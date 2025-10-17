@@ -88,17 +88,27 @@ interface Collection {
 interface Environment {
   _id: string;
   name: string;
-  variables: Array<{ key: string; value: string; enabled: boolean }>;
+  variables: Array<{ key: string; value: string; enabled: boolean; description?: string }>;
   isGlobal: boolean;
 }
 
-function EnvironmentModal({ onClose, onSave }: { onClose: () => void; onSave: (name: string, variables: Array<{key: string; value: string}>) => void }) {
-  const [name, setName] = useState('');
-  const [variables, setVariables] = useState<Array<{key: string; value: string}>>([{ key: '', value: '' }]);
+function EnvironmentModal({ onClose, onSave, existingEnvironment }: { 
+  onClose: () => void; 
+  onSave: (name: string, variables: Array<{key: string; value: string; description?: string}>) => void;
+  existingEnvironment?: Environment | null;
+}) {
+  const [name, setName] = useState(existingEnvironment?.name || '');
+  const [variables, setVariables] = useState<Array<{key: string; value: string; description?: string}>>(
+    existingEnvironment?.variables.length ? existingEnvironment.variables.map((v: any) => ({
+      key: v.key,
+      value: v.value,
+      description: v.description || ''
+    })) : [{ key: '', value: '', description: '' }]
+  );
 
-  const addVariable = () => setVariables([...variables, { key: '', value: '' }]);
+  const addVariable = () => setVariables([...variables, { key: '', value: '', description: '' }]);
   const removeVariable = (idx: number) => setVariables(variables.filter((_, i) => i !== idx));
-  const updateVariable = (idx: number, field: 'key' | 'value', val: string) => {
+  const updateVariable = (idx: number, field: 'key' | 'value' | 'description', val: string) => {
     const newVars = [...variables];
     newVars[idx][field] = val;
     setVariables(newVars);
@@ -106,9 +116,11 @@ function EnvironmentModal({ onClose, onSave }: { onClose: () => void; onSave: (n
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-yellow-400">Create Environment</h2>
+          <h2 className="text-lg font-bold text-yellow-400">
+            {existingEnvironment ? 'Edit Environment' : 'Create Environment'}
+          </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -118,37 +130,54 @@ function EnvironmentModal({ onClose, onSave }: { onClose: () => void; onSave: (n
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Production, Staging, etc."
+              placeholder="Production, Staging, Development, etc."
               className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+              autoFocus
             />
           </div>
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-slate-300">Variables</label>
-              <button onClick={addVariable} className="text-sm text-yellow-400 hover:text-yellow-300">
-                + Add Variable
+              <div>
+                <label className="block text-sm font-medium text-slate-300">Environment Variables</label>
+                <p className="text-xs text-slate-400 mt-1">Use variables in URLs like: {'{{'}baseUrl{'}}'}/users</p>
+              </div>
+              <button onClick={addVariable} className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1">
+                <PlusIcon className="w-4 h-4" /> Add Variable
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {variables.map((v, idx) => (
-                <div key={idx} className="flex gap-2">
+                <div key={idx} className="bg-slate-800 p-3 rounded border border-slate-700">
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={v.key}
+                      onChange={(e) => updateVariable(idx, 'key', e.target.value)}
+                      placeholder="Variable name (e.g., baseUrl, apiKey)"
+                      className="flex-1 px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={v.value}
+                      onChange={(e) => updateVariable(idx, 'value', e.target.value)}
+                      placeholder="Value (e.g., https://api.example.com)"
+                      className="flex-1 px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                    />
+                    <button 
+                      onClick={() => removeVariable(idx)} 
+                      className="text-red-400 hover:text-red-300 px-2"
+                      title="Remove variable"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
                   <input
                     type="text"
-                    value={v.key}
-                    onChange={(e) => updateVariable(idx, 'key', e.target.value)}
-                    placeholder="Variable name"
-                    className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                    value={v.description || ''}
+                    onChange={(e) => updateVariable(idx, 'description', e.target.value)}
+                    placeholder="Description (optional)"
+                    className="w-full px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-xs"
                   />
-                  <input
-                    type="text"
-                    value={v.value}
-                    onChange={(e) => updateVariable(idx, 'value', e.target.value)}
-                    placeholder="Value"
-                    className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
-                  />
-                  <button onClick={() => removeVariable(idx)} className="text-red-400 hover:text-red-300 px-2">
-                    ✕
-                  </button>
                 </div>
               ))}
             </div>
@@ -161,7 +190,7 @@ function EnvironmentModal({ onClose, onSave }: { onClose: () => void; onSave: (n
             disabled={!name}
             className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 disabled:opacity-50"
           >
-            Create
+            {existingEnvironment ? 'Update' : 'Create'}
           </button>
         </div>
       </div>
@@ -325,6 +354,7 @@ export default function ApiTesterPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false);
   const [showEnvModal, setShowEnvModal] = useState(false);
+  const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
@@ -622,23 +652,61 @@ export default function ApiTesterPage() {
   };
 
   const createEnvironment = async () => {
+    setEditingEnvironment(null);
     setShowEnvModal(true);
   };
 
-  const handleCreateEnvironment = async (name: string, variables: Array<{key: string; value: string}>) => {
-    try {
-      await axios.post('/api/tools/api-tester/environments', {
-        name,
-        variables: variables.map(v => ({ ...v, enabled: true, description: '' })),
-        isGlobal: false
-      });
+  const editEnvironment = (environment: Environment) => {
+    setEditingEnvironment(environment);
+    setShowEnvModal(true);
+  };
 
-      toast.success('Environment created!');
+  const deleteEnvironment = async (environmentId: string) => {
+    if (!confirm('Are you sure you want to delete this environment? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/tools/api-tester/environments?id=${environmentId}`);
+      toast.success('Environment deleted!');
+      fetchEnvironments();
+      
+      // Deselect if current environment was deleted
+      if (selectedEnvironment?._id === environmentId) {
+        setSelectedEnvironment(null);
+      }
+    } catch (error: any) {
+      console.error('Delete environment error:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete environment');
+    }
+  };
+
+  const handleSaveEnvironment = async (name: string, variables: Array<{key: string; value: string; description?: string}>) => {
+    try {
+      if (editingEnvironment) {
+        // Update existing environment
+        await axios.put('/api/tools/api-tester/environments', {
+          id: editingEnvironment._id,
+          name,
+          variables: variables.map(v => ({ ...v, enabled: true })),
+        });
+        toast.success('Environment updated!');
+      } else {
+        // Create new environment
+        await axios.post('/api/tools/api-tester/environments', {
+          name,
+          variables: variables.map(v => ({ ...v, enabled: true })),
+          isGlobal: false
+        });
+        toast.success('Environment created!');
+      }
+
       fetchEnvironments();
       setShowEnvModal(false);
+      setEditingEnvironment(null);
     } catch (error: any) {
-      console.error('Create environment error:', error);
-      toast.error(error.response?.data?.message || 'Failed to create environment');
+      console.error('Save environment error:', error);
+      toast.error(error.response?.data?.message || 'Failed to save environment');
     }
   };
 
@@ -861,7 +929,11 @@ export default function ApiTesterPage() {
             <div className="p-4 border-t border-slate-700">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-slate-300">Environments</h3>
-                <button onClick={createEnvironment} className="text-yellow-400 hover:text-yellow-300">
+                <button 
+                  onClick={createEnvironment} 
+                  className="text-yellow-400 hover:text-yellow-300"
+                  title="Create new environment"
+                >
                   <PlusIcon className="w-4 h-4" />
                 </button>
               </div>
@@ -872,15 +944,57 @@ export default function ApiTesterPage() {
                   const env = environments.find(en => en._id === e.target.value);
                   setSelectedEnvironment(env || null);
                 }}
-                className="w-full p-2 bg-slate-800 rounded text-sm border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                className="w-full p-2 bg-slate-800 rounded text-sm border border-slate-600 focus:border-yellow-400 focus:outline-none mb-2"
               >
                 <option value="">No Environment</option>
                 {environments.map((env) => (
                   <option key={env._id} value={env._id}>
-                    {env.name}
+                    {env.name} ({env.variables.length} vars)
                   </option>
                 ))}
               </select>
+
+              {/* Environment Details & Actions */}
+              {selectedEnvironment && (
+                <div className="bg-slate-800 rounded p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-yellow-400">{selectedEnvironment.name}</span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => editEnvironment(selectedEnvironment)}
+                        className="text-blue-400 hover:text-blue-300 p-1"
+                        title="Edit environment"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => deleteEnvironment(selectedEnvironment._id)}
+                        className="text-red-400 hover:text-red-300 p-1"
+                        title="Delete environment"
+                      >
+                        <TrashIcon className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {selectedEnvironment.variables.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-xs text-slate-400 font-medium">Variables:</div>
+                      {selectedEnvironment.variables.slice(0, 3).map((v, idx) => (
+                        <div key={idx} className="text-xs text-slate-300 flex items-start gap-1">
+                          <span className="text-yellow-400 font-mono">{'{{' + v.key + '}}'}: </span>
+                          <span className="text-slate-400 truncate flex-1" title={v.value}>{v.value}</span>
+                        </div>
+                      ))}
+                      {selectedEnvironment.variables.length > 3 && (
+                        <div className="text-xs text-slate-500">+{selectedEnvironment.variables.length - 3} more...</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1589,11 +1703,15 @@ pm.test("Response has data", function() {
         />
       )}
 
-      {/* Environment Creation Modal */}
+      {/* Environment Creation/Edit Modal */}
       {showEnvModal && (
         <EnvironmentModal
-          onClose={() => setShowEnvModal(false)}
-          onSave={handleCreateEnvironment}
+          onClose={() => {
+            setShowEnvModal(false);
+            setEditingEnvironment(null);
+          }}
+          onSave={handleSaveEnvironment}
+          existingEnvironment={editingEnvironment}
         />
       )}
 
