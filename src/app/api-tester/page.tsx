@@ -483,14 +483,26 @@ export default function ApiTesterPage() {
         }
       }
 
-      const res = await axios.post('/api/tools/api-tester/send', {
-        method: currentRequest.method,
-        url: replaceVariables(currentRequest.url, preRequestVariables),
-        headers: currentRequest.headers,
-        params: currentRequest.params,
-        requestBody: currentRequest.body,
-        auth: currentRequest.auth
-      });
+      const finalUrl = replaceVariables(currentRequest.url, preRequestVariables);
+      let res;
+      
+      // Auto-detect: Use client-side for localhost and http URLs, server-side for https
+      const shouldUseClientSide = isClientSideUrl(finalUrl);
+      
+      if (shouldUseClientSide) {
+        // Client-side: Direct browser request (for localhost, http, local IPs)
+        res = await sendClientSideRequest(finalUrl);
+      } else {
+        // Server-side: Proxy through Next.js API (for https production APIs)
+        res = await axios.post('/api/tools/api-tester/send', {
+          method: currentRequest.method,
+          url: finalUrl,
+          headers: currentRequest.headers,
+          params: currentRequest.params,
+          requestBody: currentRequest.body,
+          auth: currentRequest.auth
+        });
+      }
 
       const currentTestResults: TestResult[] = [];
       
@@ -545,6 +557,152 @@ export default function ApiTesterPage() {
       toast.error('Request failed');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Auto-detect if URL should use client-side request
+  const isClientSideUrl = (url: string): boolean => {
+    try {
+      const urlLower = url.toLowerCase();
+      
+      // Use client-side for:
+      // 1. localhost (any port)
+      // 2. 127.0.0.1 (any port)
+      // 3. http:// URLs (not https)
+      // 4. Local IP addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+      
+      if (urlLower.includes('localhost')) return true;
+      if (urlLower.includes('127.0.0.1')) return true;
+      if (urlLower.startsWith('http://')) return true;
+      
+      // Check for local IP addresses
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname;
+      
+      if (hostname.match(/^192\.168\./) || 
+          hostname.match(/^10\./) || 
+          hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)) {
+        return true;
+      }
+      
+      return false; // Use server-side for https and external URLs
+    } catch (e) {
+      // If URL parsing fails, default to server-side
+      return false;
+    }
+  };
+
+  // Client-side fetch (for localhost and CORS-free endpoints)
+  const sendClientSideRequest = async (url: string) => {
+    const startTime = Date.now();
+    
+    try {
+      // Build URL with query parameters
+      const finalUrl = new URL(url);
+      currentRequest.params.filter(p => p.enabled).forEach(p => {
+        finalUrl.searchParams.append(p.key, p.value);
+      });
+
+      // Build headers
+      const requestHeaders: HeadersInit = {};
+      currentRequest.headers.filter(h => h.enabled).forEach(h => {
+        requestHeaders[h.key] = h.value;
+      });
+
+      // Add authentication headers
+      if (currentRequest.auth && currentRequest.auth.type !== 'none') {
+        switch (currentRequest.auth.type) {
+          case 'basic':
+            const basicAuth = btoa(`${currentRequest.auth.basic?.username}:${currentRequest.auth.basic?.password}`);
+            requestHeaders['Authorization'] = `Basic ${basicAuth}`;
+            break;
+          
+          case 'bearer':
+            requestHeaders['Authorization'] = `Bearer ${currentRequest.auth.bearer?.token}`;
+            break;
+          
+          case 'api-key':
+            if (currentRequest.auth.apiKey?.addTo === 'header') {
+              requestHeaders[currentRequest.auth.apiKey.key] = currentRequest.auth.apiKey.value;
+            } else {
+              finalUrl.searchParams.append(currentRequest.auth.apiKey?.key || '', currentRequest.auth.apiKey?.value || '');
+            }
+            break;
+        }
+      }
+
+      // Build request options
+      const requestOptions: RequestInit = {
+        method: currentRequest.method.toUpperCase(),
+        headers: requestHeaders,
+        mode: 'cors', // Enable CORS
+      };
+
+      // Add body for non-GET requests
+      if (currentRequest.method !== 'GET' && currentRequest.method !== 'HEAD' && currentRequest.body) {
+        if (currentRequest.body.type === 'json' && currentRequest.body.json) {
+          requestOptions.body = currentRequest.body.json;
+          if (!requestHeaders['Content-Type']) {
+            requestHeaders['Content-Type'] = 'application/json';
+          }
+        } else if (currentRequest.body.type === 'raw' && currentRequest.body.raw) {
+          requestOptions.body = currentRequest.body.raw;
+        }
+      }
+
+      // Send request directly from browser
+      const response = await fetch(finalUrl.toString(), requestOptions);
+      const endTime = Date.now();
+
+      // Get response body
+      const contentType = response.headers.get('content-type') || '';
+      let responseBody: any;
+      let responseText = '';
+
+      try {
+        responseText = await response.text();
+        if (contentType.includes('application/json')) {
+          responseBody = JSON.parse(responseText);
+        } else {
+          responseBody = responseText;
+        }
+      } catch (e) {
+        responseBody = responseText;
+      }
+
+      // Get response headers
+      const responseHeaders: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+
+      // Calculate response size
+      const responseSize = new Blob([responseText]).size;
+
+      return {
+        data: {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders,
+          body: responseBody,
+          time: endTime - startTime,
+          size: responseSize,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+    } catch (error: any) {
+      const endTime = Date.now();
+      throw {
+        response: {
+          data: {
+            error: true,
+            message: error.message || 'Client-side request failed',
+            time: endTime - startTime,
+            timestamp: new Date().toISOString()
+          }
+        }
+      };
     }
   };
 
@@ -1137,7 +1295,7 @@ export default function ApiTesterPage() {
                 type="text"
                 value={currentRequest.url}
                 onChange={(e) => setCurrentRequest({ ...currentRequest, url: e.target.value })}
-                placeholder="https://api.example.com/endpoint"
+                placeholder="https://api.example.com/endpoint or http://localhost:3000/api"
                 className="flex-1 px-4 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
               />
               
