@@ -27,6 +27,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
+    // Check if trying to access localhost from production
+    const urlLower = url.toLowerCase();
+    const isLocalhostUrl = urlLower.includes('localhost') || 
+                          urlLower.includes('127.0.0.1') ||
+                          urlLower.match(/^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/);                      
+    
+    if (isLocalhostUrl) {
+      return NextResponse.json({
+        error: true,
+        message: "Cannot access localhost/local network from production server.\n\nℹ️ Localhost URLs only work when testing from localhost (development mode).\n\nTo test localhost APIs:\n1. Run this app locally (npm run dev)\n2. Access at http://localhost:3000\n3. Then test your localhost APIs\n\nAlternative: Use tools like ngrok to expose your local API publicly.",
+        time: 0,
+        timestamp: new Date().toISOString()
+      }, { status: 400 });
+    }
+
     const startTime = Date.now();
 
     try {
