@@ -22,7 +22,6 @@ const pendingFetches = new Map();
  * Skip waiting to activate immediately
  */
 self.addEventListener('install', (event) => {
-  console.log('[LocalhostWorker] Installing Service Worker...');
   self.skipWaiting();
 });
 
@@ -31,7 +30,6 @@ self.addEventListener('install', (event) => {
  * Claim all clients immediately
  */
 self.addEventListener('activate', (event) => {
-  console.log('[LocalhostWorker] Activating Service Worker...');
   event.waitUntil(self.clients.claim());
 });
 
@@ -42,9 +40,23 @@ self.addEventListener('message', async (event) => {
   const { type, requestId, request } = event.data;
 
   if (type === 'FETCH_LOCALHOST') {
-    console.log('[LocalhostWorker] Received fetch request:', requestId, request.url);
-
     try {
+      // Check for HTTPS -> HTTP (mixed content) issue
+      const isHTTPS = self.location.protocol === 'https:';
+      const requestURL = new URL(request.url);
+      const isHTTPRequest = requestURL.protocol === 'http:';
+      
+      if (isHTTPS && isHTTPRequest && requestURL.hostname === 'localhost') {
+        // Special case: HTTPS page trying to fetch HTTP localhost
+        // This is blocked by browsers (mixed content)
+        throw new Error(
+          'Mixed Content Blocked: Cannot fetch http://localhost from HTTPS page.\n\n' +
+          'Solution: Use HTTPS for your localhost server\n' +
+          '   - For testing: Use the WebSocket relay (already configured)\n' +
+          '   - For production: Set up HTTPS on localhost with mkcert'
+        );
+      }
+
       // Perform fetch in Service Worker context (bypasses CORS!)
       const startTime = Date.now();
       
@@ -93,15 +105,11 @@ self.addEventListener('message', async (event) => {
         time: endTime - startTime,
         size: responseSize
       };
-
-      console.log('[LocalhostWorker] Fetch successful:', requestId, response.status);
       
       // Send response via MessageChannel port
       event.ports[0].postMessage(result);
 
     } catch (error) {
-      console.error('[LocalhostWorker] Fetch failed:', requestId, error);
-
       // Send error response back to main thread
       const result = {
         requestId,
@@ -124,5 +132,3 @@ self.addEventListener('fetch', (event) => {
   // We only handle explicit localhost fetches via postMessage
   return;
 });
-
-console.log('[LocalhostWorker] Service Worker script loaded');

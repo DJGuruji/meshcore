@@ -2,17 +2,16 @@
  * Localhost Fetch Bridge Component
  * 
  * This component runs in the browser and listens for WebSocket commands
- * to execute local fetch requests via Service Worker.
+ * to execute local fetch requests.
  * 
- * The Service Worker bypasses CORS restrictions by running fetch() in an
- * isolated context with elevated permissions - NO CORS configuration needed!
+ * Note: This executes fetch() directly in the browser, which CAN access
+ * localhost even from HTTPS pages because localhost is same-machine.
  */
 
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
-import { localhostWorker } from '@/lib/localhostWorker';
 
 interface LocalhostRequest {
   requestId: string;
@@ -31,31 +30,9 @@ interface Props {
 
 export default function LocalhostBridge({ socket, isReady }: Props) {
   const processingRef = useRef<Set<string>>(new Set());
-  const [workerReady, setWorkerReady] = useState(false);
-
-  // Register Service Worker on mount
-  useEffect(() => {
-    const registerWorker = async () => {
-      try {
-        console.log('[LocalhostBridge] Registering Service Worker...');
-        const status = await localhostWorker.register();
-        
-        if (status.active) {
-          console.log('[LocalhostBridge] ✅ Service Worker active - CORS bypass enabled!');
-          setWorkerReady(true);
-        } else {
-          console.error('[LocalhostBridge] ❌ Service Worker registration failed:', status.error);
-        }
-      } catch (error) {
-        console.error('[LocalhostBridge] Service Worker error:', error);
-      }
-    };
-
-    registerWorker();
-  }, []);
 
   useEffect(() => {
-    if (!socket || !isReady || !workerReady) {
+    if (!socket || !isReady) {
       return;
     }
 
@@ -68,7 +45,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
       }
 
       processingRef.current.add(request.requestId);
-      console.log(`[LocalhostBridge] 🚀 Executing via Service Worker: ${request.method} ${request.url}`);
+      console.log(`[LocalhostBridge] Executing local fetch: ${request.method} ${request.url}`);
 
       const startTime = Date.now();
 
@@ -127,36 +104,79 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           }
         }
 
-        // Execute fetch via Service Worker (BYPASSES CORS!)
-        console.log('[LocalhostBridge] 🔒 Using Service Worker - No CORS restrictions!');
-        
-        const result = await localhostWorker.executeFetch({
-          url: finalUrl.toString(),
+        // Execute direct fetch (browser can access localhost even from HTTPS!)
+        const response = await fetch(finalUrl.toString(), {
           method: request.method.toUpperCase(),
           headers: requestHeaders,
           body: requestBody,
+          mode: 'cors',
         });
 
         const endTime = Date.now();
+
+        // Get response body
+        const contentType = response.headers.get('content-type') || '';
+        let responseBody: any;
+        let responseText = '';
+
+        try {
+          responseText = await response.text();
+          if (contentType.includes('application/json')) {
+            responseBody = JSON.parse(responseText);
+          } else {
+            responseBody = responseText;
+          }
+        } catch (e) {
+          responseBody = responseText;
+        }
+
+        // Get response headers
+        const responseHeaders: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          responseHeaders[key] = value;
+        });
+
+        // Calculate response size
+        const responseSize = new Blob([responseText]).size;
 
         // Send successful response back to relay
         socket.emit('localhost:fetchComplete', {
           requestId: request.requestId,
-          status: result.status,
-          statusText: result.statusText,
-          headers: result.headers,
-          body: result.body,
-          time: result.time || (endTime - startTime),
-          size: result.size,
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders,
+          body: responseBody,
+          time: endTime - startTime,
+          size: responseSize,
           timestamp: new Date().toISOString(),
         });
 
-        console.log(`[LocalhostBridge] ✅ Fetch completed: ${result.status} in ${result.time}ms`);
+        console.log(`[LocalhostBridge] Fetch completed: ${response.status} in ${endTime - startTime}ms`);
       } catch (error: any) {
         const endTime = Date.now();
-        console.error(`[LocalhostBridge] ❌ Fetch error:`, error);
+        console.error('[LocalhostBridge] Fetch error:', error.name);
 
+        // Check if this is a mixed content error (HTTPS -> HTTP)
+        const isMixedContent = error.message?.includes('NetworkError') || 
+                              error.message?.includes('fetch');
+        
         let errorMessage = error.message || 'Failed to execute local fetch';
+        
+        if (isMixedContent && window.location.protocol === 'https:') {
+          errorMessage = 
+            'Mixed Content Blocked: HTTPS page cannot fetch HTTP localhost\n\n' +
+            'Quick Fixes:\n' +
+            '1. Setup HTTPS on localhost (recommended):\n' +
+            '   - Install mkcert: npm install -g mkcert\n' +
+            '   - Generate cert: mkcert localhost\n' +
+            '   - Use HTTPS in your localhost server\n' +
+            '   - Then test: https://localhost:3000\n\n' +
+            '2. Run app locally (easier):\n' +
+            '   - npm run dev\n' +
+            '   - Access: http://localhost:3002\n' +
+            '   - Test: http://localhost:3000\n\n' +
+            'See: MIXED_CONTENT_LOCALHOST.md for full guide';
+        }
 
         // Send error response back to relay
         socket.emit('localhost:fetchError', {
@@ -175,7 +195,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
     return () => {
       socket.off('localhost:performFetch', handlePerformFetch);
     };
-  }, [socket, isReady, workerReady]);
+  }, [socket, isReady]);
 
   // This component doesn't render anything visible
   return null;
