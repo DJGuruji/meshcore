@@ -412,17 +412,6 @@ export default function ApiTesterPage() {
 
   // WebSocket Localhost Relay
   const localhostRelay = useLocalhostRelay();
-  const socketRef = useRef<any>(null);
-
-  // Store socket instance for LocalhostBridge
-  useEffect(() => {
-    if (localhostRelay.isConnected) {
-      const socket = (localhostRelay as any).socketRef?.current;
-      if (socket) {
-        socketRef.current = socket;
-      }
-    }
-  }, [localhostRelay.isConnected]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -2145,7 +2134,7 @@ pm.test("Response has data", function() {
 
       {/* Localhost Bridge - Listens for WebSocket commands and executes local fetches */}
       <LocalhostBridge 
-        socket={socketRef.current} 
+        socket={localhostRelay.socket} 
         isReady={localhostRelay.isReady} 
       />
     </div>

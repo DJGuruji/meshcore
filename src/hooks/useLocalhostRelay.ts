@@ -131,6 +131,7 @@ export function useLocalhostRelay() {
     isReady: status === 'ready',
     isConnecting: status === 'connecting',
     isConnected: status === 'connected' || status === 'ready',
-    executeRequest
+    executeRequest,
+    socket: socketRef.current // Expose socket for LocalhostBridge
   };
 }
