@@ -2,14 +2,17 @@
  * Localhost Fetch Bridge Component
  * 
  * This component runs in the browser and listens for WebSocket commands
- * to execute local fetch requests. It acts as a bridge between the relay
- * server and the user's localhost APIs.
+ * to execute local fetch requests via Service Worker.
+ * 
+ * The Service Worker bypasses CORS restrictions by running fetch() in an
+ * isolated context with elevated permissions - NO CORS configuration needed!
  */
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
+import { localhostWorker } from '@/lib/localhostWorker';
 
 interface LocalhostRequest {
   requestId: string;
@@ -28,9 +31,31 @@ interface Props {
 
 export default function LocalhostBridge({ socket, isReady }: Props) {
   const processingRef = useRef<Set<string>>(new Set());
+  const [workerReady, setWorkerReady] = useState(false);
+
+  // Register Service Worker on mount
+  useEffect(() => {
+    const registerWorker = async () => {
+      try {
+        console.log('[LocalhostBridge] Registering Service Worker...');
+        const status = await localhostWorker.register();
+        
+        if (status.active) {
+          console.log('[LocalhostBridge] ✅ Service Worker active - CORS bypass enabled!');
+          setWorkerReady(true);
+        } else {
+          console.error('[LocalhostBridge] ❌ Service Worker registration failed:', status.error);
+        }
+      } catch (error) {
+        console.error('[LocalhostBridge] Service Worker error:', error);
+      }
+    };
+
+    registerWorker();
+  }, []);
 
   useEffect(() => {
-    if (!socket || !isReady) {
+    if (!socket || !isReady || !workerReady) {
       return;
     }
 
@@ -43,7 +68,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
       }
 
       processingRef.current.add(request.requestId);
-      console.log(`[LocalhostBridge] Executing local fetch: ${request.method} ${request.url}`);
+      console.log(`[LocalhostBridge] 🚀 Executing via Service Worker: ${request.method} ${request.url}`);
 
       const startTime = Date.now();
 
@@ -55,7 +80,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
         });
 
         // Build headers
-        const requestHeaders: HeadersInit = {};
+        const requestHeaders: Record<string, string> = {};
         Object.entries(request.headers).forEach(([key, value]) => {
           if (value) {
             requestHeaders[key] = value;
@@ -89,75 +114,54 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           }
         }
 
-        // Build request options
-        const requestOptions: RequestInit = {
-          method: request.method.toUpperCase(),
-          headers: requestHeaders,
-          mode: 'cors',
-        };
-
-        // Add body for non-GET requests
+        // Build request body
+        let requestBody = null;
         if (request.method !== 'GET' && request.method !== 'HEAD' && request.body) {
           if (request.body.type === 'json' && request.body.json) {
-            requestOptions.body = request.body.json;
+            requestBody = request.body.json;
             if (!requestHeaders['Content-Type']) {
               requestHeaders['Content-Type'] = 'application/json';
             }
           } else if (request.body.type === 'raw' && request.body.raw) {
-            requestOptions.body = request.body.raw;
+            requestBody = request.body.raw;
           }
         }
 
-        // Execute local fetch
-        const response = await fetch(finalUrl.toString(), requestOptions);
-        const endTime = Date.now();
-
-        // Get response body
-        const contentType = response.headers.get('content-type') || '';
-        let responseBody: any;
-        let responseText = '';
-
-        try {
-          responseText = await response.text();
-          if (contentType.includes('application/json')) {
-            responseBody = JSON.parse(responseText);
-          } else {
-            responseBody = responseText;
-          }
-        } catch (e) {
-          responseBody = responseText;
-        }
-
-        // Get response headers
-        const responseHeaders: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-          responseHeaders[key] = value;
+        // Execute fetch via Service Worker (BYPASSES CORS!)
+        console.log('[LocalhostBridge] 🔒 Using Service Worker - No CORS restrictions!');
+        
+        const result = await localhostWorker.executeFetch({
+          url: finalUrl.toString(),
+          method: request.method.toUpperCase(),
+          headers: requestHeaders,
+          body: requestBody,
         });
 
-        // Calculate response size
-        const responseSize = new Blob([responseText]).size;
+        const endTime = Date.now();
 
         // Send successful response back to relay
         socket.emit('localhost:fetchComplete', {
           requestId: request.requestId,
-          status: response.status,
-          statusText: response.statusText,
-          headers: responseHeaders,
-          body: responseBody,
-          time: endTime - startTime,
-          size: responseSize,
+          status: result.status,
+          statusText: result.statusText,
+          headers: result.headers,
+          body: result.body,
+          time: result.time || (endTime - startTime),
+          size: result.size,
           timestamp: new Date().toISOString(),
         });
 
-        console.log(`[LocalhostBridge] Fetch completed: ${response.status} in ${endTime - startTime}ms`);
+        console.log(`[LocalhostBridge] ✅ Fetch completed: ${result.status} in ${result.time}ms`);
       } catch (error: any) {
         const endTime = Date.now();
-        console.error(`[LocalhostBridge] Fetch error:`, error);
+        console.error(`[LocalhostBridge] ❌ Fetch error:`, error);
+
+        let errorMessage = error.message || 'Failed to execute local fetch';
 
         // Send error response back to relay
         socket.emit('localhost:fetchError', {
           requestId: request.requestId,
-          error: error.message || 'Failed to execute local fetch',
+          error: errorMessage,
         });
       } finally {
         processingRef.current.delete(request.requestId);
@@ -171,7 +175,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
     return () => {
       socket.off('localhost:performFetch', handlePerformFetch);
     };
-  }, [socket, isReady]);
+  }, [socket, isReady, workerReady]);
 
   // This component doesn't render anything visible
   return null;
