@@ -313,6 +313,55 @@ export default function ApiTesterPage() {
   const [selectedEnvironment, setSelectedEnvironment] = useState<Environment | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
 
+  // Helper function to get engaging status code messages
+  const getStatusMessage = (statusCode: number): { message: string; category: string } => {
+    const messages: Record<number, { message: string; category: string }> = {
+      // Success Responses (2xx)
+      200: { message: "Success — Your API obeyed!", category: "success" },
+      201: { message: "Done! You just built something great.", category: "success" },
+      202: { message: "Got it — we're processing your request like a pro.", category: "success" },
+      204: { message: "All good — nothing to show, everything to love.", category: "success" },
+      
+      // Redirects (3xx)
+      301: { message: "We've moved… permanently! Like a codebase refactor.", category: "redirect" },
+      302: { message: "We found it — taking you to the right endpoint.", category: "redirect" },
+      304: { message: "Still the same. Why change what's already perfect?", category: "redirect" },
+      
+      // Client Errors (4xx)
+      400: { message: "Your request is confused. Maybe too much coffee?", category: "client-error" },
+      401: { message: "Access denied — tokens before glory!", category: "client-error" },
+      403: { message: "Nice try, hacker. But not today.", category: "client-error" },
+      404: { message: "We looked everywhere — nothing here but 404 ghosts.", category: "client-error" },
+      405: { message: "That method doesn't belong here — try another tool.", category: "client-error" },
+      408: { message: "Took too long — your API went for a coffee break.", category: "client-error" },
+      409: { message: "Conflict detected — merge your data like Git pros do.", category: "client-error" },
+      410: { message: "This endpoint packed up and left town.", category: "client-error" },
+      413: { message: "That's heavy! Maybe trim it down a bit.", category: "client-error" },
+      415: { message: "We don't speak that format. Try JSON, it's fluent.", category: "client-error" },
+      418: { message: "Seriously? I'm a teapot, not a server.", category: "client-error" },
+      429: { message: "Whoa there! Rate limits exist for a reason. Chill for a sec.", category: "client-error" },
+      
+      // Server Errors (5xx)
+      500: { message: "Something blew up — but that's on us.", category: "server-error" },
+      501: { message: "Not built yet — it's still in the dev lab.", category: "server-error" },
+      502: { message: "Server relay failed — clouds are moody today.", category: "server-error" },
+      503: { message: "Server's napping. Try waking it later.", category: "server-error" },
+      504: { message: "The network took a detour — timeout adventure!", category: "server-error" },
+      507: { message: "Memory full — like your weekend schedule.", category: "server-error" },
+      509: { message: "Whoa! You flooded the pipes. Ease up, champ.", category: "server-error" },
+      
+      // Bonus
+      100: { message: "Keep going — you're doing great.", category: "info" },
+      522: { message: "Your request got lost in space.", category: "server-error" },
+      530: { message: "Authentication Required.", category: "client-error" },
+    };
+
+    return messages[statusCode] || { 
+      message: `Status ${statusCode}`, 
+      category: statusCode >= 500 ? 'server-error' : statusCode >= 400 ? 'client-error' : statusCode >= 300 ? 'redirect' : 'success'
+    };
+  };
+
   // Multi-tab state
   const [requestTabs, setRequestTabs] = useState<RequestTab[]>([{
     id: 'tab-1',
@@ -1440,18 +1489,99 @@ pm.test("Response has data", function() {
                 )}
 
                 {responseTab === 'info' && (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex gap-2">
-                      <span className="text-yellow-400">Status:</span>
-                      <span className="text-slate-300">{currentTab?.response?.status} {currentTab?.response?.statusText}</span>
+                  <div className="space-y-4">
+                    {/* Status Code with Engaging Message */}
+                    {currentTab?.response?.status && (() => {
+                      const statusInfo = getStatusMessage(currentTab.response.status);
+                      const statusCode = currentTab.response.status;
+                      
+                      return (
+                        <div className={`p-4 rounded-lg border-2 ${
+                          statusInfo.category === 'success' ? 'bg-green-900/20 border-green-500/50' :
+                          statusInfo.category === 'redirect' ? 'bg-blue-900/20 border-blue-500/50' :
+                          statusInfo.category === 'client-error' ? 'bg-orange-900/20 border-orange-500/50' :
+                          statusInfo.category === 'server-error' ? 'bg-red-900/20 border-red-500/50' :
+                          'bg-slate-800/50 border-slate-600'
+                        }`}>
+                          <div className="flex items-start gap-3">
+                            <div className={`text-3xl font-bold ${
+                              statusInfo.category === 'success' ? 'text-green-400' :
+                              statusInfo.category === 'redirect' ? 'text-blue-400' :
+                              statusInfo.category === 'client-error' ? 'text-orange-400' :
+                              statusInfo.category === 'server-error' ? 'text-red-400' :
+                              'text-slate-400'
+                            }`}>
+                              {statusCode}
+                            </div>
+                            <div className="flex-1">
+                              <div className={`text-sm font-semibold mb-1 ${
+                                statusInfo.category === 'success' ? 'text-green-300' :
+                                statusInfo.category === 'redirect' ? 'text-blue-300' :
+                                statusInfo.category === 'client-error' ? 'text-orange-300' :
+                                statusInfo.category === 'server-error' ? 'text-red-300' :
+                                'text-slate-300'
+                              }`}>
+                                {currentTab.response.statusText}
+                              </div>
+                              <div className="text-xs italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
+                                "{statusInfo.message}"
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Performance Metrics */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                        <div className="text-xs text-slate-400 mb-1">Response Time</div>
+                        <div className="text-lg font-semibold text-yellow-400">
+                          {currentTab?.response?.time}ms
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {currentTab?.response?.time < 200 ? 'Lightning fast!' :
+                           currentTab?.response?.time < 500 ? 'Pretty quick!' :
+                           currentTab?.response?.time < 1000 ? 'Not bad!' :
+                           'Could be faster...'}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                        <div className="text-xs text-slate-400 mb-1">Response Size</div>
+                        <div className="text-lg font-semibold text-yellow-400">
+                          {((currentTab?.response?.size || 0) / 1024).toFixed(2)} KB
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {(currentTab?.response?.size || 0) < 1024 ? 'Tiny payload!' :
+                           (currentTab?.response?.size || 0) < 10240 ? 'Compact size!' :
+                           (currentTab?.response?.size || 0) < 102400 ? 'Moderate load' :
+                           'Heavy response!'}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="text-yellow-400">Time:</span>
-                      <span className="text-slate-300">{currentTab?.response?.time}ms</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-yellow-400">Size:</span>
-                      <span className="text-slate-300">{((currentTab?.response?.size || 0) / 1024).toFixed(2)} KB</span>
+
+                    {/* Additional Info */}
+                    <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700">
+                      <div className="text-xs font-semibold text-slate-300 mb-2">Request Details</div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Method:</span>
+                          <span className="text-slate-300 font-mono">{currentRequest.method}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">URL:</span>
+                          <span className="text-slate-300 font-mono truncate max-w-xs" title={currentRequest.url}>
+                            {currentRequest.url}
+                          </span>
+                        </div>
+                        {selectedEnvironment && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Environment:</span>
+                            <span className="text-yellow-400">{selectedEnvironment.name}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
