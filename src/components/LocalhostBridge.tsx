@@ -10,7 +10,6 @@
 
 import { useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
-import { useSession } from 'next-auth/react';
 
 interface LocalhostRequest {
   requestId: string;
@@ -28,7 +27,6 @@ interface Props {
 }
 
 export default function LocalhostBridge({ socket, isReady }: Props) {
-  const { data: session } = useSession();
   const processingRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {

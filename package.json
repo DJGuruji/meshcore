@@ -3,12 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js",
-    "dev:default": "next dev",
+    "dev": "next dev",
     "build": "next build",
     "build:no-types": "next build --no-lint",
-    "start": "NODE_ENV=production node server.js",
-    "start:default": "next start",
+    "start": "next start",
     "lint": "next lint",
     "migrate": "node src/scripts/migrate-items.js"
   },
