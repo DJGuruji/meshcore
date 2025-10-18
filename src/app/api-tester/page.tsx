@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
 import {
@@ -11,6 +11,8 @@ import {
   PlayIcon,
   FolderIcon
 } from '@heroicons/react/24/outline';
+import { useLocalhostRelay } from '@/hooks/useLocalhostRelay';
+import LocalhostBridge from '@/components/LocalhostBridge';
 
 interface Header {
   key: string;
@@ -408,6 +410,20 @@ export default function ApiTesterPage() {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
 
+  // WebSocket Localhost Relay
+  const localhostRelay = useLocalhostRelay();
+  const socketRef = useRef<any>(null);
+
+  // Store socket instance for LocalhostBridge
+  useEffect(() => {
+    if (localhostRelay.isConnected) {
+      const socket = (localhostRelay as any).socketRef?.current;
+      if (socket) {
+        socketRef.current = socket;
+      }
+    }
+  }, [localhostRelay.isConnected]);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -486,11 +502,47 @@ export default function ApiTesterPage() {
       const finalUrl = replaceVariables(currentRequest.url, preRequestVariables);
       let res;
       
-      // Auto-detect: Use client-side for localhost and http URLs, server-side for https
-      const shouldUseClientSide = isClientSideUrl(finalUrl);
+      // Check if this is a localhost URL
+      const isLocalhost = isLocalhostUrl(finalUrl);
+      const isProductionUI = typeof window !== 'undefined' && 
+                            !window.location.hostname.includes('localhost') &&
+                            !window.location.hostname.includes('127.0.0.1');
       
-      if (shouldUseClientSide) {
-        // Client-side: Direct browser request (for localhost, http, local IPs)
+      // Decision logic:
+      // 1. If localhost URL + production UI + relay ready → Use WebSocket relay
+      // 2. If localhost URL + development UI → Use client-side fetch
+      // 3. If HTTPS URL → Use server-side proxy
+      
+      if (isLocalhost && isProductionUI && localhostRelay.isReady) {
+        // Production + Localhost URL → Use WebSocket Relay!
+        toast.loading('Connecting to your local API via secure relay...', { duration: 2000 });
+        
+        try {
+          const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const relayResponse = await localhostRelay.executeRequest({
+            requestId,
+            method: currentRequest.method,
+            url: finalUrl,
+            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+            params: currentRequest.params,
+            body: currentRequest.body,
+            auth: currentRequest.auth
+          });
+          
+          res = { data: relayResponse };
+          toast.success('✅ Localhost request executed via relay!');
+        } catch (error: any) {
+          throw error;
+        }
+      } else if (isLocalhost && isProductionUI && !localhostRelay.isReady) {
+        // Localhost + Production but relay not ready → Show helpful message
+        throw new Error(
+          '🔌 WebSocket relay is connecting... Please wait a moment and try again.\n\n' +
+          'Or run this app locally for instant localhost testing:\n' +
+          '→ npm run dev'
+        );
+      } else if (isClientSideUrl(finalUrl)) {
+        // Client-side: Direct browser request (for localhost in dev, http, local IPs)
         res = await sendClientSideRequest(finalUrl);
       } else {
         // Server-side: Proxy through Next.js API (for https production APIs)
@@ -557,6 +609,32 @@ export default function ApiTesterPage() {
       toast.error('Request failed');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper to check if URL is localhost
+  const isLocalhostUrl = (url: string): boolean => {
+    try {
+      const urlLower = url.toLowerCase();
+      
+      // Check for localhost, 127.0.0.1, ::1, and local IP addresses
+      if (urlLower.includes('localhost')) return true;
+      if (urlLower.includes('127.0.0.1')) return true;
+      if (urlLower.includes('::1')) return true;
+      
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname;
+      
+      // Check for local IP addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+      if (hostname.match(/^192\.168\./) || 
+          hostname.match(/^10\./) || 
+          hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)) {
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      return false;
     }
   };
 
@@ -1050,16 +1128,45 @@ export default function ApiTesterPage() {
       {/* Sidebar */}
       {isSidebarOpen && (
         <div className="w-64 bg-slate-900 border-r border-slate-700 flex flex-col">
-          <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-yellow-400">API Tester</h2>
-            <button
-              onClick={createNewTab}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors font-semibold"
-              title="New request tab"
-            >
-              <PlusIcon className="w-3 h-3" />
-              New Tab
-            </button>
+          <div className="p-4 border-b border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-yellow-400">API Tester</h2>
+              <button
+                onClick={createNewTab}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors font-semibold"
+                title="New request tab"
+              >
+                <PlusIcon className="w-3 h-3" />
+                New Tab
+              </button>
+            </div>
+            
+            {/* WebSocket Relay Status */}
+            {typeof window !== 'undefined' && 
+             !window.location.hostname.includes('localhost') && 
+             !window.location.hostname.includes('127.0.0.1') && (
+              <div className="flex items-center gap-2 text-xs">
+                <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+                  localhostRelay.status === 'ready' ? 'bg-green-900/30 text-green-400' :
+                  localhostRelay.status === 'connecting' ? 'bg-yellow-900/30 text-yellow-400' :
+                  localhostRelay.status === 'error' ? 'bg-red-900/30 text-red-400' :
+                  'bg-slate-800 text-slate-400'
+                }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${
+                    localhostRelay.status === 'ready' ? 'bg-green-400 animate-pulse' :
+                    localhostRelay.status === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+                    localhostRelay.status === 'error' ? 'bg-red-400' :
+                    'bg-slate-500'
+                  }`}></div>
+                  <span className="font-medium">
+                    {localhostRelay.status === 'ready' ? 'Localhost Relay Ready' :
+                     localhostRelay.status === 'connecting' ? 'Connecting...' :
+                     localhostRelay.status === 'error' ? 'Relay Error' :
+                     'Relay Offline'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -2035,6 +2142,12 @@ pm.test("Response has data", function() {
           collections={collections}
         />
       )}
+
+      {/* Localhost Bridge - Listens for WebSocket commands and executes local fetches */}
+      <LocalhostBridge 
+        socket={socketRef.current} 
+        isReady={localhostRelay.isReady} 
+      />
     </div>
   );
 }
