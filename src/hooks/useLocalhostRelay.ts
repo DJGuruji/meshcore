@@ -54,8 +54,11 @@ export function useLocalhostRelay() {
     setStatus('connecting');
     setError(null);
 
-    const socket = io({
-      path: '/api/localhost-relay',
+    // Get relay server URL from environment variable
+    const relayUrl = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'http://localhost:8080';
+
+    const socket = io(relayUrl, {
+      path: '/socket.io',
       transports: ['websocket', 'polling'],
       auth: {
         userId: (session.user as any).id || (session.user as any)._id || 'anonymous'
