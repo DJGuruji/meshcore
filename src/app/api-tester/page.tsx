@@ -565,7 +565,19 @@ export default function ApiTesterPage() {
     try {
       const urlLower = url.toLowerCase();
       
-      // Use client-side for:
+      // IMPORTANT: Only use client-side when running in development (localhost UI)
+      // In production, ALWAYS use server-side proxy to avoid CORS issues
+      const isProductionUI = typeof window !== 'undefined' && 
+                            !window.location.hostname.includes('localhost') &&
+                            !window.location.hostname.includes('127.0.0.1');
+      
+      if (isProductionUI) {
+        // In production UI, always use server-side proxy
+        // Even for localhost URLs (they'll fail, but with better error message)
+        return false;
+      }
+      
+      // In development UI, use client-side for:
       // 1. localhost (any port)
       // 2. 127.0.0.1 (any port)
       // 3. http:// URLs (not https)
