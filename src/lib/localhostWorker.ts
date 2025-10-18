@@ -34,28 +34,22 @@ class LocalhostWorkerManager {
     }
 
     try {
-      console.log('[LocalhostWorker] Registering Service Worker...');
-
       // Register the Service Worker
       this.registration = await navigator.serviceWorker.register(
         '/localhost-worker.js',
         { scope: '/' }
       );
 
-      console.log('[LocalhostWorker] Service Worker registered:', this.registration);
-
       // Wait for Service Worker to be active
       if (this.registration.active) {
         this.worker = this.registration.active;
         this.status = { registered: true, active: true };
-        console.log('[LocalhostWorker] Service Worker already active');
       } else {
         await this.waitForActivation();
       }
 
       return this.status;
     } catch (error: any) {
-      console.error('[LocalhostWorker] Registration failed:', error);
       this.status = {
         registered: false,
         active: false,
@@ -86,12 +80,9 @@ class LocalhostWorkerManager {
       }
 
       worker.addEventListener('statechange', () => {
-        console.log('[LocalhostWorker] State changed:', worker.state);
-        
         if (worker.state === 'activated') {
           this.worker = worker;
           this.status = { registered: true, active: true };
-          console.log('[LocalhostWorker] Service Worker activated');
           resolve();
         } else if (worker.state === 'redundant') {
           this.status = { registered: false, active: false, error: 'Worker became redundant' };
@@ -116,16 +107,12 @@ class LocalhostWorkerManager {
 
     return new Promise((resolve, reject) => {
       const requestId = `${Date.now()}-${Math.random()}`;
-      
-      console.log('[LocalhostWorker] Sending fetch request:', requestId, request.url);
 
       // Create MessageChannel for response
       const messageChannel = new MessageChannel();
 
       // Listen for response from Service Worker
       messageChannel.port1.onmessage = (event) => {
-        console.log('[LocalhostWorker] Received response:', requestId, event.data);
-        
         if (event.data.success) {
           resolve(event.data);
         } else {
@@ -171,7 +158,6 @@ class LocalhostWorkerManager {
       this.worker = null;
       this.registration = null;
       this.status = { registered: false, active: false };
-      console.log('[LocalhostWorker] Service Worker unregistered');
     }
   }
 }

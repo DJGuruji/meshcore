@@ -72,25 +72,21 @@ export function useLocalhostRelay() {
 
     // Connection established
     socket.on('connect', () => {
-      console.log('[LocalhostRelay] Connected to WebSocket server');
       setStatus('connected');
     });
 
     // Relay ready
     socket.on('localhost:ready', (data) => {
-      console.log('[LocalhostRelay] Relay ready:', data.message);
       setStatus('ready');
     });
 
     // Handle disconnect
     socket.on('disconnect', (reason) => {
-      console.log('[LocalhostRelay] Disconnected:', reason);
       setStatus('disconnected');
     });
 
     // Handle errors
     socket.on('connect_error', (err) => {
-      console.error('[LocalhostRelay] Connection error:', err.message);
       setStatus('error');
       setError(err.message);
     });
