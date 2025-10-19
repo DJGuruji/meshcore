@@ -4,8 +4,9 @@
  * This component runs in the browser and listens for WebSocket commands
  * to execute local fetch requests.
  * 
- * Note: This executes fetch() directly in the browser, which CAN access
- * localhost even from HTTPS pages because localhost is same-machine.
+ * Two modes:
+ * 1. Direct fetch (HTTP->HTTP in local dev)
+ * 2. Proxy mode (HTTPS production via /api/localhost-proxy)
  */
 
 'use client';
@@ -104,40 +105,86 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           }
         }
 
-        // Execute direct fetch (browser can access localhost even from HTTPS!)
-        const response = await fetch(finalUrl.toString(), {
-          method: request.method.toUpperCase(),
-          headers: requestHeaders,
-          body: requestBody,
-          mode: 'cors',
-        });
+        // Check if we need to use proxy mode (HTTPS -> HTTP)
+        const isHTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        const targetURL = new URL(finalUrl.toString());
+        const isHTTPTarget = targetURL.protocol === 'http:';
+        const needsProxy = isHTTPS && isHTTPTarget;
 
-        const endTime = Date.now();
-
-        // Get response body
-        const contentType = response.headers.get('content-type') || '';
+        let response: Response;
         let responseBody: any;
-        let responseText = '';
+        let responseHeaders: Record<string, string> = {};
+        let responseSize = 0;
 
-        try {
-          responseText = await response.text();
-          if (contentType.includes('application/json')) {
-            responseBody = JSON.parse(responseText);
-          } else {
+        if (needsProxy) {
+          // Use server-side proxy to bypass mixed content
+          console.log('[LocalhostBridge] Using server-side proxy for HTTPS->HTTP');
+          
+          const proxyResponse = await fetch('/api/localhost-proxy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              url: finalUrl.toString(),
+              method: request.method.toUpperCase(),
+              headers: requestHeaders,
+              body: requestBody,
+            }),
+          });
+
+          const proxyData = await proxyResponse.json();
+          
+          if (proxyData.error) {
+            throw new Error(proxyData.message || 'Proxy request failed');
+          }
+
+          // Use proxied response data
+          response = new Response(JSON.stringify(proxyData.body), {
+            status: proxyData.status,
+            statusText: proxyData.statusText,
+            headers: proxyData.headers,
+          });
+          responseBody = proxyData.body;
+          responseHeaders = proxyData.headers;
+          responseSize = proxyData.size;
+
+        } else {
+          // Direct fetch (same protocol or HTTP->HTTP)
+          response = await fetch(finalUrl.toString(), {
+            method: request.method.toUpperCase(),
+            headers: requestHeaders,
+            body: requestBody,
+            mode: 'cors',
+          });
+
+          const endTime = Date.now();
+
+          // Get response body
+          const contentType = response.headers.get('content-type') || '';
+          let responseText = '';
+
+          try {
+            responseText = await response.text();
+            if (contentType.includes('application/json')) {
+              responseBody = JSON.parse(responseText);
+            } else {
+              responseBody = responseText;
+            }
+          } catch (e) {
             responseBody = responseText;
           }
-        } catch (e) {
-          responseBody = responseText;
+
+          // Get response headers
+          response.headers.forEach((value, key) => {
+            responseHeaders[key] = value;
+          });
+
+          // Calculate response size
+          responseSize = new Blob([responseText]).size;
         }
 
-        // Get response headers
-        const responseHeaders: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-          responseHeaders[key] = value;
-        });
-
-        // Calculate response size
-        const responseSize = new Blob([responseText]).size;
+        const endTime = Date.now();
 
         // Send successful response back to relay
         socket.emit('localhost:fetchComplete', {
@@ -158,24 +205,24 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
 
         // Check if this is a mixed content error (HTTPS -> HTTP)
         const isMixedContent = error.message?.includes('NetworkError') || 
-                              error.message?.includes('fetch');
+                              error.message?.includes('fetch') ||
+                              error.message?.includes('Mixed Content');
         
         let errorMessage = error.message || 'Failed to execute local fetch';
         
         if (isMixedContent && window.location.protocol === 'https:') {
           errorMessage = 
             'Mixed Content Blocked: HTTPS page cannot fetch HTTP localhost\n\n' +
-            'Quick Fixes:\n' +
+            'The request is now being routed through our server-side proxy automatically.\n' +
+            'If you see this error, the proxy may have failed.\n\n' +
+            'Alternative solutions:\n' +
             '1. Setup HTTPS on localhost (recommended):\n' +
             '   - Install mkcert: npm install -g mkcert\n' +
             '   - Generate cert: mkcert localhost\n' +
-            '   - Use HTTPS in your localhost server\n' +
-            '   - Then test: https://localhost:3000\n\n' +
-            '2. Run app locally (easier):\n' +
+            '   - Use HTTPS in your localhost server\n\n' +
+            '2. Run app locally:\n' +
             '   - npm run dev\n' +
-            '   - Access: http://localhost:3002\n' +
-            '   - Test: http://localhost:3000\n\n' +
-            'See: MIXED_CONTENT_LOCALHOST.md for full guide';
+            '   - Access: http://localhost:3002';
         }
 
         // Send error response back to relay
