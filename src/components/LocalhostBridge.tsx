@@ -105,86 +105,41 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           }
         }
 
-        // Check if we need to use proxy mode (HTTPS -> HTTP)
-        const isHTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:';
-        const targetURL = new URL(finalUrl.toString());
-        const isHTTPTarget = targetURL.protocol === 'http:';
-        const needsProxy = isHTTPS && isHTTPTarget;
-
-        let response: Response;
-        let responseBody: any;
-        let responseHeaders: Record<string, string> = {};
-        let responseSize = 0;
-
-        if (needsProxy) {
-          // Use server-side proxy to bypass mixed content
-          console.log('[LocalhostBridge] Using server-side proxy for HTTPS->HTTP');
-          
-          const proxyResponse = await fetch('/api/localhost-proxy', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              url: finalUrl.toString(),
-              method: request.method.toUpperCase(),
-              headers: requestHeaders,
-              body: requestBody,
-            }),
-          });
-
-          const proxyData = await proxyResponse.json();
-          
-          if (proxyData.error) {
-            throw new Error(proxyData.message || 'Proxy request failed');
-          }
-
-          // Use proxied response data
-          response = new Response(JSON.stringify(proxyData.body), {
-            status: proxyData.status,
-            statusText: proxyData.statusText,
-            headers: proxyData.headers,
-          });
-          responseBody = proxyData.body;
-          responseHeaders = proxyData.headers;
-          responseSize = proxyData.size;
-
-        } else {
-          // Direct fetch (same protocol or HTTP->HTTP)
-          response = await fetch(finalUrl.toString(), {
-            method: request.method.toUpperCase(),
-            headers: requestHeaders,
-            body: requestBody,
-            mode: 'cors',
-          });
-
-          const endTime = Date.now();
-
-          // Get response body
-          const contentType = response.headers.get('content-type') || '';
-          let responseText = '';
-
-          try {
-            responseText = await response.text();
-            if (contentType.includes('application/json')) {
-              responseBody = JSON.parse(responseText);
-            } else {
-              responseBody = responseText;
-            }
-          } catch (e) {
-            responseBody = responseText;
-          }
-
-          // Get response headers
-          response.headers.forEach((value, key) => {
-            responseHeaders[key] = value;
-          });
-
-          // Calculate response size
-          responseSize = new Blob([responseText]).size;
-        }
+        // Execute fetch directly
+        // Note: This will work in browser because it's the user's localhost
+        const response = await fetch(finalUrl.toString(), {
+          method: request.method.toUpperCase(),
+          headers: requestHeaders,
+          body: requestBody,
+          mode: 'cors',
+        });
 
         const endTime = Date.now();
+
+        // Get response body
+        const contentType = response.headers.get('content-type') || '';
+        let responseBody: any;
+        let responseText = '';
+
+        try {
+          responseText = await response.text();
+          if (contentType.includes('application/json')) {
+            responseBody = JSON.parse(responseText);
+          } else {
+            responseBody = responseText;
+          }
+        } catch (e) {
+          responseBody = responseText;
+        }
+
+        // Get response headers
+        const responseHeaders: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          responseHeaders[key] = value;
+        });
+
+        // Calculate response size
+        const responseSize = new Blob([responseText]).size;
 
         // Send successful response back to relay
         socket.emit('localhost:fetchComplete', {

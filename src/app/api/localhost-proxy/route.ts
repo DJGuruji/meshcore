@@ -3,13 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * Localhost Proxy API Route
  * 
- * Proxies requests to localhost APIs from the server-side,
- * bypassing browser CORS and mixed content restrictions.
+ * ⚠️ IMPORTANT LIMITATION:
+ * This proxy runs on Vercel's servers (cloud), NOT on the user's machine.
+ * Therefore, it CANNOT access the user's localhost services.
  * 
- * This allows HTTPS production sites to fetch HTTP localhost APIs
- * without requiring HTTPS setup on localhost or desktop agents.
+ * This endpoint is kept for potential future use cases:
+ * - Self-hosted deployments (where server and localhost are same machine)
+ * - Testing scenarios
  * 
- * Security: Only allows localhost/127.0.0.1 URLs
+ * For production use, the WebSocket relay architecture is the correct solution.
  */
 
 export async function POST(request: NextRequest) {
@@ -87,7 +89,8 @@ export async function POST(request: NextRequest) {
       {
         error: true,
         message: error.message || 'Failed to proxy request',
-        details: 'The localhost API may be offline or unreachable from the server.',
+        details: 'This proxy runs on Vercel (cloud) and cannot access your localhost. Use the WebSocket relay instead (it works through your browser).',
+        technicalReason: 'Vercel servers are in the cloud; localhost on Vercel is not the same as localhost on your machine.',
       },
       { status: 500 }
     );
