@@ -4,19 +4,10 @@ import { ApiProject, MockServerData } from '@/lib/models';
 import { extractTokenFromHeader } from '@/lib/tokenUtils';
 
 // Helper function to match endpoint path with project name
-function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string): boolean {
+function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string): boolean {
   // Expected path format: /{projectName}{baseUrl}{endpointPath}
   const cleanProjectName = projectName.toLowerCase().replace(/[^a-z0-9]/g, '-');
   const expectedPath = `/${cleanProjectName}${baseUrl}${endpointPath}`;
-  
-  // For PUT, PATCH, DELETE methods, the path might include an ID parameter at the end
-  if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
-    // Check if the request path matches the expected path with an ID at the end
-    const pathWithIdPattern = new RegExp(`^${expectedPath}/[0-9a-fA-F]{24}$`);
-    if (pathWithIdPattern.test(requestPath)) {
-      return true;
-    }
-  }
   
   return requestPath === expectedPath;
 }
@@ -158,7 +149,7 @@ async function handleRequest(request: NextRequest, method: string) {
     
     for (const project of projects) {
       for (const endpoint of project.endpoints) {
-        if (matchEndpoint(fullPath, project.name, project.baseUrl, endpoint.path, method) && endpoint.method === method) {
+        if (matchEndpoint(fullPath, project.name, project.baseUrl, endpoint.path) && endpoint.method === method) {
           
           // Check authentication requirements
           const projectAuthEnabled = project.authentication?.enabled || false;
