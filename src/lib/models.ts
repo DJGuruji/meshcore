@@ -107,6 +107,42 @@ const ApiProjectSchema = new mongoose.Schema({
       type: Boolean,
       default: null // null means inherit from project settings
     },
+    // Field definitions for POST endpoints
+    fields: [{
+      name: {
+        type: String,
+        required: true
+      },
+      type: {
+        type: String,
+        enum: ['string', 'number', 'boolean', 'object', 'array'],
+        required: true
+      },
+      required: {
+        type: Boolean,
+        default: false
+      },
+      description: String
+    }],
+    // Data source for GET endpoints
+    dataSource: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ApiProject.endpoints',
+      default: null
+    },
+    // Conditions for filtering data
+    conditions: [{
+      field: {
+        type: String,
+        required: true
+      },
+      operator: {
+        type: String,
+        enum: ['=', '!=', '>', '<', '>=', '<=', 'contains', 'startsWith', 'endsWith'],
+        required: true
+      },
+      value: mongoose.Schema.Types.Mixed
+    }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   }],
@@ -253,3 +289,25 @@ const ApiTesterHistorySchema = new mongoose.Schema({
 export const ApiTesterCollection = mongoose.models.ApiTesterCollection || mongoose.model('ApiTesterCollection', ApiTesterCollectionSchema);
 export const ApiTesterEnvironment = mongoose.models.ApiTesterEnvironment || mongoose.model('ApiTesterEnvironment', ApiTesterEnvironmentSchema);
 export const ApiTesterHistory = mongoose.models.ApiTesterHistory || mongoose.model('ApiTesterHistory', ApiTesterHistorySchema);
+
+// Mock Server Data Schema - to store data from POST requests
+const MockServerDataSchema = new mongoose.Schema({
+  endpointId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'ApiProject.endpoints'
+  },
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'ApiProject'
+  },
+  data: {
+    type: mongoose.Schema.Types.Mixed,
+    required: true
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+export const MockServerData = mongoose.models.MockServerData || mongoose.model('MockServerData', MockServerDataSchema);
