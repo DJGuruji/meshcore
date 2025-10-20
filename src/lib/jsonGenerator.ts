@@ -219,3 +219,42 @@ export function generateRandomJson(template: JsonTemplate): string {
 export function getTemplateByName(name: string): JsonTemplate | undefined {
   return defaultJsonTemplates.find(template => template.name === name);
 }
+
+// Function to generate JSON response based on endpoint fields
+export function generateJsonFromFields(fields: any[] | undefined): string {
+  if (!fields || fields.length === 0) {
+    return '{"message": "Hello World"}';
+  }
+
+  const responseObject: any = {
+    id: 1 // Common pattern for POST responses
+  };
+
+  // Add all defined fields with sample values
+  fields.forEach(field => {
+    switch (field.type) {
+      case 'string':
+        responseObject[field.name] = field.name === 'email' ? 'user@example.com' : `sample ${field.name}`;
+        break;
+      case 'number':
+        responseObject[field.name] = field.name === 'id' ? 1 : field.name === 'age' ? 25 : 0;
+        break;
+      case 'boolean':
+        responseObject[field.name] = true;
+        break;
+      case 'object':
+        responseObject[field.name] = {};
+        break;
+      case 'array':
+        responseObject[field.name] = [];
+        break;
+      default:
+        responseObject[field.name] = `sample ${field.name}`;
+    }
+  });
+
+  // Add timestamp for POST endpoints
+  responseObject.createdAt = new Date().toISOString();
+
+  return JSON.stringify(responseObject, null, 2);
+}

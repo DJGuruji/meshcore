@@ -11,7 +11,7 @@ import {
   EyeIcon,
   EyeSlashIcon 
 } from '@heroicons/react/24/outline';
-import { defaultJsonTemplates, generateRandomJson } from '@/lib/jsonGenerator';
+import { defaultJsonTemplates, generateRandomJson, generateJsonFromFields } from '@/lib/jsonGenerator';
 import { generateEndpointUrl } from '@/lib/urlUtils';
 import { generateReadableToken, formatAuthHeader } from '@/lib/tokenUtils';
 import { toast } from 'react-hot-toast';
@@ -31,6 +31,13 @@ interface ApiProject {
   createdAt: string;
 }
 
+interface EndpointField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  required: boolean;
+  description?: string;
+}
+
 interface Endpoint {
   _id: string;
   path: string;
@@ -39,6 +46,14 @@ interface Endpoint {
   statusCode: number;
   description?: string;
   requiresAuth?: boolean | null;
+  fields?: EndpointField[]; // Add this for POST endpoint field definitions
+  // New properties for GET endpoints to reference POST data
+  dataSource?: string; // ID of the POST endpoint to get data from
+  conditions?: {
+    field: string;
+    operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
+    value: string | number | boolean;
+  }[];
 }
 
 interface ProjectDetailProps {
@@ -52,11 +67,41 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
   const [showToken, setShowToken] = useState(false);
   const [newEndpoint, setNewEndpoint] = useState({
     path: '',
-    method: 'GET' as const,
+    method: 'GET' as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     responseBody: '{"message": "Hello World"}',
     statusCode: 200,
     description: '',
-    requiresAuth: null as boolean | null
+    requiresAuth: null as boolean | null,
+    fields: [] as EndpointField[],
+    dataSource: '',
+    conditions: [] as {
+      field: string;
+      operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
+      value: string | number | boolean;
+    }[]
+  });
+
+  // Add state for new field in the form
+  const [newField, setNewField] = useState({
+    name: '',
+    type: 'string' as const,
+    required: false,
+    description: ''
+  });
+
+  // Add state for new condition
+  const [newCondition, setNewCondition] = useState({
+    field: '',
+    operator: '=' as '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith',
+    value: ''
+  });
+
+  // Add state for editing conditions
+  const [editingConditions, setEditingConditions] = useState<{[key: string]: any[]}>({});
+  const [newEditCondition, setNewEditCondition] = useState({
+    field: '',
+    operator: '=' as '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith',
+    value: ''
   });
 
   // Helper function to ensure endpoint has requiresAuth property
@@ -80,11 +125,26 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       return;
     }
 
-    const endpoint = {
+    // For POST endpoints, validate that required fields are defined if any fields exist
+    if (newEndpoint.method === 'POST' && newEndpoint.fields && newEndpoint.fields.length > 0) {
+      const requiredFields = newEndpoint.fields.filter(field => field.required);
+      if (requiredFields.length > 0) {
+        // We'll validate request body when the endpoint is actually used
+        console.log('POST endpoint with required fields defined:', requiredFields);
+      }
+    }
+
+    // Create endpoint object, excluding dataSource if it's empty
+    const endpoint: any = {
       _id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Temporary ID with prefix
       ...newEndpoint,
       path: cleanPath
     };
+
+    // Remove dataSource if it's empty
+    if (endpoint.dataSource === '') {
+      delete endpoint.dataSource;
+    }
 
     const updatedProject = {
       ...project,
@@ -96,12 +156,24 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     // Reset form
     setNewEndpoint({
       path: '',
-      method: 'GET',
+      method: 'GET' as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
       responseBody: '{"message": "Hello World"}',
       statusCode: 200,
       description: '',
-      requiresAuth: null
+      requiresAuth: null as boolean | null,
+      fields: [] as EndpointField[],
+      dataSource: '',
+      conditions: []
     });
+    
+    // Reset field form
+    setNewField({
+      name: '',
+      type: 'string',
+      required: false,
+      description: ''
+    });
+    
     setShowAddEndpoint(false);
   };
 
@@ -125,10 +197,16 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       }
     }
 
+    // Remove dataSource if it's empty
+    const cleanUpdates: any = { ...updates };
+    if (cleanUpdates.dataSource === '') {
+      delete cleanUpdates.dataSource;
+    }
+
     const updatedProject = {
       ...project,
       endpoints: project.endpoints.map(ep => 
-        ep._id === endpointId ? { ...ep, ...updates } : ep
+        ep._id === endpointId ? { ...ep, ...cleanUpdates } : ep
       )
     };
     onUpdateProject(updatedProject);
@@ -158,7 +236,9 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     // Check if authentication is required for this endpoint
     const requiresAuth = endpoint.requiresAuth !== null ? endpoint.requiresAuth : project.authentication?.enabled;
     
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
     
     if (requiresAuth && project.authentication?.token) {
       const headerName = project.authentication.headerName || 'Authorization';
@@ -167,21 +247,143 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     }
     
     try {
+      // For POST, PUT, PATCH endpoints with defined fields, we can show a form to test
+      let body = undefined;
+      if ((endpoint.method === 'POST' || endpoint.method === 'PUT' || endpoint.method === 'PATCH') && endpoint.fields && endpoint.fields.length > 0) {
+        // Show a prompt to let user enter data for testing
+        const userResponse = prompt(`Enter JSON data for ${endpoint.method} request (or leave empty for sample data):`, '');
+        
+        if (userResponse !== null) {
+          if (userResponse.trim() === '') {
+            // Create sample data with all fields
+            const requestBody: any = {};
+            endpoint.fields.forEach(field => {
+              switch (field.type) {
+                case 'string':
+                  requestBody[field.name] = field.name === 'email' ? 'test@example.com' : `sample ${field.name}`;
+                  break;
+                case 'number':
+                  requestBody[field.name] = field.name === 'id' ? 1 : field.name === 'age' ? 25 : 0;
+                  break;
+                case 'boolean':
+                  requestBody[field.name] = true;
+                  break;
+                case 'object':
+                  requestBody[field.name] = {};
+                  break;
+                case 'array':
+                  requestBody[field.name] = [];
+                  break;
+                default:
+                  requestBody[field.name] = `sample ${field.name}`;
+              }
+            });
+            body = JSON.stringify(requestBody);
+          } else {
+            // Use user-provided data
+            body = userResponse;
+          }
+        } else {
+          // User cancelled
+          return;
+        }
+      }
+      
       const response = await fetch(fullUrl, { 
         method: endpoint.method,
-        headers 
+        headers,
+        body: body ? body : undefined
       });
-      const data = await response.text();
       
-      let message = `Response (${response.status}):\n${data}`;
+      // Get response details
+      const responseText = await response.text();
+      const contentType = response.headers.get('content-type');
+      let responseData;
+      
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          responseData = JSON.parse(responseText);
+        } else {
+          responseData = responseText;
+        }
+      } catch {
+        responseData = responseText;
+      }
+      
+      let message = `Response (${response.status}):\n${JSON.stringify(responseData, null, 2)}`;
       if (requiresAuth) {
         message = `🔒 Authenticated Request\n${message}`;
       }
       
+      // Show alert with response details
       alert(message);
+      
+      // Also log to console for debugging
+      console.log('API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        data: responseData
+      });
     } catch (error) {
       alert(`Error: ${error}`);
     }
+  };
+
+  // Function to validate POST request body against defined fields
+  const validatePostRequestBody = (endpoint: Endpoint, requestBody: any): { isValid: boolean; errors: string[] } => {
+    // Only validate POST endpoints with defined fields
+    if (endpoint.method !== 'POST' || !endpoint.fields || endpoint.fields.length === 0) {
+      return { isValid: true, errors: [] };
+    }
+    
+    const errors: string[] = [];
+    const requiredFields = endpoint.fields.filter(field => field.required);
+    
+    // Check if all required fields are present
+    for (const field of requiredFields) {
+      if (!(field.name in requestBody)) {
+        errors.push(`Required field '${field.name}' is missing`);
+      } else if (requestBody[field.name] === null || requestBody[field.name] === undefined || requestBody[field.name] === '') {
+        errors.push(`Required field '${field.name}' cannot be null or empty`);
+      }
+    }
+    
+    // Check field types if present
+    for (const field of endpoint.fields) {
+      if (field.name in requestBody && requestBody[field.name] !== null && requestBody[field.name] !== undefined) {
+        const value = requestBody[field.name];
+        switch (field.type) {
+          case 'string':
+            if (typeof value !== 'string') {
+              errors.push(`Field '${field.name}' should be a string`);
+            }
+            break;
+          case 'number':
+            if (typeof value !== 'number') {
+              errors.push(`Field '${field.name}' should be a number`);
+            }
+            break;
+          case 'boolean':
+            if (typeof value !== 'boolean') {
+              errors.push(`Field '${field.name}' should be a boolean`);
+            }
+            break;
+          case 'object':
+            if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+              errors.push(`Field '${field.name}' should be an object`);
+            }
+            break;
+          case 'array':
+            if (!Array.isArray(value)) {
+              errors.push(`Field '${field.name}' should be an array`);
+            }
+            break;
+        }
+      }
+    }
+    
+    return { isValid: errors.length === 0, errors };
   };
 
   const generateJsonFromTemplate = (templateName: string) => {
@@ -190,6 +392,116 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       return generateRandomJson(template);
     }
     return '{"message": "Hello World"}';
+  };
+
+  const handleAddField = () => {
+    if (!newField.name.trim()) {
+      alert('Field name is required');
+      return;
+    }
+
+    // Check for duplicate field name
+    if (newEndpoint.fields.some(field => field.name === newField.name)) {
+      alert(`Field "${newField.name}" already exists`);
+      return;
+    }
+
+    const updatedFields = [...newEndpoint.fields, { ...newField }];
+    setNewEndpoint({ ...newEndpoint, fields: updatedFields });
+    
+    // Reset field form
+    setNewField({
+      name: '',
+      type: 'string',
+      required: false,
+      description: ''
+    });
+  };
+
+  const handleRemoveField = (index: number) => {
+    const updatedFields = [...newEndpoint.fields];
+    updatedFields.splice(index, 1);
+    setNewEndpoint({ ...newEndpoint, fields: updatedFields });
+  };
+
+  const handleAddCondition = () => {
+    // Validate condition
+    if (!newCondition.field.trim()) {
+      alert('Field name is required for condition');
+      return;
+    }
+
+    const updatedConditions = [...newEndpoint.conditions, { ...newCondition }];
+    setNewEndpoint({ ...newEndpoint, conditions: updatedConditions });
+    
+    // Reset condition form
+    setNewCondition({
+      field: '',
+      operator: '=',
+      value: ''
+    });
+  };
+
+  const handleRemoveCondition = (index: number) => {
+    const updatedConditions = [...newEndpoint.conditions];
+    updatedConditions.splice(index, 1);
+    setNewEndpoint({ ...newEndpoint, conditions: updatedConditions });
+  };
+
+  // Functions for editing conditions
+  const handleAddEditCondition = (endpointId: string) => {
+    // Validate condition
+    if (!newEditCondition.field.trim()) {
+      alert('Field name is required for condition');
+      return;
+    }
+
+    const currentConditions = editingConditions[endpointId] || [];
+    const updatedConditions = [...currentConditions, { ...newEditCondition }];
+    
+    setEditingConditions({
+      ...editingConditions,
+      [endpointId]: updatedConditions
+    });
+    
+    // Reset condition form
+    setNewEditCondition({
+      field: '',
+      operator: '=',
+      value: ''
+    });
+  };
+
+  const handleRemoveEditCondition = (endpointId: string, index: number) => {
+    const currentConditions = editingConditions[endpointId] || [];
+    const updatedConditions = [...currentConditions];
+    updatedConditions.splice(index, 1);
+    
+    setEditingConditions({
+      ...editingConditions,
+      [endpointId]: updatedConditions
+    });
+  };
+
+  const handleSaveConditions = (endpointId: string) => {
+    const conditions = editingConditions[endpointId] || [];
+    handleUpdateEndpoint(endpointId, { conditions });
+    
+    // Clear editing state for this endpoint
+    const newEditingConditions = { ...editingConditions };
+    delete newEditingConditions[endpointId];
+    setEditingConditions(newEditingConditions);
+  };
+
+  const handleCancelEditConditions = (endpointId: string) => {
+    // Clear editing state for this endpoint
+    const newEditingConditions = { ...editingConditions };
+    delete newEditingConditions[endpointId];
+    setEditingConditions(newEditingConditions);
+  };
+
+  const generateResponseBodyWithFields = () => {
+    return generateJsonFromFields(newEndpoint.fields);
   };
 
   return (
@@ -478,6 +790,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   onChange={(e) => setNewEndpoint({ ...newEndpoint, path: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 />
+                {(newEndpoint.method === 'PUT' || newEndpoint.method === 'PATCH' || newEndpoint.method === 'DELETE') && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Note: Path will automatically include '/:id' parameter for identifying resources
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Method</label>
@@ -502,25 +819,54 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Generate JSON</label>
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      setNewEndpoint({ ...newEndpoint, responseBody: generateJsonFromTemplate(e.target.value) });
-                    }
-                  }}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                >
-                  <option value="">Select template...</option>
-                  {defaultJsonTemplates.map((template) => (
-                    <option key={template.name} value={template.name}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Show Generate JSON option only for GET methods */}
+              {newEndpoint.method === 'GET' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Generate JSON</label>
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value === 'fields') {
+                        // Generate from defined fields
+                        setNewEndpoint({ 
+                          ...newEndpoint, 
+                          responseBody: generateResponseBodyWithFields()
+                        });
+                      } else if (e.target.value) {
+                        setNewEndpoint({ 
+                          ...newEndpoint, 
+                          responseBody: generateJsonFromTemplate(e.target.value) 
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  >
+                    <option value="">Select template...</option>
+                    {newEndpoint.fields && newEndpoint.fields.length > 0 && (
+                      <option value="fields">Generate from defined fields</option>
+                    )}
+                    {defaultJsonTemplates.map((template) => (
+                      <option key={template.name} value={template.name}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
+            
+            {/* Show Response Body input only for GET methods */}
+            {newEndpoint.method === 'GET' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Response Body (JSON)</label>
+                <textarea
+                  value={newEndpoint.responseBody}
+                  onChange={(e) => setNewEndpoint({ ...newEndpoint, responseBody: e.target.value })}
+                  rows={6}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder='{"message": "Hello World"}'
+                />
+              </div>
+            )}
             
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-300 mb-2">Description (optional)</label>
@@ -551,16 +897,344 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
               </select>
             </div>
 
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-300 mb-2">Response Body (JSON)</label>
-              <textarea
-                value={newEndpoint.responseBody}
-                onChange={(e) => setNewEndpoint({ ...newEndpoint, responseBody: e.target.value })}
-                rows={6}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                placeholder='{"message": "Hello World"}'
-              />
-            </div>
+            {/* Fields section for POST endpoints */}
+            {newEndpoint.method === 'POST' && (
+              <div className="mt-4 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                <h3 className="text-sm font-medium text-slate-300 mb-3">Request Body Fields</h3>
+                
+                {/* Add new field form */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Field Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., name"
+                      value={newField.name}
+                      onChange={(e) => setNewField({ ...newField, name: e.target.value })}
+                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Type</label>
+                    <select
+                      value={newField.type}
+                      onChange={(e) => setNewField({ ...newField, type: e.target.value as any })}
+                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                    >
+                      <option value="string">String</option>
+                      <option value="number">Number</option>
+                      <option value="boolean">Boolean</option>
+                      <option value="object">Object</option>
+                      <option value="array">Array</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Required</label>
+                    <select
+                      value={newField.required ? 'required' : 'optional'}
+                      onChange={(e) => setNewField({ ...newField, required: e.target.value === 'required' })}
+                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                    >
+                      <option value="optional">Optional</option>
+                      <option value="required">Required</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleAddField}
+                      className="w-full px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-sm font-medium"
+                    >
+                      Add Field
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Field description */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Description (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Field description"
+                    value={newField.description}
+                    onChange={(e) => setNewField({ ...newField, description: e.target.value })}
+                    className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                  />
+                </div>
+                
+                {/* Fields list */}
+                {newEndpoint.fields.length > 0 && (
+                  <div className="mb-3">
+                    <h4 className="text-xs font-medium text-slate-400 mb-2">Defined Fields:</h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {newEndpoint.fields.map((field, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-slate-700 rounded">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-white text-sm font-mono">{field.name}</span>
+                            <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+                              {field.type}
+                            </span>
+                            {field.required && (
+                              <span className="text-xs px-1.5 py-0.5 bg-red-900 text-red-300 rounded">
+                                required
+                              </span>
+                            )}
+                            {field.description && (
+                              <span className="text-xs text-slate-400 italic">
+                                {field.description}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveField(index)}
+                            className="text-slate-400 hover:text-red-400"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Auto-generate response body button */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const generatedBody = generateResponseBodyWithFields();
+                      setNewEndpoint({ ...newEndpoint, responseBody: generatedBody });
+                    }}
+                    className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-sm"
+                  >
+                    Generate Response from Fields
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Data source and conditions section for GET endpoints */}
+            {newEndpoint.method === 'GET' && (
+              <div className="mt-4 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                <h3 className="text-sm font-medium text-slate-300 mb-3">Data Source</h3>
+                
+                {/* Data source selection */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint (optional)</label>
+                  <select
+                    value={newEndpoint.dataSource}
+                    onChange={(e) => setNewEndpoint({ ...newEndpoint, dataSource: e.target.value })}
+                    className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                  >
+                    <option value="">Use custom response body</option>
+                    {project.endpoints
+                      .filter(ep => ep.method === 'POST')
+                      .map(ep => (
+                        <option key={ep._id} value={ep._id}>
+                          {ep.path} ({ep.description || 'No description'})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                
+                {/* Conditions section */}
+                {newEndpoint.dataSource && (
+                  <div className="mt-4">
+                    <h4 className="text-xs font-medium text-slate-400 mb-2">Filter Conditions</h4>
+                    
+                    {/* Add new condition form */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Field</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., id"
+                          value={newCondition.field}
+                          onChange={(e) => setNewCondition({ ...newCondition, field: e.target.value })}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Operator</label>
+                        <select
+                          value={newCondition.operator}
+                          onChange={(e) => setNewCondition({ ...newCondition, operator: e.target.value as any })}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                        >
+                          <option value="=">=</option>
+                          <option value="!=">!=</option>
+                          <option value=">">&gt;</option>
+                          <option value="<">&lt;</option>
+                          <option value=">=">&gt;=</option>
+                          <option value="<=">&lt;=</option>
+                          <option value="contains">contains</option>
+                          <option value="startsWith">starts with</option>
+                          <option value="endsWith">ends with</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Value</label>
+                        <input
+                          type="text"
+                          placeholder="Value"
+                          value={newCondition.value}
+                          onChange={(e) => setNewCondition({ ...newCondition, value: e.target.value })}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={handleAddCondition}
+                          className="w-full px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-sm font-medium"
+                        >
+                          Add Condition
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Conditions list */}
+                    {newEndpoint.conditions.length > 0 && (
+                      <div className="mb-3">
+                        <h4 className="text-xs font-medium text-slate-400 mb-2">Defined Conditions:</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {newEndpoint.conditions.map((condition, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-slate-700 rounded">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-white text-sm font-mono">{condition.field}</span>
+                                <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+                                  {condition.operator}
+                                </span>
+                                <span className="text-white text-sm font-mono">{String(condition.value)}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCondition(index)}
+                                className="text-slate-400 hover:text-red-400"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Data source and conditions section for GET, PUT, PATCH, DELETE endpoints */}
+            {(newEndpoint.method === 'GET' || newEndpoint.method === 'PUT' || newEndpoint.method === 'PATCH' || newEndpoint.method === 'DELETE') && (
+              <div className="mt-4 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                <h3 className="text-sm font-medium text-slate-300 mb-3">Data Source</h3>
+                
+                {/* Data source selection */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint (optional)</label>
+                  <select
+                    value={newEndpoint.dataSource}
+                    onChange={(e) => setNewEndpoint({ ...newEndpoint, dataSource: e.target.value })}
+                    className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                  >
+                    <option value="">Use custom response body</option>
+                    {project.endpoints
+                      .filter(ep => ep.method === 'POST')
+                      .map(ep => (
+                        <option key={ep._id} value={ep._id}>
+                          {ep.path} ({ep.description || 'No description'})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                
+                {/* Conditions section */}
+                {newEndpoint.dataSource && (
+                  <div className="mt-4">
+                    <h4 className="text-xs font-medium text-slate-400 mb-2">Filter Conditions</h4>
+                    
+                    {/* Add new condition form */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Field</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., id"
+                          value={newCondition.field}
+                          onChange={(e) => setNewCondition({ ...newCondition, field: e.target.value })}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Operator</label>
+                        <select
+                          value={newCondition.operator}
+                          onChange={(e) => setNewCondition({ ...newCondition, operator: e.target.value as any })}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                        >
+                          <option value="=">=</option>
+                          <option value="!=">!=</option>
+                          <option value=">">&gt;</option>
+                          <option value="<">&lt;</option>
+                          <option value=">=">&gt;=</option>
+                          <option value="<=">&lt;=</option>
+                          <option value="contains">contains</option>
+                          <option value="startsWith">starts with</option>
+                          <option value="endsWith">ends with</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Value</label>
+                        <input
+                          type="text"
+                          placeholder="Value"
+                          value={newCondition.value}
+                          onChange={(e) => setNewCondition({ ...newCondition, value: e.target.value })}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={handleAddCondition}
+                          className="w-full px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-sm font-medium"
+                        >
+                          Add Condition
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Conditions list */}
+                    {newEndpoint.conditions.length > 0 && (
+                      <div className="mb-3">
+                        <h4 className="text-xs font-medium text-slate-400 mb-2">Defined Conditions:</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {newEndpoint.conditions.map((condition, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-slate-700 rounded">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-white text-sm font-mono">{condition.field}</span>
+                                <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+                                  {condition.operator}
+                                </span>
+                                <span className="text-white text-sm font-mono">{String(condition.value)}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCondition(index)}
+                                className="text-slate-400 hover:text-red-400"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-3 mt-4">
               <button
@@ -619,7 +1293,7 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                         </span>
                       </div>
                       <div>
-                        <div className="font-mono text-white">{project.baseUrl}{endpoint.path}</div>
+                        <div className="font-mono text-white">{project.baseUrl}{endpoint.path}{(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') ? '/:id' : ''}</div>
                         {endpoint.description && (
                           <div className="text-sm text-slate-400 mt-1">{endpoint.description}</div>
                         )}
@@ -668,6 +1342,26 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       >
                         <PlayIcon className="w-4 h-4" />
                       </button>
+                      {/* Add validation test button for POST, PUT, PATCH endpoints with fields */}
+                      {(endpoint.method === 'POST' || endpoint.method === 'PUT' || endpoint.method === 'PATCH') && endpoint.fields && endpoint.fields.length > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Show a dialog to test with missing required fields
+                            const requiredFields = endpoint.fields!.filter(field => field.required);
+                            if (requiredFields.length > 0) {
+                              const fieldList = requiredFields.map(f => `- ${f.name} (${f.type})`).join('\n');
+                              alert(`This endpoint requires the following fields:\n${fieldList}\n\nWhen you make a real ${endpoint.method} request missing any of these fields, you'll get a 400 error with validation details.`);
+                            } else {
+                              alert(`This ${endpoint.method} endpoint has no required fields, so any valid JSON will be accepted.`);
+                            }
+                          }}
+                          className="p-2 text-slate-400 hover:text-yellow-400 transition-colors"
+                          title="Field validation info"
+                        >
+                          <EyeIcon className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -762,34 +1456,371 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       </div>
                       
                       <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-medium text-slate-300">Response Body</h4>
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                handleUpdateEndpoint(endpoint._id, { 
-                                  responseBody: generateJsonFromTemplate(e.target.value) 
-                                });
-                              }
-                            }}
-                            className="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                          >
-                            <option value="">Generate JSON...</option>
-                            {defaultJsonTemplates.map((template) => (
-                              <option key={template.name} value={template.name}>
-                                {template.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <textarea
-                          value={endpoint.responseBody}
-                          onChange={(e) => handleUpdateEndpoint(endpoint._id, { responseBody: e.target.value })}
-                          rows={8}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                        />
+                        {/* Show response body configuration only for GET methods */}
+                        {endpoint.method === 'GET' && (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-medium text-slate-300">Response Body</h4>
+                              <select
+                                onChange={(e) => {
+                                  if (e.target.value === 'fields') {
+                                    // Generate from defined fields if available
+                                    const fields = endpoint.fields || [];
+                                    handleUpdateEndpoint(endpoint._id, { 
+                                      responseBody: generateJsonFromFields(fields) 
+                                    });
+                                  } else if (e.target.value) {
+                                    handleUpdateEndpoint(endpoint._id, { 
+                                      responseBody: generateJsonFromTemplate(e.target.value) 
+                                    });
+                                  }
+                                }}
+                                className="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                              >
+                                <option value="">Generate JSON...</option>
+                                {endpoint.fields && endpoint.fields.length > 0 && (
+                                  <option value="fields">From defined fields</option>
+                                )}
+                                {defaultJsonTemplates.map((template) => (
+                                  <option key={template.name} value={template.name}>
+                                    {template.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <textarea
+                              value={endpoint.responseBody}
+                              onChange={(e) => handleUpdateEndpoint(endpoint._id, { responseBody: e.target.value })}
+                              rows={8}
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
+                    
+                    {/* Fields section for POST endpoints in edit mode */}
+                    {endpoint.method === 'POST' && endpoint.fields && endpoint.fields.length > 0 && (
+                      <div className="mt-4 p-3 bg-slate-800 rounded border border-slate-700">
+                        <h4 className="text-sm font-medium text-slate-300 mb-2">Request Body Fields</h4>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {endpoint.fields.map((field, index) => (
+                            <div key={index} className="flex items-center space-x-3 text-xs">
+                              <span className="font-mono text-white">{field.name}</span>
+                              <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded">
+                                {field.type}
+                              </span>
+                              {field.required && (
+                                <span className="px-1.5 py-0.5 bg-red-900 text-red-300 rounded">
+                                  required
+                                </span>
+                              )}
+                              {field.description && (
+                                <span className="text-slate-400 italic">
+                                  {field.description}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Data source and conditions section for GET endpoints in edit mode */}
+                    {endpoint.method === 'GET' && (
+                      <div className="mt-4 p-3 bg-slate-800 rounded border border-slate-700">
+                        <h4 className="text-sm font-medium text-slate-300 mb-2">Data Source Configuration</h4>
+                        
+                        {/* Data source selection */}
+                        <div className="mb-2">
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint</label>
+                          <select
+                            value={endpoint.dataSource || ''}
+                            onChange={(e) => handleUpdateEndpoint(endpoint._id, { dataSource: e.target.value || undefined })}
+                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                          >
+                            <option value="">Use custom response body</option>
+                            {project.endpoints
+                              .filter(ep => ep.method === 'POST')
+                              .map(ep => (
+                                <option key={ep._id} value={ep._id}>
+                                  {ep.path} ({ep.description || 'No description'})
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        
+                        {/* Conditions section */}
+                        {endpoint.dataSource && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="text-xs font-medium text-slate-400">Filter Conditions</h5>
+                              <button
+                                onClick={() => {
+                                  // Initialize editing state with current conditions
+                                  const currentConditions = endpoint.conditions || [];
+                                  setEditingConditions({
+                                    ...editingConditions,
+                                    [endpoint._id]: [...currentConditions]
+                                  });
+                                }}
+                                className="text-xs text-yellow-400 hover:text-yellow-300"
+                              >
+                                Edit Conditions
+                              </button>
+                            </div>
+                            
+                            {editingConditions[endpoint._id] ? (
+                              // Editing mode
+                              <div className="space-y-2">
+                                {/* Add new condition form */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
+                                  <input
+                                    type="text"
+                                    placeholder="Field"
+                                    value={newEditCondition.field}
+                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, field: e.target.value })}
+                                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                  />
+                                  <select
+                                    value={newEditCondition.operator}
+                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, operator: e.target.value as any })}
+                                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                  >
+                                    <option value="=">=</option>
+                                    <option value="!=">!=</option>
+                                    <option value=">">&gt;</option>
+                                    <option value="<">&lt;</option>
+                                    <option value=">=">&gt;=</option>
+                                    <option value="<=">&lt;=</option>
+                                    <option value="contains">contains</option>
+                                    <option value="startsWith">starts with</option>
+                                    <option value="endsWith">ends with</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    placeholder="Value"
+                                    value={newEditCondition.value}
+                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, value: e.target.value })}
+                                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                  />
+                                  <button
+                                    onClick={() => handleAddEditCondition(endpoint._id)}
+                                    className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-xs font-medium"
+                                  >
+                                    Add
+                                  </button>
+                                </div>
+                                
+                                {/* Current conditions being edited */}
+                                <div className="space-y-1 max-h-32 overflow-y-auto">
+                                  {(editingConditions[endpoint._id] || []).map((condition, index) => (
+                                    <div key={index} className="flex items-center justify-between p-1 bg-slate-700 rounded">
+                                      <div className="flex items-center space-x-2 text-xs">
+                                        <span className="font-mono text-white">{condition.field}</span>
+                                        <span className="px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+                                          {condition.operator}
+                                        </span>
+                                        <span className="font-mono text-white">{String(condition.value)}</span>
+                                      </div>
+                                      <button
+                                        onClick={() => handleRemoveEditCondition(endpoint._id, index)}
+                                        className="text-slate-400 hover:text-red-400"
+                                      >
+                                        <TrashIcon className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                {/* Save/Cancel buttons */}
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleSaveConditions(endpoint._id)}
+                                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs"
+                                  >
+                                    Save Conditions
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelEditConditions(endpoint._id)}
+                                    className="px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              // View mode
+                              <div>
+                                {endpoint.conditions && endpoint.conditions.length > 0 ? (
+                                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                                    {endpoint.conditions.map((condition, index) => (
+                                      <div key={index} className="flex items-center space-x-2 text-xs">
+                                        <span className="font-mono text-white">{condition.field}</span>
+                                        <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded">
+                                          {condition.operator}
+                                        </span>
+                                        <span className="font-mono text-white">{String(condition.value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-500">No conditions defined</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Data source and conditions section for GET, PUT, PATCH, DELETE endpoints in edit mode */}
+                    {(endpoint.method === 'GET' || endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') && (
+                      <div className="mt-4 p-3 bg-slate-800 rounded border border-slate-700">
+                        <h4 className="text-sm font-medium text-slate-300 mb-2">Data Source Configuration</h4>
+                        
+                        {/* Data source selection */}
+                        <div className="mb-2">
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint</label>
+                          <select
+                            value={endpoint.dataSource || ''}
+                            onChange={(e) => handleUpdateEndpoint(endpoint._id, { dataSource: e.target.value || undefined })}
+                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                          >
+                            <option value="">Use custom response body</option>
+                            {project.endpoints
+                              .filter(ep => ep.method === 'POST')
+                              .map(ep => (
+                                <option key={ep._id} value={ep._id}>
+                                  {ep.path} ({ep.description || 'No description'})
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        
+                        {/* Conditions section */}
+                        {endpoint.dataSource && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="text-xs font-medium text-slate-400">Filter Conditions</h5>
+                              <button
+                                onClick={() => {
+                                  // Initialize editing state with current conditions
+                                  const currentConditions = endpoint.conditions || [];
+                                  setEditingConditions({
+                                    ...editingConditions,
+                                    [endpoint._id]: [...currentConditions]
+                                  });
+                                }}
+                                className="text-xs text-yellow-400 hover:text-yellow-300"
+                              >
+                                Edit Conditions
+                              </button>
+                            </div>
+                            
+                            {editingConditions[endpoint._id] ? (
+                              // Editing mode
+                              <div className="space-y-2">
+                                {/* Add new condition form */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
+                                  <input
+                                    type="text"
+                                    placeholder="Field"
+                                    value={newEditCondition.field}
+                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, field: e.target.value })}
+                                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                  />
+                                  <select
+                                    value={newEditCondition.operator}
+                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, operator: e.target.value as any })}
+                                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                  >
+                                    <option value="=">=</option>
+                                    <option value="!=">!=</option>
+                                    <option value=">">&gt;</option>
+                                    <option value="<">&lt;</option>
+                                    <option value=">=">&gt;=</option>
+                                    <option value="<=">&lt;=</option>
+                                    <option value="contains">contains</option>
+                                    <option value="startsWith">starts with</option>
+                                    <option value="endsWith">ends with</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    placeholder="Value"
+                                    value={newEditCondition.value}
+                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, value: e.target.value })}
+                                    className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                  />
+                                  <button
+                                    onClick={() => handleAddEditCondition(endpoint._id)}
+                                    className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-xs font-medium"
+                                  >
+                                    Add
+                                  </button>
+                                </div>
+                                
+                                {/* Current conditions being edited */}
+                                <div className="space-y-1 max-h-32 overflow-y-auto">
+                                  {(editingConditions[endpoint._id] || []).map((condition, index) => (
+                                    <div key={index} className="flex items-center justify-between p-1 bg-slate-700 rounded">
+                                      <div className="flex items-center space-x-2 text-xs">
+                                        <span className="font-mono text-white">{condition.field}</span>
+                                        <span className="px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+                                          {condition.operator}
+                                        </span>
+                                        <span className="font-mono text-white">{String(condition.value)}</span>
+                                      </div>
+                                      <button
+                                        onClick={() => handleRemoveEditCondition(endpoint._id, index)}
+                                        className="text-slate-400 hover:text-red-400"
+                                      >
+                                        <TrashIcon className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                {/* Save/Cancel buttons */}
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleSaveConditions(endpoint._id)}
+                                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs"
+                                  >
+                                    Save Conditions
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelEditConditions(endpoint._id)}
+                                    className="px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              // View mode
+                              <div>
+                                {endpoint.conditions && endpoint.conditions.length > 0 ? (
+                                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                                    {endpoint.conditions.map((condition, index) => (
+                                      <div key={index} className="flex items-center space-x-2 text-xs">
+                                        <span className="font-mono text-white">{condition.field}</span>
+                                        <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded">
+                                          {condition.operator}
+                                        </span>
+                                        <span className="font-mono text-white">{String(condition.value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-500">No conditions defined</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

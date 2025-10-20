@@ -122,7 +122,7 @@ export default function Header() {
               <div className="flex-shrink-0">
                 <Link href="/" className="text-xl font-bold text-white">
                   <span className="bg-gradient-to-r from-pink-500 to-green-300 bg-clip-text text-transparent">
-                   Fake API Generator
+                  Dev Tools Hub
                   </span>
                 </Link>
               </div>
@@ -137,7 +137,7 @@ export default function Header() {
                         : 'text-slate-300 hover:text-yellow-400 hover:bg-slate-800'
                     }`}
                   >
-                    API Projects
+                    Mock Server
                   </Link>
                   <Link
                     href="/tools"

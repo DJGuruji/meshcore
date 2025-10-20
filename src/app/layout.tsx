@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fake API Generator",
-  description: "Generate fake REST APIs with custom endpoints and responses",
+  title: "Dev Tools Hub",
+  description: "Create Mock server and use api tester",
 };
 
 export default function RootLayout({

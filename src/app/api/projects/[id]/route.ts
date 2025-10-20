@@ -99,6 +99,12 @@ export async function PUT(
             (cleanEndpoint._id.startsWith('temp_') || !mongoose.Types.ObjectId.isValid(cleanEndpoint._id))) {
           delete cleanEndpoint._id;
         }
+        
+        // Handle dataSource field - remove if empty string
+        if (cleanEndpoint.dataSource === '') {
+          delete cleanEndpoint.dataSource;
+        }
+        
         return cleanEndpoint;
       });
     }
