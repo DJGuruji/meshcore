@@ -116,11 +116,12 @@ export default function ProjectPanel({
           
             <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="p-2 bg-black text-white font-bold text-md rounded-md hover:bg-slate-900 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+          className="flex items-center space-x-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-800 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           data-aos="zoom-in"
           data-aos-delay="300"
         >
-          Create Project
+          <PlusIcon className="h-4 w-4" />
+          <span>Create</span>
         </button>
           </div>
 
@@ -135,7 +136,7 @@ export default function ProjectPanel({
                 placeholder="Search servers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
+                className="w-full pl-10 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 text-sm"
               />
               {searchQuery && (
                 <button
@@ -158,7 +159,7 @@ export default function ProjectPanel({
                   placeholder="My API Server"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 text-sm"
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
                 />
               </div>
@@ -169,7 +170,7 @@ export default function ProjectPanel({
                   placeholder="/api/v1"
                   value={newProjectBaseUrl}
                   onChange={(e) => setNewProjectBaseUrl(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 text-sm"
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
                 />
               </div>
@@ -177,9 +178,9 @@ export default function ProjectPanel({
                 <button
                   onClick={handleCreateProject}
                   disabled={!newProjectName.trim()}
-                  className={`flex-1 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                  className={`flex-1 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
                     newProjectName.trim()
-                      ? 'bg-yellow-600 hover:bg-yellow-700 text-black'
+                      ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-black shadow-md'
                       : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                   }`}
                 >
@@ -191,7 +192,7 @@ export default function ProjectPanel({
                     setNewProjectName('');
                     setNewProjectBaseUrl('/api/v1');
                   }}
-                  className="flex-1 px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors text-sm"
+                  className="flex-1 px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 text-sm shadow-md"
                 >
                   Cancel
                 </button>
@@ -222,7 +223,7 @@ export default function ProjectPanel({
               {!searchQuery && (
                 <button
                   onClick={() => setShowCreateForm(true)}
-                  className="mt-3 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-black rounded-lg transition-colors text-sm font-medium"
+                  className="mt-3 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-black rounded-lg transition-all duration-200 shadow-md font-medium"
                 >
                   Create Server
                 </button>

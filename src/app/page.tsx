@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Toaster, toast } from 'react-hot-toast';
+import Link from 'next/link';
 
 import ProjectPanel from '@/components/ProjectPanel';
 import ProjectDetail from '@/components/ProjectDetail';
@@ -46,7 +47,7 @@ export default function Home() {
   // Redirect to sign in if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+      // We'll handle this in the render function now
     }
   }, [status, router]);
 
@@ -158,8 +159,69 @@ export default function Home() {
     }
   };
 
-  // Show loading state or redirect to login
-  if (status === 'loading' || status === 'unauthenticated') {
+  // Show hero section for unauthenticated users
+  if (status === 'unauthenticated') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-black to-slate-900 p-4">
+        <div className="max-w-4xl w-full text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
+            Dev Tools Hub
+          </h1>
+          <p className="text-xl md:text-2xl text-slate-300 mb-10 max-w-2xl mx-auto">
+            Create mock servers, test APIs, and boost your development workflow with our powerful suite of tools.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
+              <div className="text-yellow-400 text-3xl mb-3">⚡</div>
+              <h3 className="text-lg font-semibold text-white mb-2">Mock Server</h3>
+              <p className="text-slate-400">
+                Create realistic mock APIs in seconds without writing any backend code.
+              </p>
+            </div>
+            
+            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
+              <div className="text-yellow-400 text-3xl mb-3">🔍</div>
+              <h3 className="text-lg font-semibold text-white mb-2">API Tester</h3>
+              <p className="text-slate-400">
+                Test any REST API endpoint with our intuitive interface and detailed response analysis.
+              </p>
+            </div>
+            
+            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
+              <div className="text-yellow-400 text-3xl mb-3">🛠️</div>
+              <h3 className="text-lg font-semibold text-white mb-2">Dev Tools</h3>
+              <p className="text-slate-400">
+                Essential utilities for developers including JSON validators, JWT decoders, and more.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link 
+              href="/auth/signin" 
+              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              Get Started
+            </Link>
+            <Link 
+              href="/auth/register" 
+              className="px-8 py-3 bg-transparent border-2 border-yellow-400 text-yellow-400 font-medium rounded-lg hover:bg-yellow-400/10 transition-all duration-300"
+            >
+              Create Account
+            </Link>
+          </div>
+          
+          <div className="mt-16 text-slate-500 text-sm">
+            <p>Trusted by developers worldwide • 100% Free</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (status === 'loading') {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-pulse text-slate-400">Loading...</div>
