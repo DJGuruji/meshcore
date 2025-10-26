@@ -165,7 +165,7 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-black to-slate-900 p-4">
         <div className="max-w-4xl w-full text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
-            Dev Tools Hub
+            Sadasya
           </h1>
           <p className="text-xl md:text-2xl text-slate-300 mb-10 max-w-2xl mx-auto">
             Create mock servers, test APIs, and boost your development workflow with our powerful suite of tools.

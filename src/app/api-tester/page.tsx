@@ -1739,7 +1739,9 @@ pm.test("Response has data", function() {
               <>
                 {responseTab === 'body' && (
                   <pre className="text-sm text-slate-300 font-mono whitespace-pre-wrap">
-                    {JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
+                    {typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                      ? (currentTab?.response?.body || currentTab?.response)
+                      : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
                   </pre>
                 )}
 

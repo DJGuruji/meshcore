@@ -130,7 +130,7 @@ export default function Header() {
               <div className="flex-shrink-0">
                 <Link href="/" className="text-xl font-bold text-white">
                   <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  Dev Tools Hub
+                  Sadasya
                   </span>
                 </Link>
               </div>
@@ -242,7 +242,7 @@ export default function Header() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  Dev Tools Hub
+                  Sadasya
                 </span>
               </Link>
               <button
