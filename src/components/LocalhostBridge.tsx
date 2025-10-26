@@ -172,12 +172,9 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
             'If you see this error, the proxy may have failed.\n\n' +
             'Alternative solutions:\n' +
             '1. Setup HTTPS on localhost (recommended):\n' +
-            '   - Install mkcert: npm install -g mkcert\n' +
-            '   - Generate cert: mkcert localhost\n' +
-            '   - Use HTTPS in your localhost server\n\n' +
+            '   - Use mkcert or ngrok\n' +
             '2. Run app locally:\n' +
-            '   - npm run dev\n' +
-            '   - Access: http://localhost:3002';
+            '   - Add sadasya.vercel.app to allowed origins when testing localhost API';
         }
 
         // Send error response back to relay

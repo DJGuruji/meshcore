@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dev Tools Hub",
-  description: "Create Mock server and use api tester",
+  title: "Sadasya API Tester and Mock Server",
+  description: "Create Mock server and use api tester with Sadasya",
 };
 
 export default function RootLayout({
