@@ -107,8 +107,9 @@ export default function Header() {
   // Navigation items
   const navItems = [
     { name: 'Mock Server', href: '/' },
-    { name: 'Dev Tools', href: '/tools' },
+    // { name: 'Dev Tools', href: '/tools' },
     { name: 'API Tester', href: '/api-tester' },
+    { name: 'GraphQL Tester', href: '/graphql-tester' },
   ];
 
   return (

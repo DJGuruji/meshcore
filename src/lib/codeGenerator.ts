@@ -16,6 +16,8 @@ interface Request {
     basic?: { username: string; password: string };
     apiKey?: { key: string; value: string; addTo: string };
   };
+  graphqlQuery?: string;
+  graphqlVariables?: string;
 }
 
 export class CodeGenerator {
@@ -44,7 +46,15 @@ export class CodeGenerator {
     }
 
     // Add body
-    if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
+    if (request.graphqlQuery) {
+      // GraphQL request
+      const graphqlBody = {
+        query: request.graphqlQuery,
+        variables: request.graphqlVariables ? JSON.parse(request.graphqlVariables) : {}
+      };
+      curl += ` \\\n  -H 'Content-Type: application/json'`;
+      curl += ` \\\n  -d '${JSON.stringify(graphqlBody).replace(/'/g, "'\\''")}'`;
+    } else if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
       if (request.body.type === 'json' && request.body.json) {
         curl += ` \\\n  -H 'Content-Type: application/json'`;
         curl += ` \\\n  -d '${request.body.json.replace(/'/g, "'\\''")}'`;
@@ -83,7 +93,17 @@ export class CodeGenerator {
       code += `,\n  headers: ${JSON.stringify(headers, null, 2)}`;
     }
 
-    if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
+    if (request.graphqlQuery) {
+      // GraphQL request
+      const graphqlBody = {
+        query: request.graphqlQuery,
+        variables: request.graphqlVariables ? JSON.parse(request.graphqlVariables) : {}
+      };
+      if (!headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+      code += `,\n  body: JSON.stringify(${JSON.stringify(graphqlBody, null, 2)})`;
+    } else if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
       if (request.body.type === 'json' && request.body.json) {
         if (!headers['Content-Type']) {
           headers['Content-Type'] = 'application/json';
@@ -130,10 +150,17 @@ export class CodeGenerator {
     }
 
     // Body
-    if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
-      if (request.body.type === 'json' && request.body.json) {
+    if (request.graphqlQuery) {
+      // GraphQL request
+      const graphqlBody = {
+        query: request.graphqlQuery,
+        variables: request.graphqlVariables ? JSON.parse(request.graphqlVariables) : {}
+      };
+      code += `data = ${JSON.stringify(graphqlBody, null, 2)}\n\n`;
+    } else if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
+      if (request.body && request.body.type === 'json' && request.body.json) {
         code += `data = ${request.body.json}\n\n`;
-      } else if (request.body.type === 'raw' && request.body.raw) {
+      } else if (request.body && request.body.type === 'raw' && request.body.raw) {
         code += `data = """${request.body.raw}"""\n\n`;
       }
     }
@@ -143,8 +170,10 @@ export class CodeGenerator {
     if (headers.length > 0 || request.auth) {
       code += `, headers=headers`;
     }
-    if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
-      if (request.body.type === 'json') {
+    if (request.graphqlQuery || (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method))) {
+      if (request.graphqlQuery) {
+        code += `, json=data`;
+      } else if (request.body && request.body.type === 'json') {
         code += `, json=data`;
       } else {
         code += `, data=data`;
@@ -188,10 +217,17 @@ export class CodeGenerator {
     }
 
     // Body
-    if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
-      if (request.body.type === 'json' && request.body.json) {
+    if (request.graphqlQuery) {
+      // GraphQL request
+      const graphqlBody = {
+        query: request.graphqlQuery,
+        variables: request.graphqlVariables ? JSON.parse(request.graphqlVariables) : {}
+      };
+      code += `,\n  data: ${JSON.stringify(graphqlBody, null, 2)}`;
+    } else if (request.body && request.body.type !== 'none' && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
+      if (request.body && request.body.type === 'json' && request.body.json) {
         code += `,\n  data: ${request.body.json}`;
-      } else if (request.body.type === 'raw' && request.body.raw) {
+      } else if (request.body && request.body.type === 'raw' && request.body.raw) {
         code += `,\n  data: '${request.body.raw.replace(/'/g, "\\'")}'`;
       }
     }
