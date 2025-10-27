@@ -311,3 +311,97 @@ const MockServerDataSchema = new mongoose.Schema({
 });
 
 export const MockServerData = mongoose.models.MockServerData || mongoose.model('MockServerData', MockServerDataSchema);
+
+// GraphQL Tester Collection Schema
+const GraphQLTesterCollectionSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Collection name is required'],
+  },
+  description: String,
+  requests: [{
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+    name: { type: String, required: true },
+    query: { type: String, required: true },
+    variables: String,
+    url: { type: String, required: true },
+    headers: [{
+      key: String,
+      value: String,
+      enabled: { type: Boolean, default: true }
+    }],
+    auth: {
+      type: { type: String, enum: ['none', 'basic', 'bearer'], default: 'none' },
+      bearerToken: String,
+      basicAuth: {
+        username: String,
+        password: String
+      }
+    },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+  }],
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// GraphQL Tester Environment Schema
+const GraphQLTesterEnvironmentSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Environment name is required'],
+  },
+  variables: [{
+    key: String,
+    value: String,
+    enabled: { type: Boolean, default: true },
+    description: String
+  }],
+  isGlobal: {
+    type: Boolean,
+    default: false
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// GraphQL Tester Request History Schema
+const GraphQLTesterHistorySchema = new mongoose.Schema({
+  query: String,
+  variables: String,
+  url: String,
+  headers: [{
+    key: String,
+    value: String,
+    enabled: Boolean
+  }],
+  auth: {
+    type: { type: String, enum: ['none', 'basic', 'bearer'], default: 'none' },
+    bearerToken: String,
+    basicAuth: {
+      username: String,
+      password: String
+    }
+  },
+  response: mongoose.Schema.Types.Mixed,
+  timestamp: { type: Date, default: Date.now },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
+});
+
+export const GraphQLTesterCollection = mongoose.models.GraphQLTesterCollection || mongoose.model('GraphQLTesterCollection', GraphQLTesterCollectionSchema);
+export const GraphQLTesterEnvironment = mongoose.models.GraphQLTesterEnvironment || mongoose.model('GraphQLTesterEnvironment', GraphQLTesterEnvironmentSchema);
+export const GraphQLTesterHistory = mongoose.models.GraphQLTesterHistory || mongoose.model('GraphQLTesterHistory', GraphQLTesterHistorySchema);

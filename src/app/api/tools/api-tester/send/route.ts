@@ -20,7 +20,9 @@ export async function POST(request: NextRequest) {
       headers = [],
       params = [],
       requestBody,
-      auth
+      auth,
+      graphqlQuery,
+      graphqlVariables
     } = body;
 
     if (!url) {
@@ -86,27 +88,39 @@ export async function POST(request: NextRequest) {
       };
 
       // Add body for non-GET requests
-      if (method !== 'GET' && method !== 'HEAD' && requestBody) {
-        if (requestBody.type === 'json' && requestBody.json) {
-          requestOptions.body = requestBody.json;
+      if (method !== 'GET' && method !== 'HEAD') {
+        // Check if this is a GraphQL request
+        if (graphqlQuery) {
+          // GraphQL request
+          requestOptions.body = JSON.stringify({
+            query: graphqlQuery,
+            variables: graphqlVariables ? JSON.parse(graphqlVariables) : {}
+          });
           if (!requestHeaders['Content-Type']) {
             requestHeaders['Content-Type'] = 'application/json';
           }
-        } else if (requestBody.type === 'raw' && requestBody.raw) {
-          requestOptions.body = requestBody.raw;
-        } else if (requestBody.type === 'form-data' && requestBody.formData) {
-          const formData = new FormData();
-          requestBody.formData.filter((f: any) => f.enabled).forEach((f: any) => {
-            formData.append(f.key, f.value);
-          });
-          requestOptions.body = formData as any;
-        } else if (requestBody.type === 'x-www-form-urlencoded' && requestBody.formData) {
-          const urlEncoded = new URLSearchParams();
-          requestBody.formData.filter((f: any) => f.enabled).forEach((f: any) => {
-            urlEncoded.append(f.key, f.value);
-          });
-          requestOptions.body = urlEncoded;
-          requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+        } else if (requestBody) {
+          if (requestBody.type === 'json' && requestBody.json) {
+            requestOptions.body = requestBody.json;
+            if (!requestHeaders['Content-Type']) {
+              requestHeaders['Content-Type'] = 'application/json';
+            }
+          } else if (requestBody.type === 'raw' && requestBody.raw) {
+            requestOptions.body = requestBody.raw;
+          } else if (requestBody.type === 'form-data' && requestBody.formData) {
+            const formData = new FormData();
+            requestBody.formData.filter((f: any) => f.enabled).forEach((f: any) => {
+              formData.append(f.key, f.value);
+            });
+            requestOptions.body = formData as any;
+          } else if (requestBody.type === 'x-www-form-urlencoded' && requestBody.formData) {
+            const urlEncoded = new URLSearchParams();
+            requestBody.formData.filter((f: any) => f.enabled).forEach((f: any) => {
+              urlEncoded.append(f.key, f.value);
+            });
+            requestOptions.body = urlEncoded;
+            requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+          }
         }
       }
 
@@ -157,7 +171,10 @@ export async function POST(request: NextRequest) {
               headers: headers.filter((h: any) => h.enabled),
               params: params.filter((p: any) => p.enabled),
               body: requestBody,
-              auth: auth
+              auth: auth,
+              // Add GraphQL data to history if present
+              graphqlQuery: graphqlQuery,
+              graphqlVariables: graphqlVariables
             }
           });
         }

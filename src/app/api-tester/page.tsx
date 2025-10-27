@@ -432,6 +432,17 @@ export default function ApiTesterPage() {
     }
   };
 
+  const clearHistory = async () => {
+    try {
+      await axios.delete('/api/tools/api-tester/history');
+      setHistory([]);
+      toast.success('History cleared');
+    } catch (error) {
+      console.error('Failed to clear history', error);
+      toast.error('Failed to clear history');
+    }
+  };
+
   const fetchCollections = async () => {
     try {
       const res = await axios.get('/api/tools/api-tester/collections');
@@ -1006,7 +1017,8 @@ export default function ApiTesterPage() {
           headers: currentRequest.headers.filter(h => h.enabled),
           params: currentRequest.params.filter(p => p.enabled),
           body: currentRequest.body,
-          auth: currentRequest.auth
+          auth: currentRequest.auth,
+          // Removed GraphQL data
         }
       });
       setGeneratedCode(res.data.code);
@@ -1408,6 +1420,13 @@ export default function ApiTesterPage() {
               />
               
               <button
+                onClick={saveRequestToCollection}
+                className="px-4 py-2 bg-slate-700 text-white rounded font-semibold hover:bg-slate-600 transition-colors"
+              >
+                Save
+              </button>
+              
+              <button
                 onClick={sendRequest}
                 disabled={isLoading}
                 className="px-6 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 transition-colors disabled:opacity-50 flex items-center gap-2"
@@ -1727,6 +1746,62 @@ pm.test("Response has data", function() {
                   )}
                 </button>
               ))}
+              {/* Response Action Buttons */}
+              {currentTab?.response && (
+                <div className="flex gap-1 ml-auto items-center">
+                  {/* Copy Button */}
+                  <button
+                    onClick={() => {
+                      const responseText = typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                        ? (currentTab?.response?.body || currentTab?.response)
+                        : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2);
+                      navigator.clipboard.writeText(responseText);
+                      toast.success('Response copied to clipboard');
+                    }}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
+                    title="Copy response"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                  
+                  {/* Download Button */}
+                  <button
+                    onClick={() => {
+                      const responseText = typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                        ? (currentTab?.response?.body || currentTab?.response)
+                        : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2);
+                      const blob = new Blob([responseText], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `api-response-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
+                    title="Download response"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
+                  
+                  {/* Filter Button */}
+                  <button
+                    onClick={() => toast.success('Filter feature coming soon')}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
+                    title="Filter response"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1828,72 +1903,46 @@ pm.test("Response has data", function() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Additional Info */}
-                    <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700">
-                      <div className="text-xs font-semibold text-slate-300 mb-2">Request Details</div>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Method:</span>
-                          <span className="text-slate-300 font-mono">{currentRequest.method}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">URL:</span>
-                          <span className="text-slate-300 font-mono truncate max-w-xs" title={currentRequest.url}>
-                            {currentRequest.url}
-                          </span>
-                        </div>
-                        {selectedEnvironment && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Environment:</span>
-                            <span className="text-yellow-400">{selectedEnvironment.name}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 )}
 
                 {responseTab === 'tests' && (
-                  <div className="space-y-2">
-                    {(currentTab?.testResults || []).length === 0 ? (
-                      <div className="text-slate-500 text-sm">No tests run. Add test scripts in the Tests tab.</div>
-                    ) : (
-                      (currentTab?.testResults || []).map((test, idx) => (
-                        <div key={idx} className={`p-3 rounded border ${
-                          test.passed 
-                            ? 'bg-green-900/20 border-green-500/30' 
-                            : 'bg-red-900/20 border-red-500/30'
-                        }`}>
-                          <div className="flex items-center gap-2">
-                            <span className={test.passed ? 'text-green-400' : 'text-red-400'}>
-                              {test.passed ? '✓' : '✗'}
-                            </span>
-                            <span className="text-sm text-slate-200">{test.name}</span>
+                  <div className="space-y-4">
+                    {currentTab?.testResults?.map((testResult, index) => (
+                      <div key={index} className={`p-4 rounded-lg border-2 ${
+                        testResult.passed ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`text-3xl font-bold ${
+                            testResult.passed ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {testResult.passed ? '✓' : '✗'}
                           </div>
-                          {test.error && (
-                            <div className="mt-2 text-xs text-red-300 font-mono">{test.error}</div>
-                          )}
+                          <div className="flex-1">
+                            <div className={`text-sm font-semibold mb-1 ${
+                              testResult.passed ? 'text-green-300' : 'text-red-300'
+                            }`}>
+                              {testResult.name}
+                            </div>
+                            <div className="text-xs italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
+                              {testResult.error}
+                            </div>
+                          </div>
                         </div>
-                      ))
-                    )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
                 {responseTab === 'console' && (
-                  <div className="space-y-1">
-                    {(currentTab?.consoleLogs || []).length === 0 ? (
-                      <div className="text-slate-500 text-sm">No console output</div>
-                    ) : (
-                      (currentTab?.consoleLogs || []).map((log, idx) => (
-                        <div key={idx} className="text-xs font-mono">
-                          <span className="text-slate-500">[{log.type}]</span>{' '}
-                          <span className="text-slate-300">
-                            {typeof log.message === 'object' ? JSON.stringify(log.message) : String(log.message)}
-                          </span>
-                        </div>
-                      ))
-                    )}
+                  <div className="space-y-4">
+                    {currentTab?.consoleLogs?.map((log, index) => (
+                      <div key={index} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+                        <pre className="text-sm text-slate-300 font-mono whitespace-pre-wrap">
+                          {log}
+                        </pre>
+                      </div>
+                    ))}
                   </div>
                 )}
               </>
@@ -2078,10 +2127,9 @@ pm.test("Response has data", function() {
           {history.length > 0 && (
             <div className="p-4 border-t border-slate-700">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (confirm('Clear all history?')) {
-                    setHistory([]);
-                    toast.success('History cleared');
+                    await clearHistory();
                   }
                 }}
                 className="w-full px-4 py-2 bg-red-900/20 text-red-400 rounded hover:bg-red-900/30 transition-colors text-sm"
