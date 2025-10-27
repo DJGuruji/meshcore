@@ -8,17 +8,20 @@
     "build:no-types": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
-    "migrate": "node src/scripts/migrate-items.js"
+    "migrate": "node src/scripts/migrate-items.js",
+    "audit": "npm audit",
+    "audit-fix": "npm audit fix",
+    "security-scan": "npx osv-scanner@latest scan ."
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
     "@types/nodemailer": "^6.4.17",
     "aos": "^2.3.4",
-    "axios": "^1.6.7",
+    "axios": "^1.7.4",
     "bcrypt": "^6.0.0",
     "crypto": "^1.0.1",
-    "mongoose": "^8.2.0",
+    "mongoose": "^8.5.2",
     "next": "15.3.5",
     "next-auth": "^4.24.11",
     "nodemailer": "^6.10.1",
