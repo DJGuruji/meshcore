@@ -11,8 +11,7 @@ import {
   PlayIcon,
   FolderIcon
 } from '@heroicons/react/24/outline';
-import { useLocalhostRelay } from '@/hooks/useLocalhostRelay';
-import LocalhostBridge from '@/components/LocalhostBridge';
+
 
 interface Header {
   key: string;
@@ -410,8 +409,7 @@ export default function ApiTesterPage() {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
 
-  // WebSocket Localhost Relay
-  const localhostRelay = useLocalhostRelay();
+
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -502,47 +500,12 @@ export default function ApiTesterPage() {
       const finalUrl = replaceVariables(currentRequest.url, preRequestVariables);
       let res;
       
-      // Check if this is a localhost URL
-      const isLocalhost = isLocalhostUrl(finalUrl);
-      const isProductionUI = typeof window !== 'undefined' && 
-                            !window.location.hostname.includes('localhost') &&
-                            !window.location.hostname.includes('127.0.0.1');
-      
       // Decision logic:
-      // 1. If localhost URL + production UI + relay ready → Use WebSocket relay
-      // 2. If localhost URL + development UI → Use client-side fetch
-      // 3. If HTTPS URL → Use server-side proxy
+      // 1. If localhost URL → Use client-side fetch (even in production UI)
+      // 2. If HTTPS URL → Use server-side proxy
       
-      if (isLocalhost && isProductionUI && localhostRelay.isReady) {
-        // Production + Localhost URL → Use WebSocket Relay!
-        toast.loading('Connecting to your local API via secure relay...', { duration: 2000 });
-        
-        try {
-          const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          const relayResponse = await localhostRelay.executeRequest({
-            requestId,
-            method: currentRequest.method,
-            url: finalUrl,
-            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
-            params: currentRequest.params,
-            body: currentRequest.body,
-            auth: currentRequest.auth
-          });
-          
-          res = { data: relayResponse };
-          toast.success('✅ Localhost request executed via relay!');
-        } catch (error: any) {
-          throw error;
-        }
-      } else if (isLocalhost && isProductionUI && !localhostRelay.isReady) {
-        // Localhost + Production but relay not ready → Show helpful message
-        throw new Error(
-          '🔌 WebSocket relay is connecting... Please wait a moment and try again.\n\n' +
-          'Or run this app locally for instant localhost testing:\n' +
-          '→ npm run dev'
-        );
-      } else if (isClientSideUrl(finalUrl)) {
-        // Client-side: Direct browser request (for localhost in dev, http, local IPs)
+      if (isClientSideUrl(finalUrl)) {
+        // Client-side: Direct browser request (for localhost, http, local IPs)
         res = await sendClientSideRequest(finalUrl);
       } else {
         // Server-side: Proxy through Next.js API (for https production APIs)
@@ -1143,32 +1106,7 @@ export default function ApiTesterPage() {
               </button>
             </div>
             
-            {/* WebSocket Relay Status */}
-            {typeof window !== 'undefined' && 
-             !window.location.hostname.includes('localhost') && 
-             !window.location.hostname.includes('127.0.0.1') && (
-              <div className="flex items-center gap-2 text-xs">
-                <div className={`flex items-center gap-1 px-2 py-1 rounded ${
-                  localhostRelay.status === 'ready' ? 'bg-green-900/30 text-green-400' :
-                  localhostRelay.status === 'connecting' ? 'bg-yellow-900/30 text-yellow-400' :
-                  localhostRelay.status === 'error' ? 'bg-red-900/30 text-red-400' :
-                  'bg-slate-800 text-slate-400'
-                }`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${
-                    localhostRelay.status === 'ready' ? 'bg-green-400 animate-pulse' :
-                    localhostRelay.status === 'connecting' ? 'bg-yellow-400 animate-pulse' :
-                    localhostRelay.status === 'error' ? 'bg-red-400' :
-                    'bg-slate-500'
-                  }`}></div>
-                  <span className="font-medium">
-                    {localhostRelay.status === 'ready' ? 'Localhost Relay Ready' :
-                     localhostRelay.status === 'connecting' ? 'Connecting...' :
-                     localhostRelay.status === 'error' ? 'Relay Error' :
-                     'Relay Offline'}
-                  </span>
-                </div>
-              </div>
-            )}
+
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -2183,11 +2121,7 @@ pm.test("Response has data", function() {
         />
       )}
 
-      {/* Localhost Bridge - Listens for WebSocket commands and executes local fetches */}
-      <LocalhostBridge 
-        socket={localhostRelay.socket} 
-        isReady={localhostRelay.isReady} 
-      />
+
     </div>
   );
 }
