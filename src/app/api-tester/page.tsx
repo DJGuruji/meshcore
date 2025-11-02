@@ -11,6 +11,8 @@ import {
   PlayIcon,
   FolderIcon
 } from '@heroicons/react/24/outline';
+import { useLocalhostRelay } from '@/hooks/useLocalhostRelay';
+import LocalhostBridge from '@/components/LocalhostBridge';
 
 
 interface Header {
@@ -308,6 +310,7 @@ function SaveRequestModal({ onClose, onSave, collections }: {
 export default function ApiTesterPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { status: relayStatus, isReady, executeRequest, socket } = useLocalhostRelay();
 
   const [collections, setCollections] = useState<Collection[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
@@ -724,11 +727,13 @@ export default function ApiTesterPage() {
         }
       }
 
-      // Build request options
+      // Build request options - For localhost requests, we omit mode to bypass CORS restrictions
+      // For non-localhost URLs that support CORS, we would add mode: 'cors'
       const requestOptions: RequestInit = {
         method: currentRequest.method.toUpperCase(),
         headers: requestHeaders,
-        mode: 'cors', // Enable CORS for client-side requests
+        // IMPORTANT: No mode specified to allow localhost requests to bypass CORS
+        // Browser will use 'cors' mode automatically when needed
       };
 
       // Add body for non-GET requests
@@ -1181,7 +1186,7 @@ export default function ApiTesterPage() {
                           className="text-blue-400 hover:text-blue-300 p-1"
                           title="Edit collection"
                         >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
@@ -1193,7 +1198,7 @@ export default function ApiTesterPage() {
                           className="text-red-400 hover:text-red-300 p-1"
                           title="Delete collection"
                         >
-                          <TrashIcon className="w-3 h-3" />
+                          <TrashIcon className="w-4 h-4" />
                         </button>
                       </div>
                       {selectedCollection?._id === collection._id && (
@@ -1229,6 +1234,19 @@ export default function ApiTesterPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="p-4 border-t border-slate-700">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-slate-300">Environments</h3>
+                <button 
+                  onClick={createEnvironment} 
+                  className="text-yellow-400 hover:text-yellow-300"
+                  title="Create new environment"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="p-4 border-t border-slate-700">
@@ -2160,7 +2178,7 @@ pm.test("Response has data", function() {
         />
       )}
 
-
+      <LocalhostBridge socket={socket} isReady={isReady} />
     </div>
   );
 }
