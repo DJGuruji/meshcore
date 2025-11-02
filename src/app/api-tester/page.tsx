@@ -651,6 +651,45 @@ export default function ApiTesterPage() {
     const startTime = Date.now();
     
     try {
+      // Check for mixed content scenario (HTTPS page trying to access HTTP localhost)
+      const isLocalhostUrl = (url: string): boolean => {
+        try {
+          const urlLower = url.toLowerCase();
+          if (urlLower.includes('localhost')) return true;
+          if (urlLower.includes('127.0.0.1')) return true;
+          if (urlLower.includes('::1')) return true;
+          
+          const urlObj = new URL(url);
+          const hostname = urlObj.hostname;
+          
+          if (hostname.match(/^192\.168\./) || 
+              hostname.match(/^10\./) || 
+              hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)) {
+            return true;
+          }
+          return false;
+        } catch (e) {
+          return false;
+        }
+      };
+
+      // Only show warning for localhost URLs, not all HTTP URLs
+      if (typeof window !== 'undefined' && 
+          window.location.protocol === 'https:' && 
+          url.toLowerCase().startsWith('http://') &&
+          isLocalhostUrl(url)) {
+        console.warn(
+          'Mixed Content Warning: HTTPS page accessing HTTP localhost\n\n' +
+          'To test localhost APIs from production:\n' +
+          '1. Setup HTTPS on localhost (recommended):\n' +
+          '   - Use mkcert or ngrok\n' +
+          '2. Run app locally:\n' +
+          '   - Add sadasya.vercel.app to allowed origins when testing localhost API\n' +
+          '3. Use the server-side proxy (change URL to https://your-api.com)'
+        );
+        // Don't throw error - let the browser handle it and show proper error message
+      }
+
       // Build URL with query parameters
       const finalUrl = new URL(url);
       currentRequest.params.filter(p => p.enabled).forEach(p => {
@@ -689,7 +728,7 @@ export default function ApiTesterPage() {
       const requestOptions: RequestInit = {
         method: currentRequest.method.toUpperCase(),
         headers: requestHeaders,
-        // Remove mode: 'cors' to allow localhost requests without CORS restrictions
+        mode: 'cors', // Enable CORS for client-side requests
       };
 
       // Add body for non-GET requests
