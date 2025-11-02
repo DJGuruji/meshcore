@@ -111,7 +111,6 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           method: request.method.toUpperCase(),
           headers: requestHeaders,
           body: requestBody,
-          mode: 'cors',
         });
 
         const endTime = Date.now();
@@ -161,7 +160,8 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
         // Check if this is a mixed content error (HTTPS -> HTTP)
         const isMixedContent = error.message?.includes('NetworkError') || 
                               error.message?.includes('fetch') ||
-                              error.message?.includes('Mixed Content');
+                              error.message?.includes('Mixed Content') ||
+                              (error instanceof TypeError && error.message.includes('fetch'));
         
         let errorMessage = error.message || 'Failed to execute local fetch';
         
