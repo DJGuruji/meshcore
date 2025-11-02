@@ -14,7 +14,6 @@ import {
 import { useLocalhostRelay } from '@/hooks/useLocalhostRelay';
 import LocalhostBridge from '@/components/LocalhostBridge';
 
-
 interface Header {
   key: string;
   value: string;
@@ -310,7 +309,6 @@ function SaveRequestModal({ onClose, onSave, collections }: {
 export default function ApiTesterPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { status: relayStatus, isReady, executeRequest, socket } = useLocalhostRelay();
 
   const [collections, setCollections] = useState<Collection[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
@@ -412,7 +410,8 @@ export default function ApiTesterPage() {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
 
-
+  // WebSocket Localhost Relay
+  const localhostRelay = useLocalhostRelay();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -503,12 +502,47 @@ export default function ApiTesterPage() {
       const finalUrl = replaceVariables(currentRequest.url, preRequestVariables);
       let res;
       
-      // Decision logic:
-      // 1. If localhost URL → Use client-side fetch (even in production UI)
-      // 2. If HTTPS URL → Use server-side proxy
+      // Check if this is a localhost URL
+      const isLocalhost = isLocalhostUrl(finalUrl);
+      const isProductionUI = typeof window !== 'undefined' && 
+                            !window.location.hostname.includes('localhost') &&
+                            !window.location.hostname.includes('127.0.0.1');
       
-      if (isClientSideUrl(finalUrl)) {
-        // Client-side: Direct browser request (for localhost, http, local IPs)
+      // Decision logic:
+      // 1. If localhost URL + production UI + relay ready → Use WebSocket relay
+      // 2. If localhost URL + development UI → Use client-side fetch
+      // 3. If HTTPS URL → Use server-side proxy
+      
+      if (isLocalhost && isProductionUI && localhostRelay.isReady) {
+        // Production + Localhost URL → Use WebSocket Relay!
+        toast.loading('Connecting to your local API via secure relay...', { duration: 2000 });
+        
+        try {
+          const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const relayResponse = await localhostRelay.executeRequest({
+            requestId,
+            method: currentRequest.method,
+            url: finalUrl,
+            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+            params: currentRequest.params,
+            body: currentRequest.body,
+            auth: currentRequest.auth
+          });
+          
+          res = { data: relayResponse };
+          toast.success('✅ Localhost request executed via relay!');
+        } catch (error: any) {
+          throw error;
+        }
+      } else if (isLocalhost && isProductionUI && !localhostRelay.isReady) {
+        // Localhost + Production but relay not ready → Show helpful message
+        throw new Error(
+          '🔌 WebSocket relay is connecting... Please wait a moment and try again.\n\n' +
+          'Or run this app locally for instant localhost testing:\n' +
+          '→ npm run dev'
+        );
+      } else if (isClientSideUrl(finalUrl)) {
+        // Client-side: Direct browser request (for localhost in dev, http, local IPs)
         res = await sendClientSideRequest(finalUrl);
       } else {
         // Server-side: Proxy through Next.js API (for https production APIs)
@@ -654,45 +688,6 @@ export default function ApiTesterPage() {
     const startTime = Date.now();
     
     try {
-      // Check for mixed content scenario (HTTPS page trying to access HTTP localhost)
-      const isLocalhostUrl = (url: string): boolean => {
-        try {
-          const urlLower = url.toLowerCase();
-          if (urlLower.includes('localhost')) return true;
-          if (urlLower.includes('127.0.0.1')) return true;
-          if (urlLower.includes('::1')) return true;
-          
-          const urlObj = new URL(url);
-          const hostname = urlObj.hostname;
-          
-          if (hostname.match(/^192\.168\./) || 
-              hostname.match(/^10\./) || 
-              hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)) {
-            return true;
-          }
-          return false;
-        } catch (e) {
-          return false;
-        }
-      };
-
-      // Only show warning for localhost URLs, not all HTTP URLs
-      if (typeof window !== 'undefined' && 
-          window.location.protocol === 'https:' && 
-          url.toLowerCase().startsWith('http://') &&
-          isLocalhostUrl(url)) {
-        console.warn(
-          'Mixed Content Warning: HTTPS page accessing HTTP localhost\n\n' +
-          'To test localhost APIs from production:\n' +
-          '1. Setup HTTPS on localhost (recommended):\n' +
-          '   - Use mkcert or ngrok\n' +
-          '2. Run app locally:\n' +
-          '   - Add sadasya.vercel.app to allowed origins when testing localhost API\n' +
-          '3. Use the server-side proxy (change URL to https://your-api.com)'
-        );
-        // Don't throw error - let the browser handle it and show proper error message
-      }
-
       // Build URL with query parameters
       const finalUrl = new URL(url);
       currentRequest.params.filter(p => p.enabled).forEach(p => {
@@ -727,13 +722,11 @@ export default function ApiTesterPage() {
         }
       }
 
-      // Build request options - For localhost requests, we omit mode to bypass CORS restrictions
-      // For non-localhost URLs that support CORS, we would add mode: 'cors'
+      // Build request options
       const requestOptions: RequestInit = {
         method: currentRequest.method.toUpperCase(),
         headers: requestHeaders,
-        // IMPORTANT: No mode specified to allow localhost requests to bypass CORS
-        // Browser will use 'cors' mode automatically when needed
+        // Remove mode: 'cors' to allow localhost requests without CORS restrictions
       };
 
       // Add body for non-GET requests
@@ -1150,7 +1143,32 @@ export default function ApiTesterPage() {
               </button>
             </div>
             
-
+            {/* WebSocket Relay Status */}
+            {typeof window !== 'undefined' && 
+             !window.location.hostname.includes('localhost') && 
+             !window.location.hostname.includes('127.0.0.1') && (
+              <div className="flex items-center gap-2 text-xs">
+                <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+                  localhostRelay.status === 'ready' ? 'bg-green-900/30 text-green-400' :
+                  localhostRelay.status === 'connecting' ? 'bg-yellow-900/30 text-yellow-400' :
+                  localhostRelay.status === 'error' ? 'bg-red-900/30 text-red-400' :
+                  'bg-slate-800 text-slate-400'
+                }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${
+                    localhostRelay.status === 'ready' ? 'bg-green-400 animate-pulse' :
+                    localhostRelay.status === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+                    localhostRelay.status === 'error' ? 'bg-red-400' :
+                    'bg-slate-500'
+                  }`}></div>
+                  <span className="font-medium">
+                    {localhostRelay.status === 'ready' ? 'Localhost Relay Ready' :
+                     localhostRelay.status === 'connecting' ? 'Connecting...' :
+                     localhostRelay.status === 'error' ? 'Relay Error' :
+                     'Relay Offline'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -1186,7 +1204,7 @@ export default function ApiTesterPage() {
                           className="text-blue-400 hover:text-blue-300 p-1"
                           title="Edit collection"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
@@ -1198,7 +1216,7 @@ export default function ApiTesterPage() {
                           className="text-red-400 hover:text-red-300 p-1"
                           title="Delete collection"
                         >
-                          <TrashIcon className="w-4 h-4" />
+                          <TrashIcon className="w-3 h-3" />
                         </button>
                       </div>
                       {selectedCollection?._id === collection._id && (
@@ -1234,19 +1252,6 @@ export default function ApiTesterPage() {
                   ))}
                 </div>
               )}
-            </div>
-
-            <div className="p-4 border-t border-slate-700">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-slate-300">Environments</h3>
-                <button 
-                  onClick={createEnvironment} 
-                  className="text-yellow-400 hover:text-yellow-300"
-                  title="Create new environment"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                </button>
-              </div>
             </div>
 
             <div className="p-4 border-t border-slate-700">
@@ -2178,7 +2183,11 @@ pm.test("Response has data", function() {
         />
       )}
 
-      <LocalhostBridge socket={socket} isReady={isReady} />
+      {/* Localhost Bridge - Listens for WebSocket commands and executes local fetches */}
+      <LocalhostBridge 
+        socket={localhostRelay.socket} 
+        isReady={localhostRelay.isReady} 
+      />
     </div>
   );
 }
