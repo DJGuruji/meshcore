@@ -643,37 +643,38 @@ export default function ApiTesterPage() {
     try {
       const urlLower = url.toLowerCase();
       
-      // IMPORTANT: Only use client-side when running in development (localhost UI)
-      // In production, ALWAYS use server-side proxy to avoid CORS issues
+      // Check if this is a localhost URL - these should always use client-side fetch
+      // regardless of whether we're in production or development
+      if (urlLower.includes('localhost')) return true;
+      if (urlLower.includes('127.0.0.1')) return true;
+      if (urlLower.includes('::1')) return true;
+      
+      // Check for local IP addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+      try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname;
+        
+        if (hostname.match(/^192\.168\./) || 
+            hostname.match(/^10\./) || 
+            hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)) {
+          return true;
+        }
+      } catch (e) {
+        // If URL parsing fails, continue with other checks
+      }
+      
+      // For non-localhost URLs, check if we're in development UI
       const isProductionUI = typeof window !== 'undefined' && 
                             !window.location.hostname.includes('localhost') &&
                             !window.location.hostname.includes('127.0.0.1');
       
       if (isProductionUI) {
-        // In production UI, always use server-side proxy
-        // Even for localhost URLs (they'll fail, but with better error message)
+        // In production UI, always use server-side proxy for non-localhost URLs
         return false;
       }
       
-      // In development UI, use client-side for:
-      // 1. localhost (any port)
-      // 2. 127.0.0.1 (any port)
-      // 3. http:// URLs (not https)
-      // 4. Local IP addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-      
-      if (urlLower.includes('localhost')) return true;
-      if (urlLower.includes('127.0.0.1')) return true;
+      // In development UI, use client-side for http:// URLs (not https)
       if (urlLower.startsWith('http://')) return true;
-      
-      // Check for local IP addresses
-      const urlObj = new URL(url);
-      const hostname = urlObj.hostname;
-      
-      if (hostname.match(/^192\.168\./) || 
-          hostname.match(/^10\./) || 
-          hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)) {
-        return true;
-      }
       
       return false; // Use server-side for https and external URLs
     } catch (e) {
@@ -725,7 +726,7 @@ export default function ApiTesterPage() {
       const requestOptions: RequestInit = {
         method: currentRequest.method.toUpperCase(),
         headers: requestHeaders,
-        mode: 'cors', // Enable CORS
+        // Remove mode: 'cors' to allow localhost requests without CORS restrictions
       };
 
       // Add body for non-GET requests
