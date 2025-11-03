@@ -22,6 +22,7 @@ const pendingFetches = new Map();
  * Skip waiting to activate immediately
  */
 self.addEventListener('install', (event) => {
+  console.log('[LocalhostWorker] Installing Service Worker...');
   self.skipWaiting();
 });
 
@@ -30,6 +31,7 @@ self.addEventListener('install', (event) => {
  * Claim all clients immediately
  */
 self.addEventListener('activate', (event) => {
+  console.log('[LocalhostWorker] Activating Service Worker...');
   event.waitUntil(self.clients.claim());
 });
 
@@ -40,13 +42,20 @@ self.addEventListener('message', async (event) => {
   const { type, requestId, request } = event.data;
 
   if (type === 'FETCH_LOCALHOST') {
+    console.log('[LocalhostWorker] Received fetch request:', requestId, request.url);
+    
     try {
+      // Parse the URL to check if it's a localhost URL
+      const requestURL = new URL(request.url);
+      const isLocalhost = requestURL.hostname === 'localhost' || 
+                         requestURL.hostname === '127.0.0.1' || 
+                         requestURL.hostname === '[::1]';
+      
       // Check for HTTPS -> HTTP (mixed content) issue
       const isHTTPS = self.location.protocol === 'https:';
-      const requestURL = new URL(request.url);
       const isHTTPRequest = requestURL.protocol === 'http:';
       
-      if (isHTTPS && isHTTPRequest && requestURL.hostname === 'localhost') {
+      if (isHTTPS && isHTTPRequest && isLocalhost) {
         // Special case: HTTPS page trying to fetch HTTP localhost
         // This is blocked by browsers (mixed content)
         throw new Error(
@@ -68,6 +77,7 @@ self.addEventListener('message', async (event) => {
       });
 
       const endTime = Date.now();
+      console.log('[LocalhostWorker] Fetch successful:', requestId, response.status);
 
       // Read response body (works even without CORS headers!)
       let responseBody;
@@ -108,8 +118,10 @@ self.addEventListener('message', async (event) => {
       
       // Send response via MessageChannel port
       event.ports[0].postMessage(result);
+      console.log('[LocalhostWorker] Response sent back to main thread');
 
     } catch (error) {
+      console.error('[LocalhostWorker] Fetch failed:', requestId, error.name, error.message);
       // Send error response back to main thread
       const result = {
         requestId,
