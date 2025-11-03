@@ -58,6 +58,7 @@ self.addEventListener('message', async (event) => {
       if (isHTTPS && isHTTPRequest && isLocalhost) {
         // Special case: HTTPS page trying to fetch HTTP localhost
         // This is blocked by browsers (mixed content)
+        // For localhost URLs, we should let the WebSocket relay handle this
         throw new Error(
           'Mixed Content Blocked: Cannot fetch http://localhost from HTTPS page.\n\n' +
           'Solution: Use HTTPS for your localhost server\n' +
