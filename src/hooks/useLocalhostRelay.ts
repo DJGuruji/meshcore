@@ -4,11 +4,7 @@
  * Enables testing localhost APIs from production by establishing
  * a WebSocket connection to the relay server.
  * 
- * Security Features:
- * - Secure authentication
- * - Connection validation
- * - Error handling
- * - Rate limiting awareness
+ * Updated to work with server-side localhost request execution
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
