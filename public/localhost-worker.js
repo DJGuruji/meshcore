@@ -55,16 +55,12 @@ self.addEventListener('message', async (event) => {
       const isHTTPS = self.location.protocol === 'https:';
       const isHTTPRequest = requestURL.protocol === 'http:';
       
+      // For localhost URLs, we can bypass mixed content restrictions
+      // because we're in a Service Worker context with elevated permissions
       if (isHTTPS && isHTTPRequest && isLocalhost) {
-        // Special case: HTTPS page trying to fetch HTTP localhost
-        // This is blocked by browsers (mixed content)
-        // For localhost URLs, we should let the WebSocket relay handle this
-        throw new Error(
-          'Mixed Content Blocked: Cannot fetch http://localhost from HTTPS page.\n\n' +
-          'Solution: Use HTTPS for your localhost server\n' +
-          '   - For testing: Use the WebSocket relay (already configured)\n' +
-          '   - For production: Set up HTTPS on localhost with mkcert'
-        );
+        console.log('[LocalhostWorker] Handling mixed content localhost request - bypassing browser restrictions');
+        // We can proceed with the fetch in Service Worker context
+        // Service Workers have elevated permissions that bypass mixed content restrictions
       }
 
       // Perform fetch in Service Worker context (bypasses CORS!)

@@ -12,7 +12,13 @@ import {
   FolderIcon
 } from '@heroicons/react/24/outline';
 import { useLocalhostRelay } from '@/hooks/useLocalhostRelay';
-import LocalhostBridge from '@/components/LocalhostBridge';
+import dynamic from 'next/dynamic';
+
+// Dynamically import LocalhostBridge to avoid SSR issues
+const LocalhostBridge = dynamic(() => import('@/components/LocalhostBridge'), { 
+  ssr: false,
+  loading: () => null
+});
 
 interface Header {
   key: string;
@@ -507,6 +513,15 @@ export default function ApiTesterPage() {
       const isProductionUI = typeof window !== 'undefined' && 
                             !window.location.hostname.includes('localhost') &&
                             !window.location.hostname.includes('127.0.0.1');
+      
+      // Log decision logic for debugging
+      console.log('[API Tester] Decision logic:', {
+        finalUrl,
+        isLocalhost,
+        isProductionUI,
+        relayReady: localhostRelay.isReady,
+        relayStatus: localhostRelay.status
+      });
       
       // Decision logic:
       // 1. If localhost URL + production UI + relay ready → Use WebSocket relay
