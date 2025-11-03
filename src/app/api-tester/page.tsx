@@ -726,7 +726,7 @@ export default function ApiTesterPage() {
       const requestOptions: RequestInit = {
         method: currentRequest.method.toUpperCase(),
         headers: requestHeaders,
-        // Remove mode: 'cors' to allow localhost requests without CORS restrictions
+        mode: 'cors', // Enable CORS mode for better error handling
       };
 
       // Add body for non-GET requests
@@ -784,6 +784,26 @@ export default function ApiTesterPage() {
 
     } catch (error: any) {
       const endTime = Date.now();
+      
+      // Check if this is a CORS error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw {
+          response: {
+            data: {
+              error: true,
+              message: 'CORS Error: ' + error.message + '\n\n' +
+                      'This error occurs when the target server does not allow cross-origin requests.\n' +
+                      'Possible solutions:\n' +
+                      '1. Add CORS headers to your API server\n' +
+                      '2. Use the localhost relay for testing local APIs\n' +
+                      '3. Run your API server with CORS enabled',
+              time: endTime - startTime,
+              timestamp: new Date().toISOString()
+            }
+          }
+        };
+      }
+      
       throw {
         response: {
           data: {

@@ -30,26 +30,33 @@ class LocalhostWorkerManager {
         active: false,
         error: 'Service Workers not supported in this browser',
       };
+      console.log('[LocalhostWorker] Service Workers not supported in this browser');
       return this.status;
     }
 
     try {
+      console.log('[LocalhostWorker] Registering Service Worker...');
       // Register the Service Worker
       this.registration = await navigator.serviceWorker.register(
         '/localhost-worker.js',
         { scope: '/' }
       );
 
+      console.log('[LocalhostWorker] Service Worker registered:', this.registration);
+
       // Wait for Service Worker to be active
       if (this.registration.active) {
         this.worker = this.registration.active;
         this.status = { registered: true, active: true };
+        console.log('[LocalhostWorker] Service Worker already active');
       } else {
         await this.waitForActivation();
       }
 
+      console.log('[LocalhostWorker] Service Worker status:', this.status);
       return this.status;
     } catch (error: any) {
+      console.error('[LocalhostWorker] Registration failed:', error.name, error.message);
       this.status = {
         registered: false,
         active: false,
@@ -75,20 +82,30 @@ class LocalhostWorkerManager {
         // Already active
         this.worker = this.registration.active;
         this.status = { registered: true, active: true };
+        console.log('[LocalhostWorker] Service Worker activated');
         resolve();
         return;
       }
 
-      worker.addEventListener('statechange', () => {
+      console.log('[LocalhostWorker] State changed:', worker.state);
+
+      const handleStateChange = () => {
+        console.log('[LocalhostWorker] State changed:', worker.state);
         if (worker.state === 'activated') {
           this.worker = worker;
           this.status = { registered: true, active: true };
+          console.log('[LocalhostWorker] Service Worker activated');
+          worker.removeEventListener('statechange', handleStateChange);
           resolve();
         } else if (worker.state === 'redundant') {
           this.status = { registered: false, active: false, error: 'Worker became redundant' };
+          console.error('[LocalhostWorker] Worker became redundant');
+          worker.removeEventListener('statechange', handleStateChange);
           reject(new Error('Service Worker became redundant'));
         }
-      });
+      };
+
+      worker.addEventListener('statechange', handleStateChange);
     });
   }
 
@@ -101,6 +118,8 @@ class LocalhostWorkerManager {
     headers?: Record<string, string>;
     body?: any;
   }): Promise<any> {
+    console.log('[LocalhostWorker] Sending fetch request:', request.url);
+    
     if (!this.worker || !this.status.active) {
       throw new Error('Service Worker not active. Call register() first.');
     }
@@ -113,6 +132,7 @@ class LocalhostWorkerManager {
 
       // Listen for response from Service Worker
       messageChannel.port1.onmessage = (event) => {
+        console.log('[LocalhostWorker] Received response:', event.data.requestId, event.data.success);
         if (event.data.success) {
           resolve(event.data);
         } else {
