@@ -11,14 +11,14 @@ import {
   KeyIcon,
   Bars3Icon,
   XMarkIcon,
-  Cog6ToothIcon,
-  GiftIcon,
-  BugAntIcon,
   CodeBracketSquareIcon,
-  Squares2X2Icon,
-  ArrowTopRightOnSquareIcon,
-  SparklesIcon,
 } from '@heroicons/react/24/outline';
+import Cog6ToothIcon from '@heroicons/react/24/outline/Cog6ToothIcon';
+import GiftIcon from '@heroicons/react/24/outline/GiftIcon';
+import BugAntIcon from '@heroicons/react/24/outline/BugAntIcon';
+import Squares2X2Icon from '@heroicons/react/24/outline/Squares2X2Icon';
+import ArrowTopRightOnSquareIcon from '@heroicons/react/24/outline/ArrowTopRightOnSquareIcon';
+import SparklesIcon from '@heroicons/react/24/outline/SparklesIcon';
 import { Dialog } from '@headlessui/react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
