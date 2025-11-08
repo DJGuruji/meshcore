@@ -97,51 +97,51 @@ export default function ProjectPanel({
         />
       )}
       
-      <div className={`
+      <div
+        className={`
         ${isMobile ? 'fixed' : 'relative'} 
         ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
         ${isMobile ? 'z-50' : 'z-10'}
         transition-transform duration-300 ease-in-out
-        w-80 h-full bg-slate-900 border-r border-slate-700 flex flex-col
-      `}>
+        w-80 h-full bg-[#050915]/95 border-r border-white/5 flex flex-col shadow-[20px_0_60px_rgba(3,7,18,0.65)] backdrop-blur-2xl
+      `}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center">
-                <div className="w-3 h-3 rounded-full bg-black"></div>
-              </div>
-              <h2 className="text-lg font-semibold text-yellow-400">Mock Servers</h2>
+        <div className="border-b border-white/5 p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">Sadasya</p>
+              <h2 className="mt-1 text-lg font-semibold text-white">Mock Servers</h2>
             </div>
-          
+
             <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="flex items-center space-x-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-800 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-          data-aos="zoom-in"
-          data-aos-delay="300"
-        >
-          <PlusIcon className="h-4 w-4" />
-          <span>Create</span>
-        </button>
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="flex items-center space-x-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02]"
+              data-aos="zoom-in"
+              data-aos-delay="300"
+            >
+              <PlusIcon className="h-4 w-4" />
+              <span>Create</span>
+            </button>
           </div>
 
           {/* Search Bar */}
           <div className="mb-4">
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Bars3Icon className="h-4 w-4 text-slate-500" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Bars3Icon className="h-4 w-4 text-white/40" />
               </div>
               <input
                 type="text"
                 placeholder="Search servers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 text-sm"
+                className="w-full rounded-2xl border border-white/10 bg-white/5 py-2 pl-10 pr-3 text-sm text-slate-100 placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-yellow-400"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 transition hover:text-white"
                 >
                   <span className="text-xs">×</span>
                 </button>
@@ -151,26 +151,26 @@ export default function ProjectPanel({
 
           {/* Create Project Form */}
           {showCreateForm && (
-            <div className="space-y-3 p-3 bg-slate-800 rounded-lg border border-slate-600 mb-4 animate-fadeIn">
+            <div className="mb-4 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 animate-fadeIn">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Server Name</label>
+                <label className="mb-1 block text-xs font-medium text-slate-300">Server Name</label>
                 <input
                   type="text"
                   placeholder="My API Server"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 text-sm"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Base URL</label>
+                <label className="mb-1 block text-xs font-medium text-slate-300">Base URL</label>
                 <input
                   type="text"
                   placeholder="/api/v1"
                   value={newProjectBaseUrl}
                   onChange={(e) => setNewProjectBaseUrl(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200 text-sm"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
                 />
               </div>
@@ -178,10 +178,10 @@ export default function ProjectPanel({
                 <button
                   onClick={handleCreateProject}
                   disabled={!newProjectName.trim()}
-                  className={`flex-1 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
+                  className={`flex-1 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     newProjectName.trim()
-                      ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-black shadow-md'
-                      : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30 hover:scale-[1.01]'
+                      : 'cursor-not-allowed border border-white/5 bg-white/5 text-slate-400'
                   }`}
                 >
                   Create Server
@@ -192,7 +192,7 @@ export default function ProjectPanel({
                     setNewProjectName('');
                     setNewProjectBaseUrl('/api/v1');
                   }}
-                  className="flex-1 px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-all duration-200 text-sm shadow-md"
+                  className="flex-1 rounded-2xl border border-white/10 px-3 py-2 text-sm text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
                 >
                   Cancel
                 </button>
@@ -202,60 +202,67 @@ export default function ProjectPanel({
         </div>
 
         {/* Projects List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-2">
           {isLoading ? (
             <div className="p-4 text-center text-slate-400">
-              <div className="animate-pulse">Loading servers...</div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+                Loading servers…
+              </div>
             </div>
           ) : filteredProjects.length === 0 ? (
-            <div className="p-6 text-center text-slate-400">
-              <div className="mx-auto bg-slate-800 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-                <div className="w-8 h-8 rounded-full border-2 border-dashed border-slate-600"></div>
+            <div className="p-4 text-center text-slate-400">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner shadow-black/40">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl">
+                  ⚙️
+                </div>
+                <h3 className="mb-1 font-medium text-white">
+                  {searchQuery ? 'No matching servers found' : 'No mock servers yet'}
+                </h3>
+                <p className="text-sm text-slate-400">
+                  {searchQuery ? `No servers match “${searchQuery}”` : 'Craft your first mock API server to begin.'}
+                </p>
+                {!searchQuery && (
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="mt-3 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
+                  >
+                    Create Server
+                  </button>
+                )}
               </div>
-              <h3 className="font-medium text-slate-300 mb-1">
-                {searchQuery ? 'No matching servers found' : 'No mock servers yet'}
-              </h3>
-              <p className="text-sm">
-                {searchQuery 
-                  ? `No servers match your search for "${searchQuery}"` 
-                  : 'Create your first mock API server'}
-              </p>
-              {!searchQuery && (
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="mt-3 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-black rounded-lg transition-all duration-200 shadow-md font-medium"
-                >
-                  Create Server
-                </button>
-              )}
             </div>
           ) : (
-            <div className="p-3 space-y-3">
-              <div className="text-xs text-slate-500 px-2 flex items-center">
-                YOUR SERVERS ({filteredProjects.length})
+            <div className="space-y-3 pb-3">
+              <div className="px-2 text-xs uppercase tracking-[0.4em] text-indigo-200">
+                Servers ({filteredProjects.length})
               </div>
               {filteredProjects.map((project) => (
                 <div
                   key={project._id}
-                  className="group bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-lg p-3 cursor-pointer transition-all duration-200 hover:border-slate-600"
+                  className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-indigo-400/40 hover:bg-white/10"
                   onClick={() => onProjectClick(project)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <h3 className="font-medium text-white truncate text-sm">{project.name}</h3>
+                        <span className="h-2 w-2 rounded-full bg-green-400" />
+                        <h3 className="truncate text-sm font-semibold text-white">{project.name}</h3>
                       </div>
-                      <p className="text-xs text-slate-400 truncate mt-1 flex items-center">
-                        <span className="bg-slate-700 px-1.5 py-0.5 rounded mr-1">{project.baseUrl}</span>
+                      <p className="mt-1 flex items-center truncate text-xs text-slate-400">
+                        <span className="rounded-full bg-white/5 px-2 py-0.5 font-mono text-[10px] text-white">
+                          {project.baseUrl}
+                        </span>
                       </p>
-                      <div className="flex items-center mt-2">
-                        <span className="text-xs text-slate-500">
+                      <div className="mt-2 flex items-center">
+                        <span className="text-xs text-slate-400">
                           {project.endpoints.length} endpoint{project.endpoints.length !== 1 ? 's' : ''}
                         </span>
                         {project.authentication?.enabled && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-900 text-green-300 rounded" title="Authentication enabled">
-                            🔒
+                          <span
+                            className="ml-2 rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-200"
+                            title="Authentication enabled"
+                          >
+                            🔒 Secure
                           </span>
                         )}
                       </div>
@@ -267,16 +274,16 @@ export default function ProjectPanel({
                           onDeleteProject(project._id);
                         }
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-400 transition-all"
+                      className="opacity-0 transition-all duration-200 group-hover:opacity-100"
                       title="Delete server"
                     >
-                      <TrashIcon className="w-4 h-4" />
+                      <TrashIcon className="h-4 w-4 text-slate-500 hover:text-rose-400" />
                     </button>
                   </div>
 
                   {/* Quick endpoint preview */}
                   {project.endpoints.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-slate-700 space-y-1.5">
+                    <div className="mt-3 space-y-1.5 border-t border-white/5 pt-2">
                       {project.endpoints.slice(0, 2).map((endpoint) => (
                         <div key={endpoint._id} className="flex items-center justify-between text-xs">
                           <div className="flex items-center space-x-2">
@@ -292,16 +299,16 @@ export default function ProjectPanel({
                             <span className="text-slate-300 truncate max-w-[80px]">{endpoint.path}</span>
                           </div>
                           <div className="flex items-center space-x-1">
-                            <span className="text-slate-500">{endpoint.statusCode}</span>
+                            <span className="text-slate-400">{endpoint.statusCode}</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 copyProjectUrl(project, endpoint);
                               }}
-                              className="p-1 text-slate-500 hover:text-yellow-400 transition-colors"
+                              className="rounded-full p-1 text-slate-500 transition hover:bg-white/10 hover:text-white"
                               title="Copy URL"
                             >
-                              <DocumentDuplicateIcon className="w-3 h-3" />
+                              <DocumentDuplicateIcon className="h-3 w-3" />
                             </button>
                           </div>
                         </div>
@@ -320,7 +327,7 @@ export default function ProjectPanel({
         </div>
         
         {/* Footer */}
-        <div className="p-3 border-t border-slate-700 text-xs text-slate-500">
+        <div className="border-t border-white/5 p-3 text-xs text-slate-400">
           <div className="flex items-center justify-between">
             <span>Mock API Servers</span>
             <span>{projects.length} total</span>

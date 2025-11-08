@@ -46,70 +46,104 @@ export default function SignIn() {
     }
   };
 
+  const inputStyles =
+    'mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 placeholder-slate-400 transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60';
+  const labelStyles = 'text-xs font-semibold uppercase tracking-[0.2em] text-slate-300';
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-black to-slate-900 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-slate-800 p-8 shadow-xl border border-slate-700">
-        <h1 className="mb-6 text-center text-2xl font-bold text-yellow-400">Sign In</h1>
-        
-        {error && (
-          <div className="mb-4 rounded-md bg-red-900/30 p-3 text-red-300">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-yellow-300">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder='Registered email'
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 p-2 block w-full rounded-md border-slate-600 bg-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-200"
-              required
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-yellow-300">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              placeholder='Password'
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 p-2 block w-full rounded-md border-slate-600 bg-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-200"
-              required
-            />
-          </div>
-          
-          <div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#030712] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="absolute inset-0">
+        <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-fuchsia-500/20 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_55%)]" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-lg">
+        <div className="mb-6 text-center">
+          <p className="text-xs uppercase tracking-[0.5em] text-indigo-300">Welcome back</p>
+          <h1 className="mt-3 text-3xl font-semibold text-white">Sign in to continue</h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Access your dashboard and pick up where you left off.
+          </p>
+        </div>
+
+        <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-8 shadow-2xl shadow-black/30 backdrop-blur-2xl">
+          {error && (
+            <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className={labelStyles}>
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="name@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputStyles}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className={labelStyles}>
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputStyles}
+                required
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
+              <span>Keep your credentials secure.</span>
+              <Link
+                href="/auth/forgot-password"
+                className="font-semibold text-indigo-300 transition hover:text-white"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-md bg-blue-700 py-2 px-4 text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-800 disabled:opacity-70"
+              className="group relative flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              <span>{loading ? 'Signing in…' : 'Sign In'}</span>
+              <svg
+                className="h-4 w-4 transition group-hover:translate-x-1"
+                viewBox="0 0 20 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 10h10M10 5l5 5-5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
+          </form>
+
+          <div className="mt-8 rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-center text-sm text-slate-300">
+            New here?{' '}
+            <Link href="/auth/register" className="font-semibold text-white hover:text-indigo-300">
+              Create an account
+            </Link>
           </div>
-        </form>
-        
-        <div className="mt-4 text-center text-sm text-slate-400">
-          <Link href="/auth/forgot-password" className="text-blue-400 hover:text-blue-300">
-            Forgot your password?
-          </Link>
-        </div>
-        
-        <div className="mt-6 text-center text-sm text-slate-400">
-          Don't have an account?{' '}
-          <Link href="/auth/register" className="text-blue-400 hover:text-blue-300">
-            Register
-          </Link>
         </div>
       </div>
     </div>

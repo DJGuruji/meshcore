@@ -20,6 +20,17 @@ const LocalhostBridge = dynamic(() => import('@/components/LocalhostBridge'), {
   loading: () => null
 });
 
+const inputStyles =
+  'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
+const textareaStyles =
+  'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
+const labelStyles = 'text-xs font-semibold uppercase tracking-[0.35em] text-indigo-200';
+const modalShell =
+  'w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl';
+const modalHeader = 'flex items-center justify-between border-b border-white/5 px-5 py-4';
+const modalFooter = 'flex justify-end gap-2 border-t border-white/5 px-5 py-4';
+const sectionCard =
+  'rounded-[28px] border border-white/10 bg-white/5 p-4 shadow-[0_15px_35px_rgba(2,6,23,0.5)]';
 interface Header {
   key: string;
   value: string;
@@ -123,60 +134,70 @@ function EnvironmentModal({ onClose, onSave, existingEnvironment }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-yellow-400">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+      <div className={`${modalShell} max-h-[90vh] flex flex-col`}>
+        <div className={modalHeader}>
+          <h2 className="text-base font-semibold tracking-wide text-white">
             {existingEnvironment ? 'Edit Environment' : 'Create Environment'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Close
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Environment Name</label>
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-6">
+          <div className={sectionCard}>
+            <label className="text-xs uppercase tracking-[0.4em] text-indigo-200">Environment Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Production, Staging, Development, etc."
-              className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+              className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               autoFocus
             />
           </div>
-          <div>
-            <div className="flex justify-between items-center mb-2">
+          <div className={sectionCard}>
+            <div className="mb-4 flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-slate-300">Environment Variables</label>
-                <p className="text-xs text-slate-400 mt-1">Use variables in URLs like: {'{{'}baseUrl{'}}'}/users</p>
+                <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">Environment Variables</p>
+                <p className="mt-1 text-xs text-slate-300">
+                  Use variables like <span className="font-mono text-white">{'{{'}baseUrl{'}}'}</span>/users
+                </p>
               </div>
-              <button onClick={addVariable} className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1">
-                <PlusIcon className="w-4 h-4" /> Add Variable
+              <button
+                onClick={addVariable}
+                className="inline-flex items-center gap-1 rounded-2xl border border-white/10 px-3 py-1 text-xs font-semibold text-indigo-200 transition hover:border-indigo-400/40 hover:text-white"
+              >
+                <PlusIcon className="h-4 w-4" /> Add Variable
               </button>
             </div>
             <div className="space-y-3">
               {variables.map((v, idx) => (
-                <div key={idx} className="bg-slate-800 p-3 rounded border border-slate-700">
-                  <div className="flex gap-2 mb-2">
+                <div key={idx} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="mb-2 flex gap-2">
                     <input
                       type="text"
                       value={v.key}
                       onChange={(e) => updateVariable(idx, 'key', e.target.value)}
-                      placeholder="Variable name (e.g., baseUrl, apiKey)"
-                      className="flex-1 px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                      placeholder="Variable name (e.g., baseUrl)"
+                      className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
                     />
                     <input
                       type="text"
                       value={v.value}
                       onChange={(e) => updateVariable(idx, 'value', e.target.value)}
-                      placeholder="Value (e.g., https://api.example.com)"
-                      className="flex-1 px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                      placeholder="Value"
+                      className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
                     />
-                    <button 
-                      onClick={() => removeVariable(idx)} 
-                      className="text-red-400 hover:text-red-300 px-2"
+                    <button
+                      onClick={() => removeVariable(idx)}
+                      className="rounded-2xl border border-white/10 px-2 py-2 text-rose-300 transition hover:border-rose-400/40 hover:text-white"
                       title="Remove variable"
                     >
-                      <TrashIcon className="w-4 h-4" />
+                      <TrashIcon className="h-4 w-4" />
                     </button>
                   </div>
                   <input
@@ -184,19 +205,24 @@ function EnvironmentModal({ onClose, onSave, existingEnvironment }: {
                     value={v.description || ''}
                     onChange={(e) => updateVariable(idx, 'description', e.target.value)}
                     placeholder="Description (optional)"
-                    className="w-full px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-xs"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
                   />
                 </div>
               ))}
             </div>
           </div>
         </div>
-        <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600">Cancel</button>
+        <div className={modalFooter}>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Cancel
+          </button>
           <button
             onClick={() => onSave(name, variables.filter(v => v.key))}
             disabled={!name}
-            className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 disabled:opacity-50"
+            className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {existingEnvironment ? 'Update' : 'Create'}
           </button>
@@ -215,42 +241,52 @@ function CollectionModal({ onClose, onSave, existingCollection }: {
   const [description, setDescription] = useState(existingCollection?.description || '');
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-md">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-yellow-400">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+      <div className="w-full max-w-md overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl">
+        <div className={modalHeader}>
+          <h2 className="text-base font-semibold tracking-wide text-white">
             {existingCollection ? 'Edit Collection' : 'Create Collection'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Close
+          </button>
         </div>
-        <div className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Collection Name</label>
+        <div className="space-y-4 px-5 py-6">
+          <div className={sectionCard}>
+            <label className={labelStyles}>Collection Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My API Collection"
-              className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               autoFocus
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Description (Optional)</label>
+          <div className={sectionCard}>
+            <label className={labelStyles}>Description (Optional)</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Collection description..."
-              className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none h-24"
+              className={`${textareaStyles} mt-2 h-28`}
             />
           </div>
         </div>
-        <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600">Cancel</button>
+        <div className={modalFooter}>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Cancel
+          </button>
           <button
             onClick={() => onSave(name, description)}
             disabled={!name}
-            className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 disabled:opacity-50"
+            className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {existingCollection ? 'Update' : 'Create'}
           </button>
@@ -268,19 +304,24 @@ function SaveRequestModal({ onClose, onSave, collections }: {
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-md">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-yellow-400">Save Request to Collection</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+      <div className="w-full max-w-md overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl">
+        <div className={modalHeader}>
+          <h2 className="text-base font-semibold tracking-wide text-white">Save Request to Collection</h2>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Close
+          </button>
         </div>
-        <div className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Select Collection</label>
+        <div className="space-y-4 px-5 py-6">
+          <div className={sectionCard}>
+            <label className={labelStyles}>Select Collection</label>
             <select
               value={selectedCollectionId}
               onChange={(e) => setSelectedCollectionId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               autoFocus
             >
               <option value="">Choose a collection...</option>
@@ -292,17 +333,20 @@ function SaveRequestModal({ onClose, onSave, collections }: {
             </select>
           </div>
           {collections.length === 0 && (
-            <p className="text-sm text-slate-400">
-              No collections yet. Create one first!
-            </p>
+            <p className="text-sm text-slate-400">No collections yet. Create one first!</p>
           )}
         </div>
-        <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600">Cancel</button>
+        <div className={modalFooter}>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Cancel
+          </button>
           <button
             onClick={() => onSave(selectedCollectionId)}
             disabled={!selectedCollectionId}
-            className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 disabled:opacity-50"
+            className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Save Request
           </button>
@@ -1154,23 +1198,34 @@ export default function ApiTesterPage() {
 
   if (status === 'loading' || status === 'unauthenticated') {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
-        <div className="animate-pulse text-slate-400">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#030712]">
+        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-3 text-sm text-slate-300 shadow-xl shadow-black/60">
+          Preparing API tester…
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-[#030712] text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-indigo-500/15 blur-[160px]" />
+        <div className="absolute right-0 top-20 h-80 w-80 rounded-full bg-purple-500/15 blur-[140px]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-60" />
+      </div>
+      <div className="relative m-4 flex h-[calc(100vh-2rem)] overflow-hidden rounded-[36px] border border-white/10 bg-white/5 shadow-[0_25px_80px_rgba(2,6,23,0.8)] backdrop-blur-2xl">
       {/* Sidebar */}
       {isSidebarOpen && (
-        <div className="w-64 bg-slate-900 border-r border-slate-700 flex flex-col">
-          <div className="p-4 border-b border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-bold text-yellow-400">API Tester</h2>
+        <div className="w-72 border-r border-white/10 bg-[#050915]/80 backdrop-blur-xl flex flex-col">
+          <div className="border-b border-white/5 px-5 py-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.5em] text-indigo-200">Sadasya</p>
+                <h2 className="text-lg font-semibold text-white">API Tester</h2>
+              </div>
               <button
                 onClick={createNewTab}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors font-semibold"
+                className="inline-flex items-center gap-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-3 py-1 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02]"
                 title="New request tab"
               >
                 <PlusIcon className="w-3 h-3" />
@@ -1183,11 +1238,11 @@ export default function ApiTesterPage() {
              !window.location.hostname.includes('localhost') && 
              !window.location.hostname.includes('127.0.0.1') && (
               <div className="flex items-center gap-2 text-xs">
-                <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+                <div className={`flex items-center gap-2 rounded-2xl border border-white/5 px-3 py-1 ${
                   localhostRelay.status === 'ready' ? 'bg-green-900/30 text-green-400' :
                   localhostRelay.status === 'connecting' ? 'bg-yellow-900/30 text-yellow-400' :
                   localhostRelay.status === 'error' ? 'bg-red-900/30 text-red-400' :
-                  'bg-slate-800 text-slate-400'
+                  'bg-white/5 text-slate-300'
                 }`}>
                   <div className={`w-1.5 h-1.5 rounded-full ${
                     localhostRelay.status === 'ready' ? 'bg-green-400 animate-pulse' :
@@ -1206,13 +1261,13 @@ export default function ApiTesterPage() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-slate-300">Collections</h3>
+          <div className="flex-1 overflow-y-auto px-4 py-5 space-y-5">
+            <div className={sectionCard}>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">Collections</h3>
                 <button 
                   onClick={saveCollection} 
-                  className="text-yellow-400 hover:text-yellow-300"
+                  className="rounded-2xl border border-white/10 p-2 text-indigo-200 transition hover:border-indigo-400/40 hover:text-white"
                   title="Create new collection"
                 >
                   <PlusIcon className="w-4 h-4" />
@@ -1220,23 +1275,23 @@ export default function ApiTesterPage() {
               </div>
               
               {collections.length === 0 ? (
-                <p className="text-xs text-slate-500">No collections yet</p>
+                <p className="text-xs text-slate-400">No collections yet</p>
               ) : (
                 <div className="space-y-1">
                   {collections.map((collection) => (
                     <div
                       key={collection._id}
-                      className="p-2 bg-slate-800 rounded hover:bg-slate-700"
+                      className="rounded-2xl border border-white/5 bg-white/5 p-3 transition hover:border-indigo-400/40 hover:bg-white/10"
                     >
                       <div className="flex items-center gap-2 cursor-pointer" onClick={() => setSelectedCollection(collection)}>
-                        <FolderIcon className="w-4 h-4 text-yellow-400" />
-                        <span className="text-sm flex-1">{collection.name}</span>
+                        <FolderIcon className="w-4 h-4 text-indigo-300" />
+                        <span className="flex-1 text-sm text-white">{collection.name}</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             editCollection(collection);
                           }}
-                          className="text-blue-400 hover:text-blue-300 p-1"
+                          className="rounded-full p-1 text-indigo-200 transition hover:bg-white/10 hover:text-white"
                           title="Edit collection"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1248,21 +1303,21 @@ export default function ApiTesterPage() {
                             e.stopPropagation();
                             deleteCollection(collection._id);
                           }}
-                          className="text-red-400 hover:text-red-300 p-1"
+                          className="rounded-full p-1 text-rose-300 transition hover:bg-white/10 hover:text-white"
                           title="Delete collection"
                         >
                           <TrashIcon className="w-3 h-3" />
                         </button>
                       </div>
                       {selectedCollection?._id === collection._id && (
-                        <div className="ml-6 mt-1 space-y-1">
+                        <div className="ml-6 mt-2 space-y-1">
                           {collection.requests.length === 0 ? (
-                            <p className="text-xs text-slate-500 py-1">No requests yet</p>
+                            <p className="py-1 text-xs text-slate-400">No requests yet</p>
                           ) : (
                             collection.requests.map((req, idx) => (
                               <div
                                 key={idx}
-                                className="text-xs p-1 hover:bg-slate-600 rounded cursor-pointer"
+                                className="rounded-xl px-2 py-1 text-xs text-slate-200 transition hover:bg-white/10"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setCurrentRequest(req);
@@ -1277,7 +1332,7 @@ export default function ApiTesterPage() {
                               e.stopPropagation();
                               saveRequestToCollection();
                             }}
-                            className="text-xs text-yellow-400 hover:text-yellow-300 py-1 flex items-center gap-1"
+                            className="flex items-center gap-1 py-1 text-xs text-indigo-200 transition hover:text-white"
                           >
                             <PlusIcon className="w-3 h-3" /> Add current request
                           </button>
@@ -1289,12 +1344,12 @@ export default function ApiTesterPage() {
               )}
             </div>
 
-            <div className="p-4 border-t border-slate-700">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-slate-300">Environments</h3>
+            <div className={sectionCard}>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">Environments</h3>
                 <button 
                   onClick={createEnvironment} 
-                  className="text-yellow-400 hover:text-yellow-300"
+                  className="rounded-2xl border border-white/10 p-2 text-indigo-200 transition hover:border-indigo-400/40 hover:text-white"
                   title="Create new environment"
                 >
                   <PlusIcon className="w-4 h-4" />
@@ -1307,7 +1362,7 @@ export default function ApiTesterPage() {
                   const env = environments.find(en => en._id === e.target.value);
                   setSelectedEnvironment(env || null);
                 }}
-                className="w-full p-2 bg-slate-800 rounded text-sm border border-slate-600 focus:border-yellow-400 focus:outline-none mb-2"
+                className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               >
                 <option value="">No Environment</option>
                 {environments.map((env) => (
@@ -1319,13 +1374,13 @@ export default function ApiTesterPage() {
 
               {/* Environment Details & Actions */}
               {selectedEnvironment && (
-                <div className="bg-slate-800 rounded p-3 space-y-2">
+                <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-yellow-400">{selectedEnvironment.name}</span>
+                    <span className="text-xs font-semibold text-indigo-200">{selectedEnvironment.name}</span>
                     <div className="flex gap-1">
                       <button
                         onClick={() => editEnvironment(selectedEnvironment)}
-                        className="text-blue-400 hover:text-blue-300 p-1"
+                        className="rounded-full p-1 text-indigo-200 transition hover:bg-white/10 hover:text-white"
                         title="Edit environment"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1334,7 +1389,7 @@ export default function ApiTesterPage() {
                       </button>
                       <button
                         onClick={() => deleteEnvironment(selectedEnvironment._id)}
-                        className="text-red-400 hover:text-red-300 p-1"
+                        className="rounded-full p-1 text-rose-300 transition hover:bg-white/10 hover:text-white"
                         title="Delete environment"
                       >
                         <TrashIcon className="w-3 h-3" />
@@ -1344,15 +1399,15 @@ export default function ApiTesterPage() {
                   
                   {selectedEnvironment.variables.length > 0 && (
                     <div className="space-y-1">
-                      <div className="text-xs text-slate-400 font-medium">Variables:</div>
+                      <div className="text-xs font-medium text-slate-300">Variables:</div>
                       {selectedEnvironment.variables.slice(0, 3).map((v, idx) => (
-                        <div key={idx} className="text-xs text-slate-300 flex items-start gap-1">
-                          <span className="text-yellow-400 font-mono">{'{{' + v.key + '}}'}: </span>
-                          <span className="text-slate-400 truncate flex-1" title={v.value}>{v.value}</span>
+                        <div key={idx} className="flex items-start gap-2 text-xs text-slate-200">
+                          <span className="font-mono text-indigo-200">{'{{' + v.key + '}}'}:</span>
+                          <span className="flex-1 truncate text-slate-300" title={v.value}>{v.value}</span>
                         </div>
                       ))}
                       {selectedEnvironment.variables.length > 3 && (
-                        <div className="text-xs text-slate-500">+{selectedEnvironment.variables.length - 3} more...</div>
+                        <div className="text-xs text-slate-400">+{selectedEnvironment.variables.length - 3} more...</div>
                       )}
                     </div>
                   )}
@@ -1364,21 +1419,21 @@ export default function ApiTesterPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#030712]/40 backdrop-blur">
         {/* Tab Bar */}
-        <div className="bg-slate-900 border-b border-slate-700 flex items-center overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700">
+        <div className="flex items-center overflow-x-auto border-b border-white/5 bg-transparent px-4 scrollbar-thin scrollbar-thumb-slate-700">
           {requestTabs.map((tab, index) => (
             <div
               key={tab.id}
-              className={`group flex items-center gap-2 px-4 py-2 border-r border-slate-700 cursor-pointer min-w-[200px] max-w-[250px] ${
+              className={`group flex min-w-[200px] max-w-[260px] items-center gap-3 border-r border-white/5 px-4 py-2 text-xs transition ${
                 tab.id === activeTabId
-                  ? 'bg-black text-yellow-400 border-b-2 border-b-yellow-400'
-                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-white/10 text-white shadow-inner shadow-black/40'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-white'
               }`}
               onClick={() => setActiveTabId(tab.id)}
             >
               {/* Method Badge */}
-              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+              <span className={`rounded-full px-2 py-0.5 font-mono ${
                 tab.request.method === 'GET' ? 'bg-green-900/30 text-green-400' :
                 tab.request.method === 'POST' ? 'bg-blue-900/30 text-blue-400' :
                 tab.request.method === 'PUT' ? 'bg-orange-900/30 text-orange-400' :
@@ -1395,14 +1450,14 @@ export default function ApiTesterPage() {
               </span>
 
               {/* Tab Actions */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                 {/* Duplicate */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     duplicateTab(tab.id);
                   }}
-                  className="p-1 hover:bg-slate-700 rounded"
+                  className="rounded-full p-1 text-slate-300 transition hover:bg-white/10 hover:text-white"
                   title="Duplicate tab"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1416,7 +1471,7 @@ export default function ApiTesterPage() {
                     e.stopPropagation();
                     closeTab(tab.id);
                   }}
-                  className="p-1 hover:bg-red-900/30 hover:text-red-400 rounded"
+                  className="rounded-full p-1 text-slate-300 transition hover:bg-rose-500/10 hover:text-rose-300"
                   title="Close tab"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1429,14 +1484,14 @@ export default function ApiTesterPage() {
         </div>
 
         {/* Request Section */}
-        <div className="flex-1 flex flex-col border-b border-slate-700 overflow-y-auto">
+        <div className="flex-1 flex flex-col border-b border-white/5 overflow-y-auto">
           {/* URL Bar */}
-          <div className="p-4 bg-slate-900">
-            <div className="flex gap-2">
+          <div className="border-b border-white/5 px-5 py-4">
+            <div className="flex flex-wrap gap-2">
               <select
                 value={currentRequest.method}
                 onChange={(e) => setCurrentRequest({ ...currentRequest, method: e.target.value })}
-                className="px-4 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-medium"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 font-semibold text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               >
                 <option>GET</option>
                 <option>POST</option>
@@ -1452,12 +1507,12 @@ export default function ApiTesterPage() {
                 value={currentRequest.url}
                 onChange={(e) => setCurrentRequest({ ...currentRequest, url: e.target.value })}
                 placeholder="https://api.example.com/endpoint or http://localhost:3000/api"
-                className="flex-1 px-4 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               />
               
               <button
                 onClick={saveRequestToCollection}
-                className="px-4 py-2 bg-slate-700 text-white rounded font-semibold hover:bg-slate-600 transition-colors"
+                className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
               >
                 Save
               </button>
@@ -1465,7 +1520,7 @@ export default function ApiTesterPage() {
               <button
                 onClick={sendRequest}
                 disabled={isLoading}
-                className="px-6 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <PlayIcon className="w-4 h-4" />
                 {isLoading ? 'Sending...' : 'Send'}
@@ -1474,16 +1529,16 @@ export default function ApiTesterPage() {
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-slate-700 bg-slate-900">
+          <div className="border-b border-white/5 bg-transparent">
             <div className="flex gap-1 px-4">
               {(['params', 'headers', 'body', 'auth', 'scripts', 'tests'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                  className={`rounded-2xl px-4 py-2 text-sm font-medium capitalize transition ${
                     activeTab === tab
-                      ? 'text-yellow-400 border-b-2 border-yellow-400'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white/10 text-white shadow-inner shadow-black/40'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   {tab}
@@ -1492,13 +1547,13 @@ export default function ApiTesterPage() {
               <div className="flex-1"></div>
               <button
                 onClick={() => setIsHistorySidebarOpen(!isHistorySidebarOpen)}
-                className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                className="rounded-2xl px-4 py-2 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-white"
               >
                 Activity {history.length > 0 && `(${history.length})`}
               </button>
               <button
                 onClick={generateCode}
-                className="px-4 py-2 text-sm font-medium text-yellow-400 hover:text-yellow-300 transition-colors"
+                className="rounded-2xl px-4 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-white/5 hover:text-white"
               >
                 Code
               </button>
@@ -1506,7 +1561,7 @@ export default function ApiTesterPage() {
           </div>
 
           {/* Tab Content - Will be added in next part */}
-          <div className="flex-1 p-4 overflow-y-auto bg-black">
+          <div className="flex-1 overflow-y-auto bg-white/5 p-4">
             {activeTab === 'params' && (
               <div className="space-y-2">
                 <button onClick={addParam} className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1">
@@ -1759,17 +1814,17 @@ pm.test("Response has data", function() {
         </div>
 
         {/* Response Section */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-900">
-          <div className="border-b border-slate-700">
+        <div className="flex-1 flex flex-col overflow-hidden border-l border-white/5 bg-white/5">
+          <div className="border-b border-white/5">
             <div className="flex gap-1 px-4">
               {(['body', 'headers', 'info', 'tests', 'console'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setResponseTab(tab)}
-                  className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                  className={`rounded-2xl px-4 py-2 text-sm font-medium capitalize transition ${
                     responseTab === tab
-                      ? 'text-yellow-400 border-b-2 border-yellow-400'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white/10 text-white shadow-inner shadow-black/40'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   {tab}
@@ -1784,7 +1839,7 @@ pm.test("Response has data", function() {
               ))}
               {/* Response Action Buttons */}
               {currentTab?.response && (
-                <div className="flex gap-1 ml-auto items-center">
+                <div className="ml-auto flex items-center gap-1">
                   {/* Copy Button */}
                   <button
                     onClick={() => {
@@ -1794,7 +1849,7 @@ pm.test("Response has data", function() {
                       navigator.clipboard.writeText(responseText);
                       toast.success('Response copied to clipboard');
                     }}
-                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
+                    className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
                     title="Copy response"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1818,7 +1873,7 @@ pm.test("Response has data", function() {
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
                     }}
-                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
+                    className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
                     title="Download response"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1829,7 +1884,7 @@ pm.test("Response has data", function() {
                   {/* Filter Button */}
                   <button
                     onClick={() => toast.success('Filter feature coming soon')}
-                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
+                    className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
                     title="Filter response"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1841,7 +1896,7 @@ pm.test("Response has data", function() {
             </div>
           </div>
 
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto bg-black/10 p-4">
             {!currentTab?.response ? (
               <div className="flex items-center justify-center h-full text-slate-500">
                 Send a request to see the response
@@ -2000,19 +2055,25 @@ pm.test("Response has data", function() {
 
       {/* Code Generation Modal */}
       {showCodeGen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col">
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-yellow-400">Code Generation</h2>
-              <button onClick={() => setShowCodeGen(false)} className="text-slate-400 hover:text-white">
-                ✕
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+          <div className="flex max-h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl">
+            <div className={modalHeader}>
+              <h2 className="text-base font-semibold tracking-wide text-white">Code Generation</h2>
+              <button
+                onClick={() => setShowCodeGen(false)}
+                className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+              >
+                Close
               </button>
             </div>
-            <div className="p-4 border-b border-slate-700">
+            <div className="border-b border-white/5 px-5 py-4">
               <select
                 value={codeGenLang}
-                onChange={(e) => { setCodeGenLang(e.target.value); generateCode(); }}
-                className="px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                onChange={(e) => {
+                  setCodeGenLang(e.target.value);
+                  generateCode();
+                }}
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               >
                 <option value="curl">cURL</option>
                 <option value="javascript">JavaScript (Fetch)</option>
@@ -2020,13 +2081,18 @@ pm.test("Response has data", function() {
                 <option value="nodejs">Node.js (Axios)</option>
               </select>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <pre className="text-sm text-slate-300 font-mono bg-slate-800 p-4 rounded">{generatedCode}</pre>
+            <div className="flex-1 overflow-y-auto bg-white/5 px-5 py-4">
+              <pre className="rounded-2xl border border-white/10 bg-black/40 p-4 font-mono text-sm text-indigo-100">
+                {generatedCode}
+              </pre>
             </div>
-            <div className="p-4 border-t border-slate-700">
+            <div className={modalFooter}>
               <button
-                onClick={() => { navigator.clipboard.writeText(generatedCode); toast.success('Copied to clipboard!'); }}
-                className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400"
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedCode);
+                  toast.success('Copied to clipboard!');
+                }}
+                className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
               >
                 Copy to Clipboard
               </button>
@@ -2223,6 +2289,7 @@ pm.test("Response has data", function() {
         socket={localhostRelay.socket} 
         isReady={localhostRelay.isReady} 
       />
+    </div>
     </div>
   );
 }

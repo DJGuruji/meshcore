@@ -13,6 +13,18 @@ import {
   FolderIcon
 } from '@heroicons/react/24/outline';
 
+const inputStyles =
+  'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
+const textareaStyles =
+  'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white font-mono placeholder-slate-400 focus:border-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/40';
+const labelStyles = 'text-[10px] font-semibold uppercase tracking-[0.4em] text-indigo-200';
+const modalShell =
+  'w-full max-w-3xl overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl';
+const modalHeader = 'flex items-center justify-between border-b border-white/5 px-5 py-4';
+const modalFooter = 'flex justify-end gap-2 border-t border-white/5 px-5 py-4';
+const sectionCard =
+  'rounded-[28px] border border-white/10 bg-white/5 p-4 shadow-[0_15px_35px_rgba(2,6,23,0.5)]';
+
 interface Header {
   key: string;
   value: string;
@@ -193,7 +205,8 @@ export default function GraphQLTesterPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'query' | 'headers' | 'auth'>('query');
+  const [activeTab, setActiveTab] = useState<'query' | 'codeql' | 'auth'>('query');
+  const [responseTab, setResponseTab] = useState<'body' | 'info'>('body');
   const [showHistory, setShowHistory] = useState(false);
   
   // Collections and Environments
@@ -358,6 +371,7 @@ export default function GraphQLTesterPage() {
           statusText: res.statusText
         }
       });
+      setResponseTab('body');
       
       // Add to history
       const historyItem: HistoryItem = {
@@ -435,6 +449,7 @@ export default function GraphQLTesterPage() {
           statusText: error.response?.statusText || 'Internal Server Error'
         }
       });
+      setResponseTab('body');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -753,26 +768,37 @@ export default function GraphQLTesterPage() {
 
   if (status === 'loading' || status === 'unauthenticated') {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
-        <div className="animate-pulse text-slate-400">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#030712]">
+        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-3 text-sm text-slate-300 shadow-xl shadow-black/60">
+          Preparing CodeQL workspace…
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="relative min-h-screen overflow-hidden bg-[#030712] text-white">
       <Toaster position="top-right" />
-      
+
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-indigo-500/15 blur-[160px]" />
+        <div className="absolute right-0 top-20 h-80 w-80 rounded-full bg-purple-500/15 blur-[140px]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-60" />
+      </div>
+
       {/* Main Layout - Sidebar + Content */}
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="relative m-4 flex h-[calc(100vh-2rem)] overflow-hidden rounded-[36px] border border-white/10 bg-white/5 shadow-[0_25px_80px_rgba(2,6,23,0.8)] backdrop-blur-2xl">
         {/* Sidebar */}
-        <div className="w-80 bg-slate-900 border-r border-slate-700 flex flex-col">
-          <div className="p-4 border-b border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-bold text-yellow-400">GraphQL Tester</h2>
+        <div className="w-80 border-r border-white/5 bg-[#050915]/80 backdrop-blur-xl flex flex-col">
+          <div className="border-b border-white/5 px-5 py-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.5em] text-indigo-200">Sadasya</p>
+                <h2 className="text-lg font-semibold text-white">CodeQL</h2>
+              </div>
               <button
                 onClick={createNewTab}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-colors font-semibold"
+                className="inline-flex items-center gap-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-3 py-1 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02]"
                 title="New request tab"
               >
                 <PlusIcon className="w-3 h-3" />
@@ -782,28 +808,37 @@ export default function GraphQLTesterPage() {
           </div>
 
           {/* Collections Section */}
-          <div className="p-4 border-b border-slate-700">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-300">Collections</h2>
-              <button 
+          <div className="border-b border-white/5 px-5 py-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className={labelStyles}>Collections</p>
+              <button
                 onClick={saveCollection}
-                className="text-yellow-400 hover:text-yellow-300"
+                className="inline-flex items-center justify-center rounded-2xl border border-white/10 p-1 text-indigo-200 transition hover:border-indigo-400/40 hover:text-white"
                 title="Create new collection"
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="h-4 w-4" />
               </button>
             </div>
-            
+
             {collections.length === 0 ? (
-              <p className="text-xs text-slate-500">No collections yet</p>
+              <div className="rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
+                No collections yet
+              </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
                 {collections.map((collection) => (
-                  <div key={collection._id} className="p-2 bg-slate-800 rounded border border-slate-700">
+                  <div
+                    key={collection._id}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-3 hover:border-indigo-400/40"
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1">
-                        <FolderIcon className="w-4 h-4 text-yellow-400" />
-                        <span className="text-sm flex-1 truncate">{collection.name}</span>
+                      <div className="flex flex-1 items-center gap-2">
+                        <div className="rounded-2xl bg-indigo-500/20 p-2">
+                          <FolderIcon className="h-4 w-4 text-indigo-200" />
+                        </div>
+                        <span className="flex-1 truncate text-sm font-medium text-white">
+                          {collection.name}
+                        </span>
                       </div>
                       <div className="flex gap-1">
                         <button
@@ -811,10 +846,10 @@ export default function GraphQLTesterPage() {
                             e.stopPropagation();
                             editCollection(collection);
                           }}
-                          className="text-blue-400 hover:text-blue-300 p-1"
+                          className="rounded-2xl border border-white/10 p-1 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
                           title="Edit collection"
                         >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
@@ -823,23 +858,23 @@ export default function GraphQLTesterPage() {
                             e.stopPropagation();
                             deleteCollection(collection._id);
                           }}
-                          className="text-red-400 hover:text-red-300 p-1"
+                          className="rounded-2xl border border-white/10 p-1 text-rose-300 transition hover:border-rose-400/40 hover:text-white"
                           title="Delete collection"
                         >
-                          <TrashIcon className="w-3 h-3" />
+                          <TrashIcon className="h-3 w-3" />
                         </button>
                       </div>
                     </div>
                     {collection.requests.length > 0 && (
-                      <div className="ml-6 mt-1 space-y-1">
+                      <div className="ml-8 mt-2 space-y-1">
                         {collection.requests.map((req, idx) => (
-                          <div
+                          <button
                             key={`${collection._id}-${idx}`}
-                            className="text-xs p-1 hover:bg-slate-700 rounded cursor-pointer truncate"
+                            className="w-full truncate rounded-2xl px-2 py-1 text-left text-xs text-slate-300 transition hover:bg-white/10 hover:text-white"
                             onClick={() => loadRequestFromCollection(req)}
                           >
                             {req.name}
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -850,25 +885,25 @@ export default function GraphQLTesterPage() {
           </div>
 
           {/* Environments Section */}
-          <div className="p-4 border-b border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-slate-300">Environments</h3>
-              <button 
-                onClick={createEnvironment} 
-                className="text-yellow-400 hover:text-yellow-300"
+          <div className="border-b border-white/5 px-5 py-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className={labelStyles}>Environments</p>
+              <button
+                onClick={createEnvironment}
+                className="inline-flex items-center justify-center rounded-2xl border border-white/10 p-1 text-indigo-200 transition hover:border-indigo-400/40 hover:text-white"
                 title="Create new environment"
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="h-4 w-4" />
               </button>
             </div>
-            
+
             <select
               value={selectedEnvironment?._id || ''}
               onChange={(e) => {
                 const env = environments.find(en => en._id === e.target.value);
                 setSelectedEnvironment(env || null);
               }}
-              className="w-full p-2 bg-slate-800 rounded text-sm border border-slate-600 focus:border-yellow-400 focus:outline-none mb-2"
+              className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
             >
               <option value="">No Environment</option>
               {environments.map((env) => (
@@ -880,40 +915,46 @@ export default function GraphQLTesterPage() {
 
             {/* Environment Details & Actions */}
             {selectedEnvironment && (
-              <div className="bg-slate-800 rounded p-3 space-y-2">
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-yellow-400">{selectedEnvironment.name}</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-200">
+                    {selectedEnvironment.name}
+                  </span>
                   <div className="flex gap-1">
                     <button
                       onClick={() => editEnvironment(selectedEnvironment)}
-                      className="text-blue-400 hover:text-blue-300 p-1"
+                      className="rounded-2xl border border-white/10 p-1 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
                       title="Edit environment"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
                     <button
                       onClick={() => deleteEnvironment(selectedEnvironment._id)}
-                      className="text-red-400 hover:text-red-300 p-1"
+                      className="rounded-2xl border border-white/10 p-1 text-rose-300 transition hover:border-rose-400/40 hover:text-white"
                       title="Delete environment"
                     >
-                      <TrashIcon className="w-3 h-3" />
+                      <TrashIcon className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
-                
+
                 {selectedEnvironment.variables.length > 0 && (
                   <div className="space-y-1">
-                    <div className="text-xs text-slate-400 font-medium">Variables:</div>
+                    <div className="text-xs font-medium text-slate-300">Variables</div>
                     {selectedEnvironment.variables.slice(0, 3).map((v, idx) => (
-                      <div key={`${selectedEnvironment._id}-${idx}`} className="text-xs text-slate-300 flex items-start gap-1">
-                        <span className="text-yellow-400 font-mono">{'{{' + v.key + '}}'}: </span>
-                        <span className="text-slate-400 truncate flex-1" title={v.value}>{v.value}</span>
+                      <div key={`${selectedEnvironment._id}-${idx}`} className="flex items-start gap-2 text-xs">
+                        <span className="font-mono text-indigo-200">{`{{${v.key}}}`}</span>
+                        <span className="flex-1 truncate text-slate-300" title={v.value}>
+                          {v.value}
+                        </span>
                       </div>
                     ))}
                     {selectedEnvironment.variables.length > 3 && (
-                      <div className="text-xs text-slate-500">+{selectedEnvironment.variables.length - 3} more...</div>
+                      <div className="text-xs text-slate-500">
+                        +{selectedEnvironment.variables.length - 3} more…
+                      </div>
                     )}
                   </div>
                 )}
@@ -921,39 +962,20 @@ export default function GraphQLTesterPage() {
             )}
           </div>
 
-          {/* Documentation Section */}
-          <div className="flex-1 p-4 overflow-y-auto">
-            <h2 className="text-sm font-semibold text-yellow-400 mb-3">GraphQL Tester</h2>
-            <div className="text-xs text-slate-400 space-y-2">
-              <p>
-                Test GraphQL APIs by sending queries with variables.
-              </p>
-              <div>
-                <h3 className="font-medium text-slate-300 mb-1">How to use:</h3>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Enter GraphQL endpoint URL</li>
-                  <li>Write your GraphQL query</li>
-                  <li>Add variables in JSON format</li>
-                  <li>Add headers if needed</li>
-                  <li>Configure authentication</li>
-                  <li>Click "Send" to execute</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+       
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Tab Bar - Moved to correct location above URL section */}
-          <div className="bg-slate-900 border-b border-slate-700 flex items-center overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700">
+        <div className="flex-1 flex flex-col bg-[#040714]/70 backdrop-blur">
+          {/* Tab Bar */}
+          <div className="flex items-center overflow-x-auto border-b border-white/5 bg-[#050c1f]/80 scrollbar-thin scrollbar-thumb-white/10">
             {tabs.map((tab) => (
               <div
                 key={tab.id}
-                className={`group flex items-center gap-2 px-4 py-2 border-r border-slate-700 cursor-pointer min-w-[200px] max-w-[250px] ${
+                className={`group flex min-w-[200px] max-w-[250px] items-center gap-2 border-r border-white/5 px-4 py-2 text-sm transition cursor-pointer ${
                   tab.id === activeTabId
-                    ? 'bg-black text-yellow-400 border-b-2 border-b-yellow-400'
-                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-white/10 text-white shadow-inner shadow-white/10'
+                    : 'bg-transparent text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
                 onClick={() => setActiveTabId(tab.id)}
               >
@@ -969,7 +991,7 @@ export default function GraphQLTesterPage() {
                       e.stopPropagation();
                       closeTab(tab.id);
                     }}
-                    className="p-1 hover:bg-red-900/30 hover:text-red-400 rounded opacity-0 group-hover:opacity-100"
+                    className="rounded p-1 text-slate-400 opacity-0 transition hover:bg-red-900/40 hover:text-red-300 group-hover:opacity-100"
                     title="Close tab"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -980,10 +1002,9 @@ export default function GraphQLTesterPage() {
               </div>
             ))}
             
-            {/* New Tab Button */}
             <button
               onClick={createNewTab}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800"
+              className="p-2 text-slate-400 transition hover:bg-white/5 hover:text-white"
               title="New tab"
             >
               <PlusIcon className="w-4 h-4" />
@@ -991,61 +1012,63 @@ export default function GraphQLTesterPage() {
           </div>
 
           {/* Request Name and URL Input */}
-          <div className="p-4 bg-slate-900 border-b border-slate-700">
+          <div className="border-b border-white/5 bg-[#050c1f]/80 px-6 py-5">
             <div className="mb-3">
               <input
                 type="text"
                 value={requestName}
                 onChange={(e) => updateCurrentTab({ name: e.target.value })}
                 placeholder="Request name"
-                className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm font-medium"
+                className={`${inputStyles} font-semibold`}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <input
                 type="text"
                 value={url}
                 onChange={(e) => updateCurrentTab({ url: e.target.value })}
                 placeholder="https://your-graphql-endpoint.com/graphql"
-                className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                className={`${inputStyles} flex-1`}
               />
-              <button
-                onClick={saveRequestToCollection}
-                className="px-4 py-2 bg-slate-700 text-white rounded font-semibold hover:bg-slate-600 transition-colors text-sm"
-              >
-                Save
-              </button>
-              <button
-                onClick={sendRequest}
-                disabled={isLoading}
-                className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
-              >
-                <PlayIcon className="w-4 h-4" />
-                {isLoading ? 'Sending...' : 'Send'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={saveRequestToCollection}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-indigo-400/40 hover:bg-white/5"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={sendRequest}
+                  disabled={isLoading}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
+                >
+                  <PlayIcon className="h-4 w-4" />
+                  {isLoading ? 'Sending…' : 'Send'}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-slate-700 bg-slate-900">
-            <div className="flex gap-1 px-4">
-              {(['query', 'headers', 'auth'] as const).map((tab) => (
+          <div className="border-b border-white/5 bg-[#040a1d]/80">
+            <div className="flex gap-1 px-6">
+              {(['query', 'codeql', 'auth'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                  className={`rounded-2xl px-4 py-2 text-sm font-semibold capitalize transition ${
                     activeTab === tab
-                      ? 'text-yellow-400 border-b-2 border-yellow-400'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white/10 text-white shadow-inner shadow-white/10'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  {tab}
+                  {tab === 'codeql' ? 'CodeQL' : tab}
                 </button>
               ))}
               <div className="flex-1"></div>
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                className="rounded-2xl px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white"
               >
                 Activity {history.length > 0 && `(${history.length})`}
               </button>
@@ -1053,16 +1076,15 @@ export default function GraphQLTesterPage() {
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto bg-black p-4">
+          <div className="flex-1 overflow-y-auto bg-transparent px-6 py-6">
             {activeTab === 'query' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-                {/* Query Editor */}
-                <div className="flex flex-col h-full">
-                  <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-sm font-semibold text-yellow-400">Query</h2>
+              <div className="grid h-full grid-cols-1 gap-5 md:grid-cols-2">
+                <div className={`${sectionCard} flex flex-col`}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className={labelStyles}>Query</p>
                     <button
                       onClick={formatQuery}
-                      className="text-xs text-slate-400 hover:text-yellow-400"
+                      className="text-xs font-semibold text-indigo-200 transition hover:text-white"
                     >
                       Format
                     </button>
@@ -1071,17 +1093,16 @@ export default function GraphQLTesterPage() {
                     value={query}
                     onChange={(e) => updateCurrentTab({ query: e.target.value })}
                     placeholder="query { users { id name email } }"
-                    className="flex-1 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
+                    className={`${textareaStyles} flex-1`}
                   />
                 </div>
 
-                {/* Variables Editor */}
-                <div className="flex flex-col h-full">
-                  <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-sm font-semibold text-yellow-400">Variables</h2>
+                <div className={`${sectionCard} flex flex-col`}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className={labelStyles}>Variables</p>
                     <button
                       onClick={formatVariables}
-                      className="text-xs text-slate-400 hover:text-yellow-400"
+                      className="text-xs font-semibold text-indigo-200 transition hover:text-white"
                     >
                       Format
                     </button>
@@ -1090,52 +1111,59 @@ export default function GraphQLTesterPage() {
                     value={variables}
                     onChange={(e) => updateCurrentTab({ variables: e.target.value })}
                     placeholder='{ "id": "123" }'
-                    className="flex-1 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
+                    className={`${textareaStyles} flex-1`}
                   />
                 </div>
               </div>
             )}
 
-            {activeTab === 'headers' && (
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-sm font-semibold text-yellow-400">Headers</h2>
+            {activeTab === 'codeql' && (
+              <div className={sectionCard}>
+                <div className="mb-4 flex items-center justify-between">
+                  <p className={labelStyles}>CodeQL Headers</p>
                   <button
                     onClick={addHeader}
-                    className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1"
+                    className="inline-flex items-center gap-1 rounded-2xl border border-white/10 px-3 py-1 text-xs font-semibold text-indigo-200 transition hover:border-indigo-400/40 hover:text-white"
                   >
-                    <PlusIcon className="w-3 h-3" /> Add Header
+                    <PlusIcon className="h-4 w-4" />
+                    Add
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {headers.map((header, index) => (
-                    <div key={`header-${index}`} className="flex gap-2 items-center">
-                      <input
-                        type="checkbox"
-                        checked={header.enabled}
-                        onChange={(e) => updateHeader(index, 'enabled', e.target.checked)}
-                        className="w-4 h-4"
-                      />
+                    <div key={index} className="grid grid-cols-12 items-center gap-2 rounded-[20px] border border-white/10 bg-white/5 p-3">
                       <input
                         type="text"
                         value={header.key}
                         onChange={(e) => updateHeader(index, 'key', e.target.value)}
-                        placeholder="Header name"
-                        className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                        placeholder="Key"
+                        className={`${inputStyles} col-span-4`}
                       />
                       <input
                         type="text"
                         value={header.value}
                         onChange={(e) => updateHeader(index, 'value', e.target.value)}
-                        placeholder="Header value"
-                        className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                        placeholder="Value"
+                        className={`${inputStyles} col-span-5`}
                       />
-                      <button
-                        onClick={() => removeHeader(index)}
-                        className="text-red-400 hover:text-red-300 p-2"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
+                      <div className="col-span-3 flex items-center justify-end gap-3 text-xs">
+                        <label className="inline-flex items-center gap-2 text-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={header.enabled}
+                            onChange={(e) => updateHeader(index, 'enabled', e.target.checked)}
+                            className="h-4 w-4 rounded border-white/20 bg-white/5 text-indigo-400 focus:ring-indigo-400/40"
+                          />
+                          Enabled
+                        </label>
+                        <button
+                          onClick={() => removeHeader(index)}
+                          className="rounded-2xl border border-white/10 p-1 text-rose-300 transition hover:border-rose-400/40 hover:text-white"
+                          title="Remove header"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1143,61 +1171,64 @@ export default function GraphQLTesterPage() {
             )}
 
             {activeTab === 'auth' && (
-              <div className="space-y-4">
-                <h2 className="text-sm font-semibold text-yellow-400">Authentication</h2>
-                <select
-                  value={auth.type}
-                  onChange={(e) => updateCurrentTab({ auth: { ...auth, type: e.target.value } })}
-                  className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
-                >
-                  <option value="none">No Auth</option>
-                  <option value="bearer">Bearer Token</option>
-                  <option value="basic">Basic Auth</option>
-                </select>
+              <div className={sectionCard}>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {['none', 'bearer', 'basic'].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => updateCurrentTab({ auth: { ...auth, type: type as Auth['type'] } })}
+                      className={`rounded-2xl px-4 py-2 text-sm font-semibold capitalize transition ${auth.type === type ? 'bg-white/15 text-white shadow-inner shadow-white/10' : 'border border-white/10 text-slate-300 hover:border-indigo-400/40 hover:text-white'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
 
                 {auth.type === 'bearer' && (
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-2">Token</label>
+                    <label className={`${labelStyles} mb-2 block`}>Token</label>
                     <input
                       type="text"
                       value={auth.bearerToken || ''}
                       onChange={(e) => updateCurrentTab({ auth: { ...auth, bearerToken: e.target.value } })}
                       placeholder="Enter your token"
-                      className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                      className={inputStyles}
                     />
                   </div>
                 )}
 
                 {auth.type === 'basic' && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-2">Username</label>
+                      <label className={`${labelStyles} mb-2 block`}>Username</label>
                       <input
                         type="text"
                         value={auth.basicAuth?.username || ''}
-                        onChange={(e) => updateCurrentTab({ 
-                          auth: { 
-                            ...auth, 
-                            basicAuth: { ...auth.basicAuth!, username: e.target.value } 
-                          } 
-                        })}
+                        onChange={(e) =>
+                          updateCurrentTab({
+                            auth: {
+                              ...auth,
+                              basicAuth: { ...auth.basicAuth!, username: e.target.value }
+                            }
+                          })}
                         placeholder="Enter your username"
-                        className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                        className={inputStyles}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-2">Password</label>
+                      <label className={`${labelStyles} mb-2 block`}>Password</label>
                       <input
                         type="password"
                         value={auth.basicAuth?.password || ''}
-                        onChange={(e) => updateCurrentTab({ 
-                          auth: { 
-                            ...auth, 
-                            basicAuth: { ...auth.basicAuth!, password: e.target.value } 
-                          } 
-                        })}
+                        onChange={(e) =>
+                          updateCurrentTab({
+                            auth: {
+                              ...auth,
+                              basicAuth: { ...auth.basicAuth!, password: e.target.value }
+                            }
+                          })}
                         placeholder="Enter your password"
-                        className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                        className={inputStyles}
                       />
                     </div>
                   </div>
@@ -1205,199 +1236,176 @@ export default function GraphQLTesterPage() {
               </div>
             )}
           </div>
-
           {/* Response Section */}
-          <div className="border-t border-slate-700 bg-slate-900 flex flex-col h-64">
-            <div className="p-3 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-sm font-semibold text-yellow-400">Response</h2>
-              {response && (
-                <div className="flex gap-2">
-                  {/* Copy Button */}
+          <div className="flex h-72 flex-col border-t border-white/5 bg-[#050c1f]/80">
+            <div className="border-b border-white/5">
+              <div className="flex items-center gap-2 px-6 py-3">
+                {(['body', 'info'] as const).map((tab) => (
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(JSON.stringify(response.data, null, 2));
-                      toast.success('Response copied to clipboard');
-                    }}
-                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
-                    title="Copy response"
+                    key={tab}
+                    onClick={() => setResponseTab(tab)}
+                    className={`rounded-2xl px-4 py-2 text-sm font-semibold capitalize transition ${
+                      responseTab === tab
+                        ? 'bg-white/10 text-white shadow-inner shadow-white/10'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    {tab}
                   </button>
-                  
-                  {/* Download Button */}
-                  <button
-                    onClick={() => {
-                      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `graphql-response-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
-                    title="Download response"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                  </button>
-                  
-                  {/* Filter Button */}
-                  <button
-                    onClick={() => toast.success('Filter feature coming soon')}
-                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-700"
-                    title="Filter response"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+                ))}
+
+                {response && (
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(JSON.stringify(response.data, null, 2));
+                        toast.success('Response copied to clipboard');
+                      }}
+                      className="rounded-2xl border border-white/10 p-2 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                      title="Copy response"
+                    >
+                      <DocumentDuplicateIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `graphql-response-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="rounded-2xl border border-white/10 p-2 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                      title="Download response"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 bg-black">
-              {response ? (
-                <div className="space-y-4">
-                  {/* Status Code with Engaging Message */}
-                  {response.status && (() => {
-                    const statusInfo = getStatusMessage(response.status);
-                    const statusCode = response.status;
-                    
-                    return (
-                      <div className={`p-4 rounded-lg border-2 ${
-                        statusInfo.category === 'success' ? 'bg-green-900/20 border-green-500/50' :
-                        statusInfo.category === 'redirect' ? 'bg-blue-900/20 border-blue-500/50' :
-                        statusInfo.category === 'client-error' ? 'bg-orange-900/20 border-orange-500/50' :
-                        statusInfo.category === 'server-error' ? 'bg-red-900/20 border-red-500/50' :
-                        'bg-slate-800/50 border-slate-600'
-                      }`}>
-                        <div className="flex items-start gap-3">
-                          <div className={`text-3xl font-bold ${
-                            statusInfo.category === 'success' ? 'text-green-400' :
-                            statusInfo.category === 'redirect' ? 'text-blue-400' :
-                            statusInfo.category === 'client-error' ? 'text-orange-400' :
-                            statusInfo.category === 'server-error' ? 'text-red-400' :
-                            'text-slate-400'
-                          }`}>
-                            {statusCode}
+            <div className="flex-1 overflow-y-auto bg-black/40 px-6 py-4">
+              {!response ? (
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                  Send a request to see the response
+                </div>
+              ) : (
+                <>
+                  {responseTab === 'body' && (
+                    <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-white">
+                      {JSON.stringify(response.data, null, 2)}
+                    </pre>
+                  )}
+
+                  {responseTab === 'info' && (
+                    <div className="space-y-4">
+                      {response.status && (() => {
+                        const statusInfo = getStatusMessage(response.status);
+                        return (
+                          <div
+                            className={`rounded-3xl border px-4 py-3 text-sm shadow-inner ${
+                              statusInfo.category === 'success'
+                                ? 'border-green-500/40 bg-green-500/10 text-green-200'
+                                : statusInfo.category === 'redirect'
+                                ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
+                                : statusInfo.category === 'client-error'
+                                ? 'border-orange-500/40 bg-orange-500/10 text-orange-200'
+                                : 'border-red-500/40 bg-red-500/10 text-red-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="text-2xl font-bold">{response.status}</div>
+                              <div className="text-xs text-white/60">
+                                {response.statusText} • {response.time}ms • {(response.size / 1024).toFixed(2)} KB
+                              </div>
+                            </div>
+                            <div className="mt-1 text-sm text-white">{statusInfo.message}</div>
                           </div>
-                          <div className="flex-1">
-                            <div className={`text-sm font-semibold mb-1 ${
-                              statusInfo.category === 'success' ? 'text-green-300' :
-                              statusInfo.category === 'redirect' ? 'text-blue-300' :
-                              statusInfo.category === 'client-error' ? 'text-orange-300' :
-                              statusInfo.category === 'server-error' ? 'text-red-300' :
-                              'text-slate-300'
-                            }`}>
-                              {response.statusText}
-                            </div>
-                            <div className="text-xs italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
-                              "{statusInfo.message}"
-                            </div>
+                        );
+                      })()}
+
+                      <div className="grid grid-cols-1 gap-3 text-xs text-slate-200 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                          <div className="text-slate-400">Response Time</div>
+                          <div className="text-lg font-semibold text-white">{response.time}ms</div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                          <div className="text-slate-400">Payload Size</div>
+                          <div className="text-lg font-semibold text-white">
+                            {(response.size / 1024).toFixed(2)} KB
                           </div>
                         </div>
                       </div>
-                    );
-                  })()}
 
-                  {/* Response Stats */}
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="bg-slate-800/50 rounded-lg p-2 border border-slate-700">
-                      <div className="text-slate-400 mb-1">Response Time</div>
-                      <div className="font-semibold text-yellow-400">{response.time}ms</div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {response.time < 200 ? 'Lightning fast!' :
-                         response.time < 500 ? 'Pretty quick!' :
-                         response.time < 1000 ? 'Not bad!' :
-                         'Could be faster...'}
-                      </div>
+                      {response.timestamp && (
+                        <div className="text-xs text-slate-400">
+                          Recorded at {new Date(response.timestamp).toLocaleString()}
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="bg-slate-800/50 rounded-lg p-2 border border-slate-700">
-                      <div className="text-slate-400 mb-1">Response Size</div>
-                      <div className="font-semibold text-yellow-400">{(response.size / 1024).toFixed(2)} KB</div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {response.size < 1024 ? 'Tiny payload!' :
-                         response.size < 10240 ? 'Compact size!' :
-                         response.size < 102400 ? 'Moderate load' :
-                         'Heavy response!'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Response Data */}
-                  <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap">
-                    {JSON.stringify(response.data, null, 2)}
-                  </pre>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-sm">
-                  Send a request to see the response
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>
-        </div>
-
         {/* History Side Panel */}
         {showHistory && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-end z-50">
-            <div className="bg-slate-900 w-full max-w-md h-full flex flex-col">
-              <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-yellow-400">Activity</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur">
+            <div className="flex h-full w-full max-w-md flex-col rounded-l-[32px] border border-white/10 bg-[#050915]/95 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
+                <div>
+                  <p className={labelStyles}>Activity</p>
+                  <h2 className="text-lg font-semibold text-white">Recent Runs</h2>
+                </div>
                 <div className="flex gap-2">
                   {history.length > 0 && (
                     <button
                       onClick={clearHistory}
-                      className="text-sm text-red-400 hover:text-red-300"
+                      className="rounded-2xl border border-white/10 px-3 py-1 text-xs font-semibold text-rose-300 transition hover:border-rose-400/40 hover:text-white"
                     >
-                      Clear All
+                      Clear
                     </button>
                   )}
                   <button
                     onClick={() => setShowHistory(false)}
-                    className="text-slate-400 hover:text-white"
+                    className="rounded-2xl border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
                   >
                     ✕
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-5">
                 {history.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-slate-500">
+                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
                     No history yet
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {history.map((item) => (
-                      <div
+                      <button
                         key={item.id}
-                        className="p-3 bg-slate-800 rounded-lg border border-slate-700 hover:border-yellow-400 cursor-pointer"
                         onClick={() => {
                           loadFromHistory(item);
                           setShowHistory(false);
                         }}
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-indigo-400/40"
                       >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="text-sm font-mono text-yellow-400 truncate">
-                            {item.url}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {new Date(item.timestamp).toLocaleTimeString()}
-                          </div>
+                        <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+                          <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                          <span>{new Date(item.timestamp).toLocaleTimeString()}</span>
                         </div>
-                        <div className="text-xs text-slate-400 truncate">
-                          {item.query && item.query.split ? item.query.split('\n')[0] : 'Untitled Request'}
+                        <div className="truncate text-sm font-semibold text-white" title={item.url}>
+                          {item.url}
                         </div>
-                        <div className="mt-2 text-xs text-slate-500">
-                          {new Date(item.timestamp).toLocaleDateString()}
+                        <div className="mt-1 truncate text-xs text-slate-300">
+                          {item.query && item.query.split ? item.query.split('\\n')[0] : 'Untitled Request'}
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -1409,62 +1417,67 @@ export default function GraphQLTesterPage() {
 
       {/* Collection Creation Modal */}
       {showCollectionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-yellow-400">
-                {editingCollection ? 'Edit Collection' : 'Create Collection'}
-              </h2>
-              <button 
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+          <div className={`${modalShell} max-w-md`}>
+            <div className={modalHeader}>
+              <div>
+                <p className={labelStyles}>
+                  {editingCollection ? 'Update Collection' : 'Create Collection'}
+                </p>
+                <h2 className="text-lg font-semibold text-white">
+                  {editingCollection ? 'Edit Collection' : 'New Collection'}
+                </h2>
+              </div>
+              <button
                 onClick={() => {
                   setShowCollectionModal(false);
                   setEditingCollection(null);
                   setNewCollectionName('');
                   setNewCollectionDescription('');
-                }} 
-                className="text-slate-400 hover:text-white"
+                }}
+                className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
               >
-                ✕
+                Close
               </button>
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Collection Name</label>
+            <div className="space-y-4 px-5 py-6">
+              <div className={sectionCard}>
+                <label className={`${labelStyles} mb-2 block`}>Collection Name</label>
                 <input
                   type="text"
                   value={newCollectionName}
                   onChange={(e) => setNewCollectionName(e.target.value)}
-                  placeholder="My GraphQL Collection"
-                  className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                  placeholder="My CodeQL Collection"
+                  className={inputStyles}
                   autoFocus
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Description (Optional)</label>
+              <div className={sectionCard}>
+                <label className={`${labelStyles} mb-2 block`}>Description (Optional)</label>
                 <textarea
                   value={newCollectionDescription}
                   onChange={(e) => setNewCollectionDescription(e.target.value)}
-                  placeholder="Collection description..."
-                  className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none h-24"
+                  placeholder="Give your collection some context"
+                  className={`${textareaStyles} h-24`}
                 />
               </div>
             </div>
-            <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-              <button 
+            <div className={modalFooter}>
+              <button
                 onClick={() => {
                   setShowCollectionModal(false);
                   setEditingCollection(null);
                   setNewCollectionName('');
                   setNewCollectionDescription('');
-                }} 
-                className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600"
+                }}
+                className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveCollection}
                 disabled={!newCollectionName.trim()}
-                className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 disabled:opacity-50"
+                className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
               >
                 {editingCollection ? 'Update' : 'Create'}
               </button>
@@ -1475,24 +1488,27 @@ export default function GraphQLTesterPage() {
 
       {/* Save Request Modal */}
       {showSaveRequestModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-yellow-400">Save Request to Collection</h2>
-              <button 
-                onClick={() => setShowSaveRequestModal(false)} 
-                className="text-slate-400 hover:text-white"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+          <div className={`${modalShell} max-w-md`}>
+            <div className={modalHeader}>
+              <div>
+                <p className={labelStyles}>Save Request</p>
+                <h2 className="text-lg font-semibold text-white">Add to Collection</h2>
+              </div>
+              <button
+                onClick={() => setShowSaveRequestModal(false)}
+                className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
               >
-                ✕
+                Close
               </button>
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Select Collection</label>
+            <div className="space-y-4 px-5 py-6">
+              <div className={sectionCard}>
+                <label className={`${labelStyles} mb-2 block`}>Select Collection</label>
                 <select
                   value={selectedCollectionId}
                   onChange={(e) => setSelectedCollectionId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                  className={inputStyles}
                   autoFocus
                 >
                   <option value="">Choose a collection...</option>
@@ -1504,22 +1520,22 @@ export default function GraphQLTesterPage() {
                 </select>
               </div>
               {collections.length === 0 && (
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-300">
                   No collections yet. Create one first!
                 </p>
               )}
             </div>
-            <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-              <button 
-                onClick={() => setShowSaveRequestModal(false)} 
-                className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600"
+            <div className={modalFooter}>
+              <button
+                onClick={() => setShowSaveRequestModal(false)}
+                className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveRequestToCollection}
                 disabled={!selectedCollectionId}
-                className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 disabled:opacity-50"
+                className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
               >
                 Save Request
               </button>
@@ -1530,67 +1546,72 @@ export default function GraphQLTesterPage() {
 
       {/* Environment Creation/Edit Modal */}
       {showEnvironmentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-yellow-400">
-                {editingEnvironment ? 'Edit Environment' : 'Create Environment'}
-              </h2>
-              <button 
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+          <div className={`${modalShell} max-w-3xl max-h-[90vh] flex flex-col`}>
+            <div className={modalHeader}>
+              <div>
+                <p className={labelStyles}>
+                  {editingEnvironment ? 'Update Environment' : 'Create Environment'}
+                </p>
+                <h2 className="text-lg font-semibold text-white">
+                  {editingEnvironment ? 'Edit Environment' : 'New Environment'}
+                </h2>
+              </div>
+              <button
                 onClick={() => {
                   setShowEnvironmentModal(false);
                   setEditingEnvironment(null);
                   setNewEnvironmentName('');
                   setNewEnvironmentVariables([{ key: '', value: '', description: '', enabled: true }]);
-                }} 
-                className="text-slate-400 hover:text-white"
+                }}
+                className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
               >
-                ✕
+                Close
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Environment Name</label>
+            <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+              <div className={sectionCard}>
+                <label className={`${labelStyles} mb-2 block`}>Environment Name</label>
                 <input
                   type="text"
                   value={newEnvironmentName}
                   onChange={(e) => setNewEnvironmentName(e.target.value)}
                   placeholder="Production, Staging, Development, etc."
-                  className="w-full px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                  className={inputStyles}
                   autoFocus
                 />
               </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
+              <div className={sectionCard}>
+                <div className="mb-3 flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300">Environment Variables</label>
-                    <p className="text-xs text-slate-400 mt-1">Use variables in URLs like: {'{{'}baseUrl{'}}'}/users</p>
+                    <label className={labelStyles}>Environment Variables</label>
+                    <p className="text-xs text-slate-300 mt-1">Use variables in URLs like: {'{{'}baseUrl{'}}'}/users</p>
                   </div>
-                  <button onClick={addEnvironmentVariable} className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1">
+                  <button onClick={addEnvironmentVariable} className="inline-flex items-center gap-1 rounded-2xl border border-white/10 px-3 py-1 text-xs font-semibold text-indigo-200 transition hover:border-indigo-400/40 hover:text-white">
                     <PlusIcon className="w-4 h-4" /> Add Variable
                   </button>
                 </div>
                 <div className="space-y-3">
                   {newEnvironmentVariables.map((v, idx) => (
-                    <div key={idx} className="bg-slate-800 p-3 rounded border border-slate-700">
-                      <div className="flex gap-2 mb-2">
+                    <div key={idx} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <div className="mb-2 flex gap-2">
                         <input
                           type="text"
                           value={v.key}
                           onChange={(e) => updateEnvironmentVariable(idx, 'key', e.target.value)}
                           placeholder="Variable name (e.g., baseUrl, apiKey)"
-                          className="flex-1 px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                          className={inputStyles}
                         />
                         <input
                           type="text"
                           value={v.value}
                           onChange={(e) => updateEnvironmentVariable(idx, 'value', e.target.value)}
                           placeholder="Value (e.g., https://api.example.com)"
-                          className="flex-1 px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
+                          className={inputStyles}
                         />
-                        <button 
-                          onClick={() => removeEnvironmentVariable(idx)} 
-                          className="text-red-400 hover:text-red-300 px-2"
+                        <button
+                          onClick={() => removeEnvironmentVariable(idx)}
+                          className="rounded-2xl border border-white/10 px-2 text-rose-300 transition hover:border-rose-400/40 hover:text-white"
                           title="Remove variable"
                         >
                           <TrashIcon className="w-4 h-4" />
@@ -1601,29 +1622,29 @@ export default function GraphQLTesterPage() {
                         value={v.description || ''}
                         onChange={(e) => updateEnvironmentVariable(idx, 'description', e.target.value)}
                         placeholder="Description (optional)"
-                        className="w-full px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-xs"
+                        className={`${inputStyles} text-xs`}
                       />
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-            <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-              <button 
+            <div className={modalFooter}>
+              <button
                 onClick={() => {
                   setShowEnvironmentModal(false);
                   setEditingEnvironment(null);
                   setNewEnvironmentName('');
                   setNewEnvironmentVariables([{ key: '', value: '', description: '', enabled: true }]);
-                }} 
-                className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600"
+                }}
+                className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEnvironment}
                 disabled={!newEnvironmentName}
-                className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold hover:bg-yellow-400 disabled:opacity-50"
+                className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
               >
                 {editingEnvironment ? 'Update' : 'Create'}
               </button>
@@ -1632,5 +1653,6 @@ export default function GraphQLTesterPage() {
         </div>
       )}
     </div>
+      </div>
   );
 }

@@ -162,58 +162,65 @@ export default function Home() {
   // Show hero section for unauthenticated users
   if (status === 'unauthenticated') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-black to-slate-900 p-4">
-        <div className="max-w-4xl w-full text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
-            Sadasya
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#030712] px-4 py-16 sm:px-6 lg:px-8">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
+          <div className="absolute right-0 top-10 h-96 w-96 rounded-full bg-fuchsia-500/15 blur-[140px]" />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/60 to-transparent" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-5xl text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.4em] text-indigo-200">
+            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-indigo-500 to-orange-400" />
+            Build. Test. Iterate.
+          </div>
+          <h1 className="mt-6 text-4xl font-semibold text-white sm:text-5xl md:text-6xl">
+            Ship APIs faster with <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-orange-300 bg-clip-text text-transparent">Sadasya</span>
           </h1>
-          <p className="text-xl md:text-2xl text-slate-300 mb-10 max-w-2xl mx-auto">
-            Create mock servers, test APIs, and boost your development workflow with our powerful suite of tools.
+          <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-300 sm:text-xl">
+            Spin up mock servers, validate payloads, explore GraphQL, and stress test your workflows—everything you need to
+            move from idea to production without friction.
           </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
-              <div className="text-yellow-400 text-3xl mb-3">⚡</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Mock Server</h3>
-              <p className="text-slate-400">
-                Create realistic mock APIs in seconds without writing any backend code.
-              </p>
-            </div>
-            
-            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
-              <div className="text-yellow-400 text-3xl mb-3">🔍</div>
-              <h3 className="text-lg font-semibold text-white mb-2">API Tester</h3>
-              <p className="text-slate-400">
-                Test any REST API endpoint with our intuitive interface and detailed response analysis.
-              </p>
-            </div>
-            
-            <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
-              <div className="text-yellow-400 text-3xl mb-3">🛠️</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Dev Tools</h3>
-              <p className="text-slate-400">
-                Essential utilities for developers including JSON validators, JWT decoders, and more.
-              </p>
-            </div>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { icon: '⚡', title: 'Mock Server', desc: 'Design endpoints with auth, payloads, and status codes instantly.' },
+              { icon: '🧪', title: 'API Tester', desc: 'Send requests, inspect responses, and share collections effortlessly.' },
+              { icon: '🧰', title: 'Dev Toolkit', desc: 'JWT decode, JSON validate, and more power utilities in one place.' },
+            ].map((card) => (
+              <div
+                key={card.title}
+                className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl"
+              >
+                <div className="text-3xl">{card.icon}</div>
+                <h3 className="mt-4 text-lg font-semibold text-white">{card.title}</h3>
+                <p className="mt-2 text-sm text-slate-300">{card.desc}</p>
+              </div>
+            ))}
           </div>
-          
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link 
-              href="/auth/signin" 
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+
+          <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link
+              href="/auth/signin"
+              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
             >
-              Get Started
+              Enter Workspace
+              <svg className="h-4 w-4 transition group-hover:translate-x-1" viewBox="0 0 20 20" fill="none">
+                <path d="M5 10h10M10 5l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
             </Link>
-            <Link 
-              href="/auth/register" 
-              className="px-8 py-3 bg-transparent border-2 border-yellow-400 text-yellow-400 font-medium rounded-lg hover:bg-yellow-400/10 transition-all duration-300"
+            <Link
+              href="/auth/register"
+              className="inline-flex items-center justify-center rounded-2xl border border-white/10 px-8 py-3 text-base font-semibold text-white/80 transition hover:border-indigo-400/40 hover:text-white"
             >
-              Create Account
+              Create free account
             </Link>
           </div>
-          
-          <div className="mt-16 text-slate-500 text-sm">
-            <p>Trusted by developers worldwide • 100% Free</p>
+
+          <div className="mt-12 grid gap-4 text-left text-sm text-slate-400 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Unlimited workspaces</div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Collaboration ready</div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">No credit card required</div>
           </div>
         </div>
       </div>
@@ -223,14 +230,22 @@ export default function Home() {
   // Show loading state
   if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-pulse text-slate-400">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#030712]">
+        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 shadow-xl shadow-black/50">
+          Preparing your workspace…
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-black shadow-lg">
+    <div className="relative min-h-screen overflow-hidden bg-[#030712]">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-indigo-500/20 blur-[140px]" />
+        <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-purple-500/15 blur-[160px]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-40" />
+      </div>
+      <div className="relative m-4 flex h-[calc(100vh-2rem)] overflow-hidden rounded-[32px] border border-white/5 bg-white/5 p-0 shadow-[0_25px_80px_rgba(2,6,23,0.9)] backdrop-blur-2xl">
       <div 
         data-aos="fade-right" 
         data-aos-duration="800"
@@ -260,28 +275,46 @@ export default function Home() {
         {selectedProject ? (
           <ProjectDetail project={selectedProject} onUpdateProject={handleUpdateProject} />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8">
-            <div 
-              className="max-w-md text-center p-8 rounded-xl bg-slate-800/80 backdrop-blur-sm shadow-xl border border-slate-700"
+          <div className="flex h-full w-full items-center justify-center p-10 text-slate-300">
+            <div
+              className="relative w-full max-w-2xl overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-10 text-center shadow-[0_25px_80px_rgba(2,6,23,0.8)]"
               data-aos="zoom-in"
               data-aos-delay="400"
             >
-              <img 
-                src="/globe.svg" 
-                alt="API" 
-                className="w-24 h-24 mx-auto mb-6 opacity-60 invert"
-                data-aos="flip-up"
-                data-aos-delay="600"
-              />
-              <h2 className="text-xl font-medium text-yellow-400 mb-2">No Project Selected</h2>
-              <p className="text-slate-400">
-                {projects.length > 0 
-                  ? 'Select a project from the sidebar or create a new one to get started'
-                  : 'Create your first API project to get started'}
-              </p>
+              <div className="absolute inset-0 border border-white/5" />
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs uppercase tracking-[0.4em] text-indigo-200">
+                  <span className="h-2 w-2 rounded-full bg-gradient-to-r from-indigo-500 to-orange-400" />
+                  Workspace idle
+                </div>
+                <h2 className="mt-6 text-2xl font-semibold text-white">No project selected</h2>
+                <p className="mt-3 text-sm text-slate-300">
+                  {projects.length > 0
+                    ? 'Choose a project on the left to continue building, or craft a new mock server.'
+                    : 'Create your first API space to design endpoints, configure auth, and collaborate.'}
+                </p>
+
+               
+
+                <div className="mt-10 grid gap-4 text-left text-xs text-slate-300 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.35em] text-indigo-200">Endpoints</p>
+                    <p className="mt-2 text-lg font-semibold text-white">Dynamic</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.35em] text-indigo-200">Security</p>
+                    <p className="mt-2 text-lg font-semibold text-white">JWT & Keys</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.35em] text-indigo-200">Sharing</p>
+                    <p className="mt-2 text-lg font-semibold text-white">Live Links</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
+      </div>
       </div>
       <Toaster 
         position="bottom-right" 
