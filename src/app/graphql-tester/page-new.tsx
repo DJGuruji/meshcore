@@ -692,7 +692,7 @@ export default function GraphQLTesterPage() {
 
           {/* Documentation Section */}
           <div className="flex-1 p-4 overflow-y-auto">
-            <h2 className="text-sm font-semibold text-yellow-400 mb-3">GraphQL Tester</h2>
+            <h2 className="text-sm font-semibold text-yellow-400 mb-3">CodeQL</h2>
             <div className="text-xs text-slate-400 space-y-2">
               <p>
                 Test GraphQL APIs by sending queries with variables.
@@ -1016,13 +1016,13 @@ export default function GraphQLTesterPage() {
               <h2 className="text-lg font-bold text-yellow-400">
                 {editingCollection ? 'Edit Collection' : 'Create Collection'}
               </h2>
-              <button 
+              <button
                 onClick={() => {
                   setShowCollectionModal(false);
                   setEditingCollection(null);
                   setNewCollectionName('');
                   setNewCollectionDescription('');
-                }} 
+                }}
                 className="text-slate-400 hover:text-white"
               >
                 ✕
@@ -1051,13 +1051,13 @@ export default function GraphQLTesterPage() {
               </div>
             </div>
             <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-              <button 
+              <button
                 onClick={() => {
                   setShowCollectionModal(false);
                   setEditingCollection(null);
                   setNewCollectionName('');
                   setNewCollectionDescription('');
-                }} 
+                }}
                 className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600"
               >
                 Cancel
@@ -1080,8 +1080,8 @@ export default function GraphQLTesterPage() {
           <div className="bg-slate-900 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-4 border-b border-slate-700 flex justify-between items-center">
               <h2 className="text-lg font-bold text-yellow-400">Save Request to Collection</h2>
-              <button 
-                onClick={() => setShowSaveRequestModal(false)} 
+              <button
+                onClick={() => setShowSaveRequestModal(false)}
                 className="text-slate-400 hover:text-white"
               >
                 ✕
@@ -1111,8 +1111,8 @@ export default function GraphQLTesterPage() {
               )}
             </div>
             <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-              <button 
-                onClick={() => setShowSaveRequestModal(false)} 
+              <button
+                onClick={() => setShowSaveRequestModal(false)}
                 className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600"
               >
                 Cancel
@@ -1137,13 +1137,13 @@ export default function GraphQLTesterPage() {
               <h2 className="text-lg font-bold text-yellow-400">
                 {editingEnvironment ? 'Edit Environment' : 'Create Environment'}
               </h2>
-              <button 
+              <button
                 onClick={() => {
                   setShowEnvironmentModal(false);
                   setEditingEnvironment(null);
                   setNewEnvironmentName('');
                   setNewEnvironmentVariables([{ key: '', value: '', description: '', enabled: true }]);
-                }} 
+                }}
                 className="text-slate-400 hover:text-white"
               >
                 ✕
@@ -1189,8 +1189,8 @@ export default function GraphQLTesterPage() {
                           placeholder="Value (e.g., https://api.example.com)"
                           className="flex-1 px-3 py-2 bg-slate-700 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-sm"
                         />
-                        <button 
-                          onClick={() => removeEnvironmentVariable(idx)} 
+                        <button
+                          onClick={() => removeEnvironmentVariable(idx)}
                           className="text-red-400 hover:text-red-300 px-2"
                           title="Remove variable"
                         >
@@ -1210,13 +1210,13 @@ export default function GraphQLTesterPage() {
               </div>
             </div>
             <div className="p-4 border-t border-slate-700 flex gap-2 justify-end">
-              <button 
+              <button
                 onClick={() => {
                   setShowEnvironmentModal(false);
                   setEditingEnvironment(null);
                   setNewEnvironmentName('');
                   setNewEnvironmentVariables([{ key: '', value: '', description: '', enabled: true }]);
-                }} 
+                }}
                 className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600"
               >
                 Cancel

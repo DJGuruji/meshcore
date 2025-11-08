@@ -508,6 +508,7 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
   const textareaStyles =
     'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-mono text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
+  const optionStyles = 'text-slate-900';
   const labelStyles = 'mb-2 block text-xs font-semibold uppercase tracking-[0.3em] text-slate-300';
   const sectionCardStyles = 'rounded-[28px] border border-white/10 bg-white/5 p-5';
 
@@ -776,11 +777,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   onChange={(e) => setNewEndpoint({ ...newEndpoint, method: e.target.value as any })}
                   className={inputStyles}
                 >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="PATCH">PATCH</option>
-                  <option value="DELETE">DELETE</option>
+                  <option className={optionStyles} value="GET">GET</option>
+                  <option className={optionStyles} value="POST">POST</option>
+                  <option className={optionStyles} value="PUT">PUT</option>
+                  <option className={optionStyles} value="PATCH">PATCH</option>
+                  <option className={optionStyles} value="DELETE">DELETE</option>
                 </select>
               </div>
               <div>
@@ -813,12 +814,12 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                     }}
                     className={inputStyles}
                   >
-                    <option value="">Select template...</option>
+                    <option className={optionStyles} value="">Select template...</option>
                     {newEndpoint.fields && newEndpoint.fields.length > 0 && (
-                      <option value="fields">Generate from defined fields</option>
+                      <option className={optionStyles} value="fields">Generate from defined fields</option>
                     )}
                     {defaultJsonTemplates.map((template) => (
-                      <option key={template.name} value={template.name}>
+                      <option className={optionStyles} key={template.name} value={template.name}>
                         {template.name}
                       </option>
                     ))}
@@ -864,9 +865,9 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                 }}
                 className={inputStyles}
               >
-                <option value="inherit">Inherit from project ({project.authentication?.enabled ? 'Enabled' : 'Disabled'})</option>
-                <option value="required">Always require authentication</option>
-                <option value="none">No authentication required</option>
+                <option className={optionStyles} value="inherit">Inherit from project ({project.authentication?.enabled ? 'Enabled' : 'Disabled'})</option>
+                <option className={optionStyles} value="required">Always require authentication</option>
+                <option className={optionStyles} value="none">No authentication required</option>
               </select>
             </div>
 
@@ -894,11 +895,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       onChange={(e) => setNewField({ ...newField, type: e.target.value as any })}
                       className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                     >
-                      <option value="string">String</option>
-                      <option value="number">Number</option>
-                      <option value="boolean">Boolean</option>
-                      <option value="object">Object</option>
-                      <option value="array">Array</option>
+                      <option className={optionStyles} value="string">String</option>
+                      <option className={optionStyles} value="number">Number</option>
+                      <option className={optionStyles} value="boolean">Boolean</option>
+                      <option className={optionStyles} value="object">Object</option>
+                      <option className={optionStyles} value="array">Array</option>
                     </select>
                   </div>
                   <div>
@@ -908,8 +909,8 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       onChange={(e) => setNewField({ ...newField, required: e.target.value === 'required' })}
                       className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                     >
-                      <option value="optional">Optional</option>
-                      <option value="required">Required</option>
+                      <option className={optionStyles} value="optional">Optional</option>
+                      <option className={optionStyles} value="required">Required</option>
                     </select>
                   </div>
                   <div className="flex items-end">
@@ -987,117 +988,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
               </div>
             )}
 
-            {/* Data source and conditions section for GET endpoints */}
-            {newEndpoint.method === 'GET' && (
-              <div className="mt-4 p-3 rounded-[24px] border border-white/10 bg-white/5">
-                <h3 className="text-sm font-medium text-slate-300 mb-3">Data Source</h3>
-                
-                {/* Data source selection */}
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint (optional)</label>
-                  <select
-                    value={newEndpoint.dataSource}
-                    onChange={(e) => setNewEndpoint({ ...newEndpoint, dataSource: e.target.value })}
-                    className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                  >
-                    <option value="">Use custom response body</option>
-                    {project.endpoints
-                      .filter(ep => ep.method === 'POST')
-                      .map(ep => (
-                        <option key={ep._id} value={ep._id}>
-                          {ep.path} ({ep.description || 'No description'})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                
-                {/* Conditions section */}
-                {newEndpoint.dataSource && (
-                  <div className="mt-4">
-                    <h4 className="text-xs font-medium text-slate-400 mb-2">Filter Conditions</h4>
-                    
-                    {/* Add new condition form */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Field</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., id"
-                          value={newCondition.field}
-                          onChange={(e) => setNewCondition({ ...newCondition, field: e.target.value })}
-                          className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Operator</label>
-                        <select
-                          value={newCondition.operator}
-                          onChange={(e) => setNewCondition({ ...newCondition, operator: e.target.value as any })}
-                          className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                        >
-                          <option value="=">=</option>
-                          <option value="!=">!=</option>
-                          <option value=">">&gt;</option>
-                          <option value="<">&lt;</option>
-                          <option value=">=">&gt;=</option>
-                          <option value="<=">&lt;=</option>
-                          <option value="contains">contains</option>
-                          <option value="startsWith">starts with</option>
-                          <option value="endsWith">ends with</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Value</label>
-                        <input
-                          type="text"
-                          placeholder="Value"
-                          value={newCondition.value}
-                          onChange={(e) => setNewCondition({ ...newCondition, value: e.target.value })}
-                          className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <button
-                          type="button"
-                          onClick={handleAddCondition}
-                          className="w-full px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-sm font-medium"
-                        >
-                          Add Condition
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Conditions list */}
-                    {newEndpoint.conditions.length > 0 && (
-                      <div className="mb-3">
-                        <h4 className="text-xs font-medium text-slate-400 mb-2">Defined Conditions:</h4>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {newEndpoint.conditions.map((condition, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-slate-700 rounded">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-white text-sm font-mono">{condition.field}</span>
-                                <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
-                                  {condition.operator}
-                                </span>
-                                <span className="text-white text-sm font-mono">{String(condition.value)}</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveCondition(index)}
-                                className="text-slate-400 hover:text-red-400"
-                              >
-                                <TrashIcon className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Data source and conditions section for GET, PUT, PATCH, DELETE endpoints */}
             {(newEndpoint.method === 'GET' || newEndpoint.method === 'PUT' || newEndpoint.method === 'PATCH' || newEndpoint.method === 'DELETE') && (
               <div className="mt-4 p-3 rounded-[24px] border border-white/10 bg-white/5">
@@ -1111,11 +1001,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                     onChange={(e) => setNewEndpoint({ ...newEndpoint, dataSource: e.target.value })}
                     className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                   >
-                    <option value="">Use custom response body</option>
+                    <option className={optionStyles} value="">Use custom response body</option>
                     {project.endpoints
                       .filter(ep => ep.method === 'POST')
                       .map(ep => (
-                        <option key={ep._id} value={ep._id}>
+                        <option className={optionStyles} key={ep._id} value={ep._id}>
                           {ep.path} ({ep.description || 'No description'})
                         </option>
                       ))}
@@ -1146,15 +1036,15 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                           onChange={(e) => setNewCondition({ ...newCondition, operator: e.target.value as any })}
                           className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                         >
-                          <option value="=">=</option>
-                          <option value="!=">!=</option>
-                          <option value=">">&gt;</option>
-                          <option value="<">&lt;</option>
-                          <option value=">=">&gt;=</option>
-                          <option value="<=">&lt;=</option>
-                          <option value="contains">contains</option>
-                          <option value="startsWith">starts with</option>
-                          <option value="endsWith">ends with</option>
+                          <option className={optionStyles} value="=">=</option>
+                          <option className={optionStyles} value="!=">!=</option>
+                          <option className={optionStyles} value=">">&gt;</option>
+                          <option className={optionStyles} value="<">&lt;</option>
+                          <option className={optionStyles} value=">=">&gt;=</option>
+                          <option className={optionStyles} value="<=">&lt;=</option>
+                          <option className={optionStyles} value="contains">contains</option>
+                          <option className={optionStyles} value="startsWith">starts with</option>
+                          <option className={optionStyles} value="endsWith">ends with</option>
                         </select>
                       </div>
                       <div>
@@ -1383,11 +1273,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                                 onChange={(e) => handleUpdateEndpoint(endpoint._id, { method: e.target.value as any })}
                                 className={inputStyles}
                               >
-                                <option value="GET">GET</option>
-                                <option value="POST">POST</option>
-                                <option value="PUT">PUT</option>
-                                <option value="PATCH">PATCH</option>
-                                <option value="DELETE">DELETE</option>
+                                <option className={optionStyles} value="GET">GET</option>
+                                <option className={optionStyles} value="POST">POST</option>
+                                <option className={optionStyles} value="PUT">PUT</option>
+                                <option className={optionStyles} value="PATCH">PATCH</option>
+                                <option className={optionStyles} value="DELETE">DELETE</option>
                               </select>
                             </div>
                             <div>
@@ -1420,9 +1310,9 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                               }}
                               className={inputStyles}
                             >
-                              <option value="inherit">Inherit ({project.authentication?.enabled ? 'Enabled' : 'Disabled'})</option>
-                              <option value="required">Always require</option>
-                              <option value="none">No auth required</option>
+                              <option className={optionStyles} value="inherit">Inherit ({project.authentication?.enabled ? 'Enabled' : 'Disabled'})</option>
+                              <option className={optionStyles} value="required">Always require</option>
+                              <option className={optionStyles} value="none">No auth required</option>
                             </select>
                           </div>
                         </div>
@@ -1450,12 +1340,12 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                                 }}
                                 className="rounded-2xl border border-white/10 bg-white/5 px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-400/40"
                               >
-                                <option value="">Generate JSON...</option>
+                                <option className={optionStyles} value="">Generate JSON...</option>
                                 {endpoint.fields && endpoint.fields.length > 0 && (
-                                  <option value="fields">From defined fields</option>
+                                  <option className={optionStyles} value="fields">From defined fields</option>
                                 )}
                                 {defaultJsonTemplates.map((template) => (
-                                  <option key={template.name} value={template.name}>
+                                  <option className={optionStyles} key={template.name} value={template.name}>
                                     {template.name}
                                   </option>
                                 ))}
@@ -1499,154 +1389,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       </div>
                     )}
 
-                    {/* Data source and conditions section for GET endpoints in edit mode */}
-                    {endpoint.method === 'GET' && (
-                      <div className="mt-4 p-3 rounded-[24px] border border-white/10 bg-white/5">
-                        <h4 className="text-sm font-medium text-slate-300 mb-2">Data Source Configuration</h4>
-                        
-                        {/* Data source selection */}
-                        <div className="mb-2">
-                          <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint</label>
-                          <select
-                            value={endpoint.dataSource || ''}
-                            onChange={(e) => handleUpdateEndpoint(endpoint._id, { dataSource: e.target.value || undefined })}
-                            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                          >
-                            <option value="">Use custom response body</option>
-                            {project.endpoints
-                              .filter(ep => ep.method === 'POST')
-                              .map(ep => (
-                                <option key={ep._id} value={ep._id}>
-                                  {ep.path} ({ep.description || 'No description'})
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-                        
-                        {/* Conditions section */}
-                        {endpoint.dataSource && (
-                          <div className="mt-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="text-xs font-medium text-slate-400">Filter Conditions</h5>
-                              <button
-                                onClick={() => {
-                                  // Initialize editing state with current conditions
-                                  const currentConditions = endpoint.conditions || [];
-                                  setEditingConditions({
-                                    ...editingConditions,
-                                    [endpoint._id]: [...currentConditions]
-                                  });
-                                }}
-                                className="text-xs text-yellow-400 hover:text-yellow-300"
-                              >
-                                Edit Conditions
-                              </button>
-                            </div>
-                            
-                            {editingConditions[endpoint._id] ? (
-                              // Editing mode
-                              <div className="space-y-2">
-                                {/* Add new condition form */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
-                                  <input
-                                    type="text"
-                                    placeholder="Field"
-                                    value={newEditCondition.field}
-                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, field: e.target.value })}
-                                    className="px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                                  />
-                                  <select
-                                    value={newEditCondition.operator}
-                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, operator: e.target.value as any })}
-                                    className="px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                                  >
-                                    <option value="=">=</option>
-                                    <option value="!=">!=</option>
-                                    <option value=">">&gt;</option>
-                                    <option value="<">&lt;</option>
-                                    <option value=">=">&gt;=</option>
-                                    <option value="<=">&lt;=</option>
-                                    <option value="contains">contains</option>
-                                    <option value="startsWith">starts with</option>
-                                    <option value="endsWith">ends with</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    placeholder="Value"
-                                    value={newEditCondition.value}
-                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, value: e.target.value })}
-                                    className="px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                                  />
-                                  <button
-                                    onClick={() => handleAddEditCondition(endpoint._id)}
-                                    className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-xs font-medium"
-                                  >
-                                    Add
-                                  </button>
-                                </div>
-                                
-                                {/* Current conditions being edited */}
-                                <div className="space-y-1 max-h-32 overflow-y-auto">
-                                  {(editingConditions[endpoint._id] || []).map((condition, index) => (
-                                    <div key={index} className="flex items-center justify-between p-1 bg-slate-700 rounded">
-                                      <div className="flex items-center space-x-2 text-xs">
-                                        <span className="font-mono text-white">{condition.field}</span>
-                                        <span className="px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
-                                          {condition.operator}
-                                        </span>
-                                        <span className="font-mono text-white">{String(condition.value)}</span>
-                                      </div>
-                                      <button
-                                        onClick={() => handleRemoveEditCondition(endpoint._id, index)}
-                                        className="text-slate-400 hover:text-red-400"
-                                      >
-                                        <TrashIcon className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                {/* Save/Cancel buttons */}
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => handleSaveConditions(endpoint._id)}
-                                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs"
-                                  >
-                                    Save Conditions
-                                  </button>
-                                  <button
-                                    onClick={() => handleCancelEditConditions(endpoint._id)}
-                                    className="px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              // View mode
-                              <div>
-                                {endpoint.conditions && endpoint.conditions.length > 0 ? (
-                                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                                    {endpoint.conditions.map((condition, index) => (
-                                      <div key={index} className="flex items-center space-x-2 text-xs">
-                                        <span className="font-mono text-white">{condition.field}</span>
-                                        <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded">
-                                          {condition.operator}
-                                        </span>
-                                        <span className="font-mono text-white">{String(condition.value)}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-slate-500">No conditions defined</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     {/* Data source and conditions section for GET, PUT, PATCH, DELETE endpoints in edit mode */}
                     {(endpoint.method === 'GET' || endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') && (
                       <div className="mt-4 p-3 rounded-[24px] border border-white/10 bg-white/5">
@@ -1660,11 +1402,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                             onChange={(e) => handleUpdateEndpoint(endpoint._id, { dataSource: e.target.value || undefined })}
                             className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
                           >
-                            <option value="">Use custom response body</option>
+                            <option className={optionStyles} value="">Use custom response body</option>
                             {project.endpoints
                               .filter(ep => ep.method === 'POST')
                               .map(ep => (
-                                <option key={ep._id} value={ep._id}>
+                                <option className={optionStyles} key={ep._id} value={ep._id}>
                                   {ep.path} ({ep.description || 'No description'})
                                 </option>
                               ))}
@@ -1708,15 +1450,15 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                                     onChange={(e) => setNewEditCondition({ ...newEditCondition, operator: e.target.value as any })}
                                     className="px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
                                   >
-                                    <option value="=">=</option>
-                                    <option value="!=">!=</option>
-                                    <option value=">">&gt;</option>
-                                    <option value="<">&lt;</option>
-                                    <option value=">=">&gt;=</option>
-                                    <option value="<=">&lt;=</option>
-                                    <option value="contains">contains</option>
-                                    <option value="startsWith">starts with</option>
-                                    <option value="endsWith">ends with</option>
+                                    <option className={optionStyles} value="=">=</option>
+                                    <option className={optionStyles} value="!=">!=</option>
+                                    <option className={optionStyles} value=">">&gt;</option>
+                                    <option className={optionStyles} value="<">&lt;</option>
+                                    <option className={optionStyles} value=">=">&gt;=</option>
+                                    <option className={optionStyles} value="<=">&lt;=</option>
+                                    <option className={optionStyles} value="contains">contains</option>
+                                    <option className={optionStyles} value="startsWith">starts with</option>
+                                    <option className={optionStyles} value="endsWith">ends with</option>
                                   </select>
                                   <input
                                     type="text"

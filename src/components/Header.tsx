@@ -143,7 +143,7 @@ export default function Header() {
   const navItems = [
     { name: 'Mock Server', href: '/' },
     { name: 'API Tester', href: '/api-tester' },
-    { name: 'GraphQL Tester', href: '/graphql-tester' },
+    { name: 'CodeQL', href: '/graphql-tester' },
   ];
 
   const renderNavLink = (item: { name: string; href: string }) => {
