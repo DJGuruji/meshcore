@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { PlusIcon, TrashIcon, DocumentDuplicateIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { generateEndpointUrl } from '@/lib/urlUtils';
 
@@ -50,10 +50,13 @@ export default function ProjectPanel({
   isMobile,
   isLoading
 }: ProjectPanelProps) {
+  const PAGE_SIZE = 5;
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectBaseUrl, setNewProjectBaseUrl] = useState('/api/v1');
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const handleCreateProject = () => {
     if (newProjectName.trim()) {
@@ -86,6 +89,33 @@ export default function ProjectPanel({
       )
     );
   }, [projects, searchQuery]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filteredProjects.length, PAGE_SIZE]);
+
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    if (visibleCount >= filteredProjects.length) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount((prev) =>
+            Math.min(prev + PAGE_SIZE, filteredProjects.length)
+          );
+        }
+      },
+      { rootMargin: '0px 0px 120px 0px' }
+    );
+
+    const node = loadMoreRef.current;
+    observer.observe(node);
+    return () => observer.unobserve(node);
+  }, [visibleCount, filteredProjects.length, PAGE_SIZE]);
+
+  const visibleProjects = filteredProjects.slice(0, visibleCount);
+  const hasMoreProjects = visibleCount < filteredProjects.length;
 
   return (
     <>
@@ -236,7 +266,7 @@ export default function ProjectPanel({
               <div className="px-2 text-xs uppercase tracking-[0.4em] text-indigo-200">
                 Servers ({filteredProjects.length})
               </div>
-              {filteredProjects.map((project) => (
+              {visibleProjects.map((project) => (
                 <div
                   key={project._id}
                   className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-indigo-400/40 hover:bg-white/10"
@@ -322,6 +352,13 @@ export default function ProjectPanel({
                   )}
                 </div>
               ))}
+              <div ref={loadMoreRef} className="h-6">
+                {hasMoreProjects && (
+                  <div className="px-4 text-center text-xs text-slate-500">
+                    Loading more servers…
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
