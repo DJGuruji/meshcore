@@ -12,6 +12,7 @@ import {
   Bars3Icon,
   XMarkIcon,
   CodeBracketSquareIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import Cog6ToothIcon from '@heroicons/react/24/outline/Cog6ToothIcon';
 import GiftIcon from '@heroicons/react/24/outline/GiftIcon';
@@ -22,6 +23,19 @@ import SparklesIcon from '@heroicons/react/24/outline/SparklesIcon';
 import { Dialog } from '@headlessui/react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+
+const navigation = [
+  { name: 'Mockserver', href: '/' },
+  { name: 'API Tester', href: '/api-tester' },
+  { name: 'CodeQL', href: '/codeql' },
+];
+
+const utilityLinks = [
+  { name: 'Terms & Conditions', href: '/terms', icon: DocumentTextIcon },
+  { name: 'Privacy Policy', href: '/privacy', icon: DocumentTextIcon },
+  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
+];
 
 const BrandMark = ({ priority = false }: { priority?: boolean }) => (
   <div className="flex items-center gap-3">
@@ -60,6 +74,9 @@ export default function Header() {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUtilityPanelOpen, setIsUtilityPanelOpen] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -85,7 +102,7 @@ export default function Header() {
   }, []);
 
   const handleSidebarToggle = () => {
-    const newState = true;
+    const newState = !isSidePanelOpen;
     setIsSidePanelOpen(newState);
 
     window.dispatchEvent(
@@ -140,12 +157,6 @@ export default function Header() {
     }
   };
 
-  const navItems = [
-    { name: 'Mock Server', href: '/' },
-    { name: 'API Tester', href: '/api-tester' },
-    { name: 'CodeQL', href: '/graphql-tester' },
-  ];
-
   const renderNavLink = (item: { name: string; href: string }) => {
     const isActive = pathname === item.href;
     return (
@@ -155,14 +166,14 @@ export default function Header() {
         aria-current={isActive ? 'page' : undefined}
         className={`group relative overflow-hidden rounded-2xl border px-4 py-2 text-sm font-medium transition-all duration-300 ${
           isActive
-            ? 'border-transparent text-white shadow-lg shadow-indigo-500/30'
+            ? 'border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1),inset_0_0_10px_rgba(0,0,0,0.5)] bg-black/30 backdrop-blur-sm'
             : 'border-white/5 text-slate-300 hover:border-indigo-400/40 hover:text-white'
         }`}
       >
         <span
           className={`absolute inset-0 rounded-2xl transition-all duration-300 ${
             isActive
-              ? 'bg-gradient-to-r from-indigo-500/70 via-purple-500/70 to-orange-400/70'
+              ? 'bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.1)_0%,rgba(0,0,0,0.3)_100%)] opacity-100'
               : 'bg-white/5 opacity-0 group-hover:opacity-60'
           }`}
         />
@@ -196,23 +207,16 @@ export default function Header() {
             </Link>
 
             {status === 'authenticated' && (
-              <nav className="hidden items-center gap-2 md:flex">{navItems.map(renderNavLink)}</nav>
+              <nav className="hidden items-center gap-2 md:flex">{navigation.map(renderNavLink)}</nav>
             )}
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
             {status === 'authenticated' ? (
               <>
-                <button
-                  onClick={() => setIsUtilityPanelOpen(true)}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-indigo-100 transition hover:border-indigo-400/40 hover:text-white"
-                  aria-label="Open quick actions"
-                >
-                  <SparklesIcon className="h-5 w-5" />
-                </button>
                 <div className="relative">
                   <button
-                    onClick={toggleDropdown}
+                    onClick={() => setIsUtilityPanelOpen(true)}
                     className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/90 transition hover:border-indigo-400/40 hover:text-white"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30">
@@ -220,32 +224,6 @@ export default function Header() {
                     </span>
                     <span className="text-left">{session?.user?.name || 'Member'}</span>
                   </button>
-
-                  {isDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-64 overflow-hidden rounded-3xl border border-white/10 bg-[#050915]/95 text-sm shadow-2xl shadow-black/60 backdrop-blur-2xl">
-                      <div className="border-b border-white/5 px-4 py-3">
-                        <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">Signed in as</p>
-                        <p className="mt-1 truncate text-white">{session?.user?.email}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setIsPasswordModalOpen(true);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-slate-200 transition hover:bg-white/5"
-                      >
-                        <KeyIcon className="h-5 w-5 text-indigo-300" />
-                        Change Password
-                      </button>
-                      <button
-                        onClick={handleSignOut}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left font-semibold text-rose-300 transition hover:bg-white/5"
-                      >
-                        <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                        Sign out
-                      </button>
-                    </div>
-                  )}
                 </div>
               </>
             ) : (
@@ -302,7 +280,7 @@ export default function Header() {
             {status === 'authenticated' ? (
               <>
                 <nav className="space-y-2">
-                  {navItems.map((item) => (
+                  {navigation.map((item) => (
                     <Link
                       key={item.name}
                       href={item.href}
@@ -326,16 +304,6 @@ export default function Header() {
                 </nav>
 
                 <div className="mt-8 space-y-4 border-t border-white/5 pt-6">
-                  <button
-                    onClick={() => {
-                      setIsUtilityPanelOpen(true);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-indigo-400/30 px-4 py-3 text-left text-indigo-100 transition hover:border-indigo-400/60 hover:text-white"
-                  >
-                    <SparklesIcon className="h-5 w-5" />
-                    Open quick panel
-                  </button>
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-orange-400 text-gray-950">
                       <UserIcon className="h-6 w-6" />
@@ -346,6 +314,16 @@ export default function Header() {
                     </div>
                   </div>
 
+                  <button
+                    onClick={() => {
+                      setIsUtilityPanelOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-left text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+                  >
+                    <Cog6ToothIcon className="h-5 w-5 text-indigo-300" />
+                    Open Settings
+                  </button>
                   <button
                     onClick={() => {
                       setIsPasswordModalOpen(true);
@@ -432,7 +410,7 @@ export default function Header() {
               </Link>
 
               <a
-                href="https://github.com/meshcore"
+                href="https://github.com/DJGuruji/meshcore"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
@@ -444,6 +422,30 @@ export default function Header() {
                 </span>
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </a>
+
+              <Link
+                href="/terms"
+                className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+                onClick={() => setIsUtilityPanelOpen(false)}
+              >
+                <span className="flex items-center gap-3">
+                  <DocumentTextIcon className="h-5 w-5 text-indigo-300" />
+                  Terms & Conditions
+                </span>
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </Link>
+
+              <Link
+                href="/privacy"
+                className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+                onClick={() => setIsUtilityPanelOpen(false)}
+              >
+                <span className="flex items-center gap-3">
+                  <DocumentTextIcon className="h-5 w-5 text-indigo-300" />
+                  Privacy Policy
+                </span>
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </Link>
 
               <a
                 href="https://buymeacoffee.com/krishnanaths"
@@ -530,8 +532,8 @@ export default function Header() {
 
               <button
                 onClick={() => {
-                  setIsUtilityPanelOpen(false);
                   handleSignOut();
+                  setIsUtilityPanelOpen(false);
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-rose-300 transition hover:border-rose-400/40 hover:text-white"
               >
@@ -568,33 +570,72 @@ export default function Header() {
             <form onSubmit={handleChangePassword} className="mt-6 space-y-4">
               <div>
                 <label className="text-xs uppercase tracking-[0.3em] text-slate-400">Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
-                  required
-                />
+                <div className="relative mt-2">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-10 text-sm text-white placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="text-xs uppercase tracking-[0.3em] text-slate-400">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
-                  required
-                />
+                <div className="relative mt-2">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-10 text-sm text-white placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
+                  >
+                    {showNewPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="text-xs uppercase tracking-[0.3em] text-slate-400">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
-                  required
-                />
+                <div className="relative mt-2">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-10 text-sm text-white placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
                 <button

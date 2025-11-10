@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "./db";
 import { User } from "./models";
+import { validateTurnstileToken } from "./turnstile";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -9,10 +10,18 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        turnstileToken: { label: "Turnstile Token", type: "text" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.email || !credentials?.password || !credentials?.turnstileToken) {
+          return null;
+        }
+
+        // Validate Turnstile token
+        const isTurnstileValid = await validateTurnstileToken(credentials.turnstileToken);
+        if (!isTurnstileValid) {
+          console.error("Turnstile validation failed");
           return null;
         }
 
@@ -92,4 +101,4 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
   }
-} 
+}

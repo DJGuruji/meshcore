@@ -3,16 +3,33 @@ import crypto from 'crypto';
 import connectDB from '@/lib/db';
 import { User } from '@/lib/models';
 import { sendPasswordResetEmail } from '@/lib/email';
+import { validateTurnstileToken } from '@/lib/turnstile';
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
     
-    const { email } = await request.json();
+    const { email, turnstileToken } = await request.json();
     
     if (!email) {
       return NextResponse.json(
         { error: 'Email is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate Turnstile token
+    if (!turnstileToken) {
+      return NextResponse.json(
+        { error: 'CAPTCHA verification is required' },
+        { status: 400 }
+      );
+    }
+    
+    const isTurnstileValid = await validateTurnstileToken(turnstileToken);
+    if (!isTurnstileValid) {
+      return NextResponse.json(
+        { error: 'CAPTCHA verification failed. Please try again.' },
         { status: 400 }
       );
     }

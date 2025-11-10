@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function Register() {
   const router = useRouter();
@@ -11,8 +13,12 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +38,16 @@ export default function Register() {
       return;
     }
     
+    if (!acceptedTerms) {
+      setError('Please accept the Terms and Privacy Policy');
+      return;
+    }
+    
+    if (!turnstileToken) {
+      setError('Please complete the CAPTCHA verification');
+      return;
+    }
+    
     try {
       setLoading(true);
       setError('');
@@ -41,6 +57,7 @@ export default function Register() {
         name,
         email,
         password,
+        turnstileToken,
       });
       
       // Redirect to sign in page after successful registration
@@ -49,6 +66,8 @@ export default function Register() {
       const errorMessage = error.response?.data?.error || 'Registration failed';
       setError(errorMessage);
       console.error('Registration error:', error);
+      // Reset the Turnstile token
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -118,16 +137,29 @@ export default function Register() {
                 <label htmlFor="password" className={labelStyles}>
                   Password
                 </label>
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="Create a secure password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={inputStyles}
-                  required
-                  minLength={6}
-                />
+                <div className="relative mt-2">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a secure password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={inputStyles}
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
                 <p className="mt-2 text-xs text-slate-400">At least 6 characters.</p>
               </div>
 
@@ -135,23 +167,74 @@ export default function Register() {
                 <label htmlFor="confirmPassword" className={labelStyles}>
                   Confirm Password
                 </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Re-enter password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={inputStyles}
-                  required
-                  minLength={6}
-                />
+                <div className="relative mt-2">
+                  <input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={inputStyles}
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-indigo-500 focus:ring-indigo-500"
+                />
+                <span className="ml-3 text-sm text-slate-300">
+                  I accept the{' '}
+                  <Link href="/terms" className="text-indigo-300 hover:text-white">
+                    Terms and Conditions
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" className="text-indigo-300 hover:text-white">
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+            </div>
+
+            {/* Turnstile CAPTCHA */}
+            <div className="flex justify-center">
+              <Turnstile
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                onSuccess={(token: string) => setTurnstileToken(token)}
+                onError={() => {
+                  setError('CAPTCHA verification failed. Please try again.');
+                  setTurnstileToken('');
+                }}
+                onExpire={() => setTurnstileToken('')}
+              />
             </div>
 
             <button
               type="submit"
-              disabled={loading}
-              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={loading || !acceptedTerms}
+              className={`group flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-not-allowed ${
+                acceptedTerms
+                  ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 shadow-indigo-500/30 hover:scale-[1.01]'
+                  : 'bg-white/10 opacity-70'
+              }`}
             >
               <span>{loading ? 'Creating account…' : 'Create account'}</span>
               <svg
@@ -181,4 +264,4 @@ export default function Register() {
       </div>
     </div>
   );
-} 
+}

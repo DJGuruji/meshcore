@@ -43,6 +43,7 @@ export default function Home() {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
 
   // Redirect to sign in if not authenticated
   useEffect(() => {
@@ -72,6 +73,16 @@ export default function Home() {
     };
   }, []);
 
+  // Check for cookie consent when user is authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const consent = localStorage.getItem('cookieConsent');
+      if (!consent) {
+        setShowCookieConsent(true);
+      }
+    }
+  }, [status]);
+
   // Notify header about sidebar state changes
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('sidebarToggle', { 
@@ -80,10 +91,10 @@ export default function Home() {
   }, [isSidePanelOpen]);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !showCookieConsent) {
       fetchProjects();
     }
-  }, [status]);
+  }, [status, showCookieConsent]);
 
   const fetchProjects = async () => {
     try {
@@ -157,6 +168,16 @@ export default function Home() {
         setSelectedProject({ ...selectedProject });
       }
     }
+  };
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem('cookieConsent', 'accepted');
+    setShowCookieConsent(false);
+  };
+
+  const handleRejectCookies = () => {
+    // Redirect to sign out if cookies are rejected
+    router.push('/auth/signin');
   };
 
   // Show hero section for unauthenticated users
@@ -233,6 +254,69 @@ export default function Home() {
       <div className="flex min-h-screen items-center justify-center bg-[#030712]">
         <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 shadow-xl shadow-black/50">
           Preparing your workspace…
+        </div>
+      </div>
+    );
+  }
+
+  // Show cookie consent popup
+  if (status === 'authenticated' && showCookieConsent) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="relative w-full max-w-2xl rounded-3xl border border-white/10 bg-[#050915]/95 p-8 text-white shadow-2xl shadow-black/80 backdrop-blur-2xl">
+          <div className="text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500/10 mb-6">
+              <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            
+            <h2 className="text-2xl font-bold">We Use Cookies</h2>
+            
+            <div className="mt-6 text-slate-300">
+              <p className="mb-4">
+                This website uses cookies to enhance your browsing experience and provide personalized content. 
+                By clicking "Accept Cookies", you consent to our use of cookies in accordance with our{' '}
+                <Link href="/privacy" className="text-indigo-300 hover:text-white underline">
+                  Privacy Policy
+                </Link>.
+              </p>
+              
+              <p className="text-sm">
+                Cookies help us understand how you interact with our website and improve your experience. 
+                You must accept cookies to use this site.
+              </p>
+            </div>
+            
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
+              <button
+                onClick={handleAcceptCookies}
+                className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
+              >
+                Accept Cookies
+              </button>
+              
+              <button
+                onClick={handleRejectCookies}
+                className="rounded-2xl border border-white/10 px-8 py-3 text-base font-semibold text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+              >
+                Reject (Sign Out)
+              </button>
+            </div>
+            
+            <div className="mt-6 text-xs text-slate-400">
+              <p>
+                By using our website, you agree to our{' '}
+                <Link href="/terms" className="text-indigo-300 hover:text-white underline">
+                  Terms and Conditions
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-indigo-300 hover:text-white underline">
+                  Privacy Policy
+                </Link>.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );

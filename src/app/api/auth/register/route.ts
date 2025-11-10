@@ -1,12 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { User } from '@/lib/models';
+import { validateTurnstileToken } from '@/lib/turnstile';
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
     
-    const { name, email, password } = await request.json();
+    const { name, email, password, turnstileToken } = await request.json();
+    
+    // Validate Turnstile token
+    if (!turnstileToken) {
+      return NextResponse.json(
+        { error: 'CAPTCHA verification is required' },
+        { status: 400 }
+      );
+    }
+    
+    const isTurnstileValid = await validateTurnstileToken(turnstileToken);
+    if (!isTurnstileValid) {
+      return NextResponse.json(
+        { error: 'CAPTCHA verification failed. Please try again.' },
+        { status: 400 }
+      );
+    }
     
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -50,4 +67,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
