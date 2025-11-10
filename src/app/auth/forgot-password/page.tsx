@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,15 +20,25 @@ export default function ForgotPassword() {
       return;
     }
     
+    if (!turnstileToken) {
+      setError('Please complete the CAPTCHA verification');
+      return;
+    }
+    
     try {
       setLoading(true);
       setError('');
       setMessage('');
       
-      const response = await axios.post('/api/auth/forgot-password', { email });
+      const response = await axios.post('/api/auth/forgot-password', { 
+        email,
+        turnstileToken,
+      });
       setMessage(response.data.message);
     } catch (error: any) {
       setError(error.response?.data?.error || 'An error occurred. Please try again.');
+      // Reset the Turnstile token
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -79,6 +91,19 @@ export default function ForgotPassword() {
                 onChange={(e) => setEmail(e.target.value)}
                 className={inputStyles}
                 required
+              />
+            </div>
+
+            {/* Turnstile CAPTCHA */}
+            <div className="flex justify-center">
+              <Turnstile
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                onSuccess={(token: string) => setTurnstileToken(token)}
+                onError={() => {
+                  setError('CAPTCHA verification failed. Please try again.');
+                  setTurnstileToken('');
+                }}
+                onExpire={() => setTurnstileToken('')}
               />
             </div>
 

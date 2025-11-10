@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function SignIn() {
   const router = useRouter();
@@ -11,12 +13,19 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
       setError('Please fill in all fields');
+      return;
+    }
+    
+    if (!turnstileToken) {
+      setError('Please complete the CAPTCHA verification');
       return;
     }
     
@@ -28,10 +37,13 @@ export default function SignIn() {
         redirect: false,
         email,
         password,
+        turnstileToken,
       });
       
       if (result?.error) {
         setError('Invalid email or password');
+        // Reset the Turnstile token
+        setTurnstileToken('');
         return;
       }
       
@@ -41,6 +53,8 @@ export default function SignIn() {
     } catch (error) {
       setError('An error occurred during sign in');
       console.error('Sign in error:', error);
+      // Reset the Turnstile token
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -94,15 +108,28 @@ export default function SignIn() {
               <label htmlFor="password" className={labelStyles}>
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={inputStyles}
-                required
-              />
+              <div className="relative mt-2">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputStyles}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
@@ -113,6 +140,19 @@ export default function SignIn() {
               >
                 Forgot password?
               </Link>
+            </div>
+
+            {/* Turnstile CAPTCHA */}
+            <div className="flex justify-center">
+              <Turnstile
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                onSuccess={(token: string) => setTurnstileToken(token)}
+                onError={() => {
+                  setError('CAPTCHA verification failed. Please try again.');
+                  setTurnstileToken('');
+                }}
+                onExpire={() => setTurnstileToken('')}
+              />
             </div>
 
             <button
@@ -148,4 +188,4 @@ export default function SignIn() {
       </div>
     </div>
   );
-} 
+}
