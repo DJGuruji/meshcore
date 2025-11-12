@@ -447,7 +447,7 @@ export default function ApiTesterPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'tests'>('params');
-  const [responseTab, setResponseTab] = useState<'body' | 'headers' | 'info' | 'tests' | 'console'>('body');
+  const [responseTab, setResponseTab] = useState<'body' | 'headers' | 'info' | 'tests' | 'console' | 'payload'>('body');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showCodeGen, setShowCodeGen] = useState(false);
   const [codeGenLang, setCodeGenLang] = useState('curl');
@@ -932,6 +932,60 @@ export default function ApiTesterPage() {
       const shortened = url.length > 30 ? url.substring(0, 30) + '...' : url;
       return `${method} ${shortened}`;
     }
+  };
+
+  // Helper function to mask sensitive data
+  const maskSensitiveData = (data: string): string => {
+    if (!data) return '';
+    
+    // For JSON strings, parse and mask sensitive fields
+    if (data.trim().startsWith('{') || data.trim().startsWith('[')) {
+      try {
+        const parsed = JSON.parse(data);
+        const masked = maskObject(parsed);
+        return JSON.stringify(masked, null, 2);
+      } catch (e) {
+        // If parsing fails, treat as regular string
+      }
+    }
+    
+    // For regular strings, mask common sensitive patterns
+    return data
+      .replace(/(password|pwd|pass|secret|token|key|auth|authorization)(["\s:=]*)[^\s"'&;]*/gi, '$1$2********')
+      .replace(/(Bearer\s+)[^\s]+/gi, '$1********')
+      .replace(/(Basic\s+)[^\s]+/gi, '$1********')
+      .replace(/[a-zA-Z0-9]{32,}/g, '********************************')
+      .replace(/[0-9]{4}[-\s]?[0-9]{4}[-\s]?[0-9]{4}[-\s]?[0-9]{4}/g, '****-****-****-****');
+  };
+
+  // Helper function to recursively mask sensitive fields in objects
+  const maskObject = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    
+    if (typeof obj === 'string') {
+      return maskSensitiveData(obj);
+    }
+    
+    if (typeof obj === 'object') {
+      if (Array.isArray(obj)) {
+        return obj.map(item => maskObject(item));
+      }
+      
+      const maskedObj: any = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          // Mask sensitive field names
+          if (/(password|pwd|pass|secret|token|key|auth|authorization)/i.test(key)) {
+            maskedObj[key] = '********';
+          } else {
+            maskedObj[key] = maskObject(obj[key]);
+          }
+        }
+      }
+      return maskedObj;
+    }
+    
+    return obj;
   };
 
   const saveCollection = async () => {
@@ -1817,7 +1871,7 @@ pm.test("Response has data", function() {
         <div className="flex-1 flex flex-col overflow-hidden border-l border-white/5 bg-white/5">
           <div className="border-b border-white/5">
             <div className="flex gap-1 px-4">
-              {(['body', 'headers', 'info', 'tests', 'console'] as const).map((tab) => (
+              {(['body', 'headers', 'info', 'tests', 'console', 'payload'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setResponseTab(tab)}
@@ -2034,6 +2088,140 @@ pm.test("Response has data", function() {
                         </pre>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {responseTab === 'payload' && (
+                  <div className="space-y-6">
+                    {/* Request Payload Section */}
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                      <h3 className="text-sm font-semibold text-yellow-400 mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        Request Payload
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-4">
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Method</div>
+                            <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
+                              {currentTab?.request.method}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">URL</div>
+                            <div className="text-sm font-mono text-white break-all max-w-md px-2 py-1 bg-slate-700 rounded">
+                              {currentTab?.request.url}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {currentTab?.request.headers && currentTab.request.headers.filter(h => h.enabled).length > 0 && (
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Headers</div>
+                            <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto">
+                              {currentTab.request.headers.filter(h => h.enabled).map((header, idx) => (
+                                <div key={idx} className="flex gap-2 mb-1 last:mb-0">
+                                  <span className="text-indigo-300">{header.key}:</span>
+                                  <span className="text-slate-300 break-all">{maskSensitiveData(header.value)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {currentTab?.request.params && currentTab.request.params.filter(p => p.enabled).length > 0 && (
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Query Parameters</div>
+                            <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto">
+                              {currentTab.request.params.filter(p => p.enabled).map((param, idx) => (
+                                <div key={idx} className="flex gap-2 mb-1 last:mb-0">
+                                  <span className="text-indigo-300">{param.key}:</span>
+                                  <span className="text-slate-300 break-all">{maskSensitiveData(param.value)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {currentTab?.request.body && currentTab.request.body.type !== 'none' && (
+                          <div>
+                            <div className="text-xs text-slate-400 mb-1">Body ({currentTab.request.body.type})</div>
+                            <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto font-mono">
+                              <pre className="text-slate-300 whitespace-pre-wrap break-all">
+                                {currentTab.request.body.type === 'json' && currentTab.request.body.json 
+                                  ? maskSensitiveData(currentTab.request.body.json)
+                                  : currentTab.request.body.type === 'raw' && currentTab.request.body.raw
+                                  ? maskSensitiveData(currentTab.request.body.raw)
+                                  : 'No body content'}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Response Data Section */}
+                    {currentTab?.response && (
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                        <h3 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Response Data
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap gap-4">
+                            <div>
+                              <div className="text-xs text-slate-400 mb-1">Status</div>
+                              <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
+                                {currentTab.response.status} {currentTab.response.statusText}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-400 mb-1">Time</div>
+                              <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
+                                {currentTab.response.time}ms
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-400 mb-1">Size</div>
+                              <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
+                                {((currentTab.response.size || 0) / 1024).toFixed(2)} KB
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {currentTab.response.headers && Object.keys(currentTab.response.headers).length > 0 && (
+                            <div>
+                              <div className="text-xs text-slate-400 mb-1">Response Headers</div>
+                              <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto">
+                                {Object.entries(currentTab.response.headers).map(([key, value]) => (
+                                  <div key={key} className="flex gap-2 mb-1 last:mb-0">
+                                    <span className="text-indigo-300">{key}:</span>
+                                    <span className="text-slate-300 break-all">{maskSensitiveData(value as string)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {currentTab.response.body && (
+                            <div>
+                              <div className="text-xs text-slate-400 mb-1">Response Body</div>
+                              <div className="text-sm bg-slate-700 rounded p-2 max-h-40 overflow-y-auto font-mono">
+                                <pre className="text-slate-300 whitespace-pre-wrap break-all">
+                                  {typeof currentTab.response.body === 'string' 
+                                    ? maskSensitiveData(currentTab.response.body)
+                                    : maskSensitiveData(JSON.stringify(currentTab.response.body, null, 2))}
+                                </pre>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
