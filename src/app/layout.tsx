@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import "aos/dist/aos.css"; // AOS styles
 import AOSInitializer from "@/components/AOSInitializer";
 import AuthProvider from "@/components/AuthProvider";
 import Header from "@/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -29,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-br from-black min-h-screen text-yellow-400`}
+        className={`${inter.variable} antialiased bg-gradient-to-br from-black min-h-screen text-yellow-400`}
       >
         <AuthProvider>
           <AOSInitializer>

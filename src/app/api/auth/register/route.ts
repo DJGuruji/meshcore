@@ -35,11 +35,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create user
+    // Create user with default role
     const user = await User.create({
       name,
       email,
       password,
+      role: 'user' // Default role
     });
     
     // Return user without password

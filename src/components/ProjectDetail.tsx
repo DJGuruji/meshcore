@@ -54,6 +54,12 @@ interface Endpoint {
     operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
     value: string | number | boolean;
   }[];
+  // Pagination settings
+  pagination?: {
+    enabled: boolean;
+    defaultLimit: number;
+    maxLimit: number;
+  };
 }
 
 interface ProjectDetailProps {
@@ -78,7 +84,13 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       field: string;
       operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
       value: string | number | boolean;
-    }[]
+    }[],
+    // Pagination settings
+    pagination: {
+      enabled: false,
+      defaultLimit: 10,
+      maxLimit: 100
+    }
   });
 
   // Add state for new field in the form
@@ -163,7 +175,13 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       requiresAuth: null as boolean | null,
       fields: [] as EndpointField[],
       dataSource: '',
-      conditions: []
+      conditions: [],
+      // Pagination settings
+      pagination: {
+        enabled: false,
+        defaultLimit: 10,
+        maxLimit: 100
+      }
     });
     
     // Reset field form
@@ -1096,6 +1114,71 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                     )}
                   </div>
                 )}
+                
+                {/* Pagination settings for GET endpoints */}
+                {newEndpoint.method === 'GET' && newEndpoint.dataSource && (
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <h4 className="text-xs font-medium text-slate-300 mb-3">Pagination Settings</h4>
+                    
+                    <div className="flex items-center mb-3">
+                      <input
+                        type="checkbox"
+                        id="paginationEnabled"
+                        checked={newEndpoint.pagination.enabled}
+                        onChange={(e) => setNewEndpoint({
+                          ...newEndpoint,
+                          pagination: {
+                            ...newEndpoint.pagination,
+                            enabled: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 rounded border-white/10 bg-white/5 text-yellow-400 focus:ring-yellow-400"
+                      />
+                      <label htmlFor="paginationEnabled" className="text-sm text-slate-300">
+                        Enable Pagination & Infinite Loading
+                      </label>
+                    </div>
+                    
+                    {newEndpoint.pagination.enabled && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Default Items Per Page</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={newEndpoint.pagination.defaultLimit}
+                            onChange={(e) => setNewEndpoint({
+                              ...newEndpoint,
+                              pagination: {
+                                ...newEndpoint.pagination,
+                                defaultLimit: parseInt(e.target.value) || 10
+                              }
+                            })}
+                            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Maximum Items Per Page</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="1000"
+                            value={newEndpoint.pagination.maxLimit}
+                            onChange={(e) => setNewEndpoint({
+                              ...newEndpoint,
+                              pagination: {
+                                ...newEndpoint.pagination,
+                                maxLimit: parseInt(e.target.value) || 100
+                              }
+                            })}
+                            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1532,6 +1615,71 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                                 )}
                               </div>
                             )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Pagination settings for GET endpoints in edit mode */}
+                    {endpoint.method === 'GET' && endpoint.dataSource && (
+                      <div className="mt-4 pt-4 border-t border-white/10">
+                        <h4 className="text-sm font-medium text-slate-300 mb-3">Pagination Settings</h4>
+                        
+                        <div className="flex items-center mb-3">
+                          <input
+                            type="checkbox"
+                            id={`paginationEnabled-${endpoint._id}`}
+                            checked={endpoint.pagination?.enabled || false}
+                            onChange={(e) => handleUpdateEndpoint(endpoint._id, {
+                              pagination: {
+                                enabled: e.target.checked,
+                                defaultLimit: endpoint.pagination?.defaultLimit || 10,
+                                maxLimit: endpoint.pagination?.maxLimit || 100
+                              }
+                            })}
+                            className="mr-2 h-4 w-4 rounded border-white/10 bg-white/5 text-yellow-400 focus:ring-yellow-400"
+                          />
+                          <label htmlFor={`paginationEnabled-${endpoint._id}`} className="text-sm text-slate-300">
+                            Enable Pagination & Infinite Loading
+                          </label>
+                        </div>
+                        
+                        {endpoint.pagination?.enabled && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 mb-1">Default Items Per Page</label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={endpoint.pagination.defaultLimit || 10}
+                                onChange={(e) => handleUpdateEndpoint(endpoint._id, {
+                                  pagination: {
+                                    enabled: endpoint.pagination?.enabled || false,
+                                    defaultLimit: parseInt(e.target.value) || 10,
+                                    maxLimit: endpoint.pagination?.maxLimit || 100
+                                  }
+                                })}
+                                className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 mb-1">Maximum Items Per Page</label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="1000"
+                                value={endpoint.pagination.maxLimit || 100}
+                                onChange={(e) => handleUpdateEndpoint(endpoint._id, {
+                                  pagination: {
+                                    enabled: endpoint.pagination?.enabled || false,
+                                    defaultLimit: endpoint.pagination?.defaultLimit || 10,
+                                    maxLimit: parseInt(e.target.value) || 100
+                                  }
+                                })}
+                                className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
