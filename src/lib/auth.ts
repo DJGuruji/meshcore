@@ -47,6 +47,7 @@ export const authOptions: NextAuthOptions = {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
+            role: user.role // Include user role
           };
         } catch (error) {
           console.error("Authentication error:", error);
@@ -63,12 +64,14 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role; // Include user role in token
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
+        session.user.role = token.role as string; // Include user role in session
       }
       return session;
     }
@@ -85,6 +88,7 @@ export const authOptions: NextAuthOptions = {
 declare module "next-auth" {
   interface User {
     id: string;
+    role?: string; // Add role property
   }
   
   interface Session {
@@ -93,6 +97,7 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      role?: string; // Add role property
     };
   }
 }
@@ -100,5 +105,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
+    role?: string; // Add role property
   }
 }

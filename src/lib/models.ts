@@ -19,6 +19,13 @@ const UserSchema = new mongoose.Schema({
     minlength: [6, 'Password should be at least 6 characters'],
     select: false, // Don't include password in query results by default
   },
+  // Role field with default value
+  role: {
+    type: String,
+    enum: ['user', 'staff', 'admin', 'super-admin'],
+    default: 'user',
+    required: true
+  },
   resetToken: {
     type: String,
     select: false, // Don't include in query results by default
@@ -143,6 +150,21 @@ const ApiProjectSchema = new mongoose.Schema({
       },
       value: mongoose.Schema.Types.Mixed
     }],
+    // Pagination settings for GET endpoints
+    pagination: {
+      enabled: {
+        type: Boolean,
+        default: false
+      },
+      defaultLimit: {
+        type: Number,
+        default: 10
+      },
+      maxLimit: {
+        type: Number,
+        default: 100
+      }
+    },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   }],

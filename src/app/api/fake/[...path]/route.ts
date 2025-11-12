@@ -403,7 +403,44 @@ async function handleRequest(request: NextRequest, method: string) {
                 // Apply conditions if any
                 const filteredData = filterDataByConditions(sourceData, endpoint.conditions || []);
                 
-                const response = NextResponse.json(filteredData, { status: endpoint.statusCode });
+                // Handle pagination if enabled
+                let paginatedData = filteredData;
+                let paginationInfo = null;
+                
+                if (endpoint.pagination?.enabled && Array.isArray(filteredData)) {
+                  // Get pagination parameters from query string
+                  const url = new URL(request.url);
+                  const page = parseInt(url.searchParams.get('page') || '1');
+                  const limit = Math.min(
+                    parseInt(url.searchParams.get('limit') || endpoint.pagination.defaultLimit.toString()),
+                    endpoint.pagination.maxLimit
+                  );
+                  
+                  // Calculate pagination
+                  const startIndex = (page - 1) * limit;
+                  const endIndex = startIndex + limit;
+                  const totalPages = Math.ceil(filteredData.length / limit);
+                  
+                  // Slice the data
+                  paginatedData = filteredData.slice(startIndex, endIndex);
+                  
+                  // Add pagination info
+                  paginationInfo = {
+                    page,
+                    limit,
+                    total: filteredData.length,
+                    totalPages,
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1
+                  };
+                }
+                
+                // Prepare response data
+                const responseData = paginationInfo 
+                  ? { data: paginatedData, pagination: paginationInfo }
+                  : paginatedData;
+                
+                const response = NextResponse.json(responseData, { status: endpoint.statusCode });
                 return addCorsHeaders(response);
               } catch (error) {
                 console.error('Error processing data source:', error);
