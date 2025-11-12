@@ -1362,11 +1362,11 @@ export default function ApiTesterPage() {
                   const env = environments.find(en => en._id === e.target.value);
                   setSelectedEnvironment(env || null);
                 }}
-                className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                className="mb-3 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               >
-                <option value="">No Environment</option>
+                <option className="bg-black/80" value="">No Environment</option>
                 {environments.map((env) => (
-                  <option key={env._id} value={env._id}>
+                  <option key={env._id} value={env._id} className="bg-black/80">
                     {env.name} ({env.variables.length} vars)
                   </option>
                 ))}
@@ -1491,15 +1491,15 @@ export default function ApiTesterPage() {
               <select
                 value={currentRequest.method}
                 onChange={(e) => setCurrentRequest({ ...currentRequest, method: e.target.value })}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 font-semibold text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                className="rounded-2xl border border-white/10 bg-black/30 px-4 py-2 font-semibold text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               >
-                <option>GET</option>
-                <option>POST</option>
-                <option>PUT</option>
-                <option>PATCH</option>
-                <option>DELETE</option>
-                <option>OPTIONS</option>
-                <option>HEAD</option>
+                <option className="bg-black/80">GET</option>
+                <option className="bg-black/80">POST</option>
+                <option className="bg-black/80">PUT</option>
+                <option className="bg-black/80">PATCH</option>
+                <option className="bg-black/80">DELETE</option>
+                <option className="bg-black/80">OPTIONS</option>
+                <option className="bg-black/80">HEAD</option>
               </select>
               
               <input

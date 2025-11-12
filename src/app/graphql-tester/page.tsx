@@ -162,7 +162,7 @@ export default function GraphQLTesterPage() {
     {
       id: 'tab-1',
       name: 'Untitled Request',
-      url: 'http://localhost:3000/api/tools/graphql-test',
+      url: `${process.env.BASE_URL || 'http://localhost:3000'}/api/tools/graphql-test`,
       query: `query {
   users {
     id
