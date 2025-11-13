@@ -42,16 +42,22 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // Check if email is verified
+          if (!user.emailVerified) {
+            throw new Error("Please verify your email address before signing in");
+          }
+
           // Return user without password
           return {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
-            role: user.role // Include user role
+            role: user.role, // Include user role
+            accountType: user.accountType // Include account type
           };
         } catch (error) {
           console.error("Authentication error:", error);
-          return null;
+          throw error; // Re-throw to be handled by NextAuth
         }
       }
     })
@@ -65,6 +71,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role; // Include user role in token
+        token.accountType = user.accountType; // Include account type in token
       }
       return token;
     },
@@ -72,6 +79,7 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string; // Include user role in session
+        session.user.accountType = token.accountType as string; // Include account type in session
       }
       return session;
     }
@@ -82,6 +90,14 @@ export const authOptions: NextAuthOptions = {
     error: "/auth/error",
   },
   secret: process.env.NEXTAUTH_SECRET || "your-default-secret-do-not-use-in-production",
+  // Handle sign in errors
+  events: {
+    async signIn({ user, account, profile, isNewUser }) {
+      // This event is triggered after successful sign in
+      // We can use it for audit logging or other side effects
+      console.log("User signed in:", user);
+    }
+  }
 };
 
 // Extend next-auth types
@@ -89,6 +105,7 @@ declare module "next-auth" {
   interface User {
     id: string;
     role?: string; // Add role property
+    accountType?: string; // Add account type property
   }
   
   interface Session {
@@ -98,6 +115,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       role?: string; // Add role property
+      accountType?: string; // Add account type property
     };
   }
 }
@@ -106,5 +124,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role?: string; // Add role property
+    accountType?: string; // Add account type property
   }
 }

@@ -9,31 +9,14 @@ function matchEndpoint(requestPath: string, projectName: string, baseUrl: string
   const cleanProjectName = projectName.toLowerCase().replace(/[^a-z0-9]/g, '-');
   const expectedPath = `/${cleanProjectName}${baseUrl}${endpointPath}`;
 
-   // For PUT, PATCH, DELETE methods, the path might include an ID parameter at the end
-
-
-  if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
-
-
+   // For GET, PUT, PATCH, DELETE methods, the path might include an ID parameter at the end
+  if (method === 'GET' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
     // Check if the request path matches the expected path with an ID at the end
-
-
     const pathWithIdPattern = new RegExp(`^${expectedPath}/[0-9a-fA-F]{24}$`);
-
-
     if (pathWithIdPattern.test(requestPath)) {
-
-
       return true;
-
-
     }
-
-
   }
-
-
-  
   
   return requestPath === expectedPath;
 }
@@ -374,40 +357,72 @@ async function handleRequest(request: NextRequest, method: string) {
               ep._id.toString() === endpoint.dataSource.toString());
             if (sourceEndpoint) {
               try {
-                // Get data from the database instead of using the response body
-                const storedData = await MockServerData.find({ 
+                // Extract ID from path if present
+                const pathParts = fullPath.split('/');
+                const potentialId = pathParts[pathParts.length - 1];
+                
+                // Check if the last part of the path is a valid MongoDB ObjectId
+                const isValidId = /^[0-9a-fA-F]{24}$/.test(potentialId);
+                
+                let query: any = { 
                   endpointId: sourceEndpoint._id,
                   projectId: project._id
-                }).sort({ createdAt: -1 });
+                };
+                
+                // If we have a valid ID, filter by it
+                if (isValidId) {
+                  query._id = potentialId;
+                }
+                
+                // Get data from the database
+                const storedData = await MockServerData.find(query).sort({ createdAt: -1 });
                 
                 let sourceData;
                 if (storedData.length > 0) {
                   // Use the stored data
-                  if (storedData.length === 1) {
+                  if (storedData.length === 1 && isValidId) {
+                    // If we're fetching a specific item by ID, return just that item
                     sourceData = {
                       id: storedData[0]._id,
                       ...storedData[0].data
                     };
-                  } else {
-                    // Return array of all stored data with IDs
+                  } else if (!isValidId) {
+                    // If no ID was provided, return all items (array)
                     sourceData = storedData.map(item => ({
                       id: item._id,
                       ...item.data
                     }));
+                  } else {
+                    // If ID was provided but no item found, return 404
+                    const notFoundResponse = NextResponse.json({ 
+                      error: 'Item not found',
+                      id: potentialId
+                    }, { status: 404 });
+                    return addCorsHeaders(notFoundResponse);
                   }
                 } else {
-                  // Fall back to the original response body if no data is stored
-                  sourceData = JSON.parse(sourceEndpoint.responseBody);
+                  // If no data is stored, fall back to the original response body
+                  if (!isValidId) {
+                    // Only fall back for general GET requests, not specific ID requests
+                    sourceData = JSON.parse(sourceEndpoint.responseBody);
+                  } else {
+                    // If specific ID requested but no data found, return 404
+                    const notFoundResponse = NextResponse.json({ 
+                      error: 'Item not found',
+                      id: potentialId
+                    }, { status: 404 });
+                    return addCorsHeaders(notFoundResponse);
+                  }
                 }
                 
                 // Apply conditions if any
                 const filteredData = filterDataByConditions(sourceData, endpoint.conditions || []);
                 
-                // Handle pagination if enabled
+                // Handle pagination if enabled (only for general GET requests, not specific ID requests)
                 let paginatedData = filteredData;
                 let paginationInfo = null;
                 
-                if (endpoint.pagination?.enabled && Array.isArray(filteredData)) {
+                if (endpoint.pagination?.enabled && Array.isArray(filteredData) && !isValidId) {
                   // Get pagination parameters from query string
                   const url = new URL(request.url);
                   const page = parseInt(url.searchParams.get('page') || '1');

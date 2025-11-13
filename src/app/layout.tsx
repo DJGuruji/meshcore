@@ -5,6 +5,7 @@ import "aos/dist/aos.css"; // AOS styles
 import AOSInitializer from "@/components/AOSInitializer";
 import AuthProvider from "@/components/AuthProvider";
 import Header from "@/components/Header";
+import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,14 +28,16 @@ export default function RootLayout({
         className={`${inter.variable} antialiased bg-gradient-to-br from-black min-h-screen text-yellow-400`}
       >
         <AuthProvider>
-          <AOSInitializer>
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <main className="flex-grow">
-                {children}
-              </main>
-            </div>
-          </AOSInitializer>
+          <NavigationStateProvider>
+            <AOSInitializer>
+              <div className="flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-grow">
+                  {children}
+                </main>
+              </div>
+            </AOSInitializer>
+          </NavigationStateProvider>
         </AuthProvider>
       </body>
     </html>

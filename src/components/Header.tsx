@@ -119,6 +119,8 @@ export default function Header() {
   };
 
   const handleSignOut = () => {
+    // Clear navigation state when signing out
+    localStorage.removeItem('navigationState');
     signOut({ callbackUrl: '/auth/signin' });
   };
 
@@ -311,6 +313,12 @@ export default function Header() {
                     <div>
                       <p className="text-sm font-semibold">{session?.user?.name}</p>
                       <p className="text-xs text-slate-300">{session?.user?.email}</p>
+                      {/* Display account type in mobile menu */}
+                      <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                        <p className="text-xs font-semibold capitalize text-white">
+                          {session?.user?.accountType || 'free'}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -394,6 +402,18 @@ export default function Header() {
               <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">Signed in</p>
               <p className="mt-2 text-lg font-semibold">{session?.user?.name || 'Member'}</p>
               <p className="text-sm text-slate-300">{session?.user?.email || 'No email'}</p>
+              {/* Display account type */}
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Account Type</p>
+                <p className="mt-1 font-semibold capitalize text-white">
+                  {session?.user?.accountType || 'free'}
+                </p>
+                {session?.user?.accountType === 'free' && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Upgrade to unlock premium features
+                  </p>
+                )}
+              </div>
             </div>
 
             <nav className="space-y-3">
@@ -409,19 +429,7 @@ export default function Header() {
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </Link>
 
-              <a
-                href="https://github.com/DJGuruji/meshcore"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
-                onClick={() => setIsUtilityPanelOpen(false)}
-              >
-                <span className="flex items-center gap-3">
-                  <CodeBracketSquareIcon className="h-5 w-5 text-indigo-300" />
-                  Open Source
-                </span>
-                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-              </a>
+       
 
               <Link
                 href="/terms"

@@ -1,16 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function ForgotPassword() {
+  const { status } = useSession();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
+
+  // Redirect authenticated users to home page
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/');
+    }
+  }, [status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +58,22 @@ export default function ForgotPassword() {
   const inputStyles =
     'mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 placeholder-slate-400 transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60';
   const labelStyles = 'text-xs font-semibold uppercase tracking-[0.2em] text-slate-300';
+
+  // Show loading state while checking authentication
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#030712]">
+        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 shadow-xl shadow-black/50">
+          Checking authentication status…
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render the forgot password form if user is authenticated
+  if (status === 'authenticated') {
+    return null;
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#030712] px-4 py-10 sm:px-6 lg:px-8">

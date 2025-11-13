@@ -38,6 +38,7 @@ interface ProjectPanelProps {
   setIsOpen: (isOpen: boolean) => void;
   isMobile: boolean;
   isLoading: boolean;
+  isCreatingProject?: boolean; // Add the new prop
 }
 
 export default function ProjectPanel({
@@ -48,7 +49,8 @@ export default function ProjectPanel({
   isOpen,
   setIsOpen,
   isMobile,
-  isLoading
+  isLoading,
+  isCreatingProject = false // Default to false
 }: ProjectPanelProps) {
   const PAGE_SIZE = 5;
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -266,6 +268,15 @@ export default function ProjectPanel({
               <div className="px-2 text-xs uppercase tracking-[0.4em] text-indigo-200">
                 Servers ({filteredProjects.length})
               </div>
+              {/* Show loading indicator for new project creation */}
+              {isCreatingProject && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent"></div>
+                    <span className="text-sm text-slate-300">Creating new server...</span>
+                  </div>
+                </div>
+              )}
               {visibleProjects.map((project) => (
                 <div
                   key={project._id}

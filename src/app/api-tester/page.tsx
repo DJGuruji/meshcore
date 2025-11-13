@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useLocalhostRelay } from '@/hooks/useLocalhostRelay';
 import dynamic from 'next/dynamic';
+import { useNavigationState } from '@/contexts/NavigationStateContext';
 
 // Dynamically import LocalhostBridge to avoid SSR issues
 const LocalhostBridge = dynamic(() => import('@/components/LocalhostBridge'), { 
@@ -359,6 +360,7 @@ function SaveRequestModal({ onClose, onSave, collections }: {
 export default function ApiTesterPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { state, updateState } = useNavigationState();
 
   const [collections, setCollections] = useState<Collection[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
@@ -415,7 +417,7 @@ export default function ApiTesterPage() {
   };
 
   // Multi-tab state
-  const [requestTabs, setRequestTabs] = useState<RequestTab[]>([{
+  const [requestTabs, setRequestTabs] = useState<RequestTab[]>(state.apiTesterTabs.length > 0 ? state.apiTesterTabs : [{
     id: 'tab-1',
     request: {
       name: 'Untitled Request',
@@ -430,15 +432,18 @@ export default function ApiTesterPage() {
     },
     isSaved: false
   }]);
-  const [activeTabId, setActiveTabId] = useState('tab-1');
+  const [activeTabId, setActiveTabId] = useState(state.activeApiTesterTabId || 'tab-1');
 
   // Get current tab data
   const currentTab = requestTabs.find(tab => tab.id === activeTabId);
   const currentRequest = currentTab?.request || requestTabs[0].request;
   const setCurrentRequest = (request: Request) => {
-    setRequestTabs(tabs => tabs.map(tab => 
+    const newTabs = requestTabs.map(tab => 
       tab.id === activeTabId ? { ...tab, request, isSaved: false } : tab
-    ));
+    );
+    setRequestTabs(newTabs);
+    // Save to navigation state
+    updateState({ apiTesterTabs: newTabs });
   };
 
   const [response, setResponse] = useState<any>(currentTab?.response || null);
@@ -1199,8 +1204,11 @@ export default function ApiTesterPage() {
       },
       isSaved: false
     };
-    setRequestTabs([...requestTabs, newTab]);
+    const newTabs = [...requestTabs, newTab];
+    setRequestTabs(newTabs);
     setActiveTabId(newTabId);
+    // Save to navigation state
+    updateState({ apiTesterTabs: newTabs, activeApiTesterTabId: newTabId });
     toast.success('New request tab created');
   };
 
@@ -1221,11 +1229,16 @@ export default function ApiTesterPage() {
     setRequestTabs(newTabs);
     
     // Switch to another tab if closing active tab
+    let newActiveTabId = activeTabId;
     if (tabId === activeTabId) {
       const currentIndex = requestTabs.findIndex(t => t.id === tabId);
       const newActiveTab = newTabs[currentIndex] || newTabs[currentIndex - 1] || newTabs[0];
-      setActiveTabId(newActiveTab.id);
+      newActiveTabId = newActiveTab.id;
+      setActiveTabId(newActiveTabId);
     }
+    
+    // Save to navigation state
+    updateState({ apiTesterTabs: newTabs, activeApiTesterTabId: newActiveTabId });
   };
 
   const duplicateTab = (tabId: string) => {
@@ -1247,6 +1260,8 @@ export default function ApiTesterPage() {
     newTabs.splice(insertIndex, 0, newTab);
     setRequestTabs(newTabs);
     setActiveTabId(newTabId);
+    // Save to navigation state
+    updateState({ apiTesterTabs: newTabs, activeApiTesterTabId: newTabId });
     toast.success('Tab duplicated');
   };
 

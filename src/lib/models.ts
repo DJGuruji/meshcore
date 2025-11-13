@@ -26,6 +26,13 @@ const UserSchema = new mongoose.Schema({
     default: 'user',
     required: true
   },
+  // Account type field with default value
+  accountType: {
+    type: String,
+    enum: ['free', 'freemium', 'pro', 'ultra-pro'],
+    default: 'free',
+    required: true
+  },
   resetToken: {
     type: String,
     select: false, // Don't include in query results by default
@@ -33,6 +40,19 @@ const UserSchema = new mongoose.Schema({
   resetTokenExpiry: {
     type: Date,
     select: false, // Don't include in query results by default
+  },
+  // Email verification fields
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false
+  },
+  emailVerificationTokenExpiry: {
+    type: Date,
+    select: false
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -174,7 +194,10 @@ const ApiProjectSchema = new mongoose.Schema({
     required: true
   },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  expiresAt: { type: Date, default: null }, // Expiration date for auto-deletion
+  lastWeekReminderSent: { type: Boolean, default: false }, // Track if 1-week reminder was sent
+  lastDayReminderSent: { type: Boolean, default: false } // Track if 1-day reminder was sent
 });
 
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
