@@ -119,6 +119,8 @@ export default function Header() {
   };
 
   const handleSignOut = () => {
+    // Clear navigation state when signing out
+    localStorage.removeItem('navigationState');
     signOut({ callbackUrl: '/auth/signin' });
   };
 
@@ -427,19 +429,7 @@ export default function Header() {
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </Link>
 
-              <a
-                href="https://github.com/DJGuruji/meshcore"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
-                onClick={() => setIsUtilityPanelOpen(false)}
-              >
-                <span className="flex items-center gap-3">
-                  <CodeBracketSquareIcon className="h-5 w-5 text-indigo-300" />
-                  Open Source
-                </span>
-                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-              </a>
+       
 
               <Link
                 href="/terms"

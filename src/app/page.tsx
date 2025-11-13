@@ -9,6 +9,7 @@ import Link from 'next/link';
 
 import ProjectPanel from '@/components/ProjectPanel';
 import ProjectDetail from '@/components/ProjectDetail';
+import { useNavigationState } from '@/contexts/NavigationStateContext';
 
 interface Endpoint {
   _id: string;
@@ -38,11 +39,13 @@ interface ApiProject {
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { state, updateState } = useNavigationState();
   const [projects, setProjects] = useState<ApiProject[]>([]);
   const [selectedProject, setSelectedProject] = useState<ApiProject | null>(null);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingProject, setIsCreatingProject] = useState(false); // New state for project creation
   const [showCookieConsent, setShowCookieConsent] = useState(false);
 
   // Redirect to sign in if not authenticated
@@ -96,6 +99,16 @@ export default function Home() {
     }
   }, [status, showCookieConsent]);
 
+  // Restore selected project when projects are loaded
+  useEffect(() => {
+    if (projects.length > 0 && state.selectedProjectId) {
+      const project = projects.find(p => p._id === state.selectedProjectId);
+      if (project) {
+        setSelectedProject(project);
+      }
+    }
+  }, [projects, state.selectedProjectId]);
+
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
@@ -110,6 +123,7 @@ export default function Home() {
 
   const handleCreateProject = async (name: string, baseUrl: string) => {
     try {
+      setIsCreatingProject(true); // Set loading state
       const response = await axios.post('/api/projects', { 
         name, 
         baseUrl,
@@ -126,6 +140,8 @@ export default function Home() {
       toast.success('Project created successfully');
     } catch (error) {
       toast.error('Failed to create project');
+    } finally {
+      setIsCreatingProject(false); // Reset loading state
     }
   };
 
@@ -156,6 +172,8 @@ export default function Home() {
           project._id === updatedProject._id ? response.data : project
         ));
         setSelectedProject(response.data);
+        // Save selected project ID to navigation state
+        updateState({ selectedProjectId: response.data._id });
         toast.success('Project updated successfully');
       }
     } catch (error: any) {
@@ -338,6 +356,8 @@ export default function Home() {
           projects={projects}
           onProjectClick={(project: ApiProject) => {
             setSelectedProject(project);
+            // Save selected project ID to navigation state
+            updateState({ selectedProjectId: project._id });
             // Close sidebar in mobile view when a project is selected
             if (isMobile) {
               setIsSidePanelOpen(false);
@@ -349,6 +369,7 @@ export default function Home() {
           isOpen={isSidePanelOpen}
           setIsOpen={setIsSidePanelOpen}
           isLoading={isLoading}
+          isCreatingProject={isCreatingProject} // Pass the new prop
         />
       </div>
       <div 

@@ -12,6 +12,7 @@ import {
   PlusIcon,
   FolderIcon
 } from '@heroicons/react/24/outline';
+import { useNavigationState } from '@/contexts/NavigationStateContext';
 
 const inputStyles =
   'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
@@ -107,6 +108,7 @@ interface Tab {
 export default function GraphQLTesterPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { state, updateState } = useNavigationState();
 
   // Helper function to get engaging status code messages
   const getStatusMessage = (statusCode: number): { message: string; category: string } => {
@@ -158,7 +160,7 @@ export default function GraphQLTesterPage() {
   };
 
   // Tab management
-  const [tabs, setTabs] = useState<Tab[]>([
+  const [tabs, setTabs] = useState<Tab[]>(state.graphQlTesterTabs.length > 0 ? state.graphQlTesterTabs : [
     {
       id: 'tab-1',
       name: 'Untitled Request',
@@ -182,7 +184,7 @@ export default function GraphQLTesterPage() {
       response: null
     }
   ]);
-  const [activeTabId, setActiveTabId] = useState('tab-1');
+  const [activeTabId, setActiveTabId] = useState(state.activeGraphQlTesterTabId || 'tab-1');
 
   // Get current tab data
   const currentTab = tabs.find(tab => tab.id === activeTabId) || tabs[0];
@@ -198,9 +200,12 @@ export default function GraphQLTesterPage() {
 
   // Update current tab
   const updateCurrentTab = (updates: Partial<Tab>) => {
-    setTabs(tabs.map(tab => 
+    const newTabs = tabs.map(tab => 
       tab.id === activeTabId ? { ...tab, ...updates } : tab
-    ));
+    );
+    setTabs(newTabs);
+    // Save to navigation state
+    updateState({ graphQlTesterTabs: newTabs });
   };
 
   const [isLoading, setIsLoading] = useState(false);
@@ -738,8 +743,11 @@ export default function GraphQLTesterPage() {
       },
       response: null
     };
-    setTabs([...tabs, newTab]);
+    const newTabs = [...tabs, newTab];
+    setTabs(newTabs);
     setActiveTabId(newTabId);
+    // Save to navigation state
+    updateState({ graphQlTesterTabs: newTabs, activeGraphQlTesterTabId: newTabId });
     toast.success('New request tab created');
   };
 
@@ -753,9 +761,14 @@ export default function GraphQLTesterPage() {
     setTabs(newTabs);
     
     // If we closed the active tab, switch to the first tab
+    let newActiveTabId = activeTabId;
     if (tabId === activeTabId) {
-      setActiveTabId(newTabs[0].id);
+      newActiveTabId = newTabs[0].id;
+      setActiveTabId(newActiveTabId);
     }
+    
+    // Save to navigation state
+    updateState({ graphQlTesterTabs: newTabs, activeGraphQlTesterTabId: newActiveTabId });
     
     toast.success('Tab closed');
   };
@@ -977,7 +990,11 @@ export default function GraphQLTesterPage() {
                     ? 'bg-white/10 text-white shadow-inner shadow-white/10'
                     : 'bg-transparent text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
-                onClick={() => setActiveTabId(tab.id)}
+                onClick={() => {
+                  setActiveTabId(tab.id);
+                  // Save to navigation state
+                  updateState({ activeGraphQlTesterTabId: tab.id });
+                }}
               >
                 {/* Tab Name */}
                 <span className="flex-1 truncate text-sm">

@@ -92,6 +92,9 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       maxLimit: 100
     }
   });
+  
+  // Validation state for highlighting required fields
+  const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
 
   // Add state for new field in the form
   const [newField, setNewField] = useState({
@@ -123,8 +126,56 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
   });
 
   const handleAddEndpoint = () => {
-    if (!newEndpoint.path.trim()) return;
-
+    // Reset validation errors
+    setValidationErrors({});
+    
+    // Validate required fields
+    const errors: Record<string, boolean> = {};
+    
+    // Path is always required
+    if (!newEndpoint.path.trim()) {
+      errors.path = true;
+    }
+    
+    // Status code is always required
+    if (!newEndpoint.statusCode) {
+      errors.statusCode = true;
+    }
+    
+    // For GET endpoints, if using data source, validate it
+    if (newEndpoint.method === 'GET' && newEndpoint.dataSource) {
+      // Data source is selected, no additional validation needed
+    }
+    
+    // For POST endpoints, if fields are defined, validate them
+    if (newEndpoint.method === 'POST' && newEndpoint.fields.length > 0) {
+      // Validate that fields have names
+      for (let i = 0; i < newEndpoint.fields.length; i++) {
+        const field = newEndpoint.fields[i];
+        if (!field.name.trim()) {
+          errors[`field-${i}-name`] = true;
+        }
+      }
+    }
+    
+    // For GET, PUT, PATCH, DELETE endpoints with data source, validate conditions
+    if ((newEndpoint.method === 'GET' || newEndpoint.method === 'PUT' || newEndpoint.method === 'PATCH' || newEndpoint.method === 'DELETE') && 
+        newEndpoint.dataSource && newEndpoint.conditions.length > 0) {
+      // Validate that conditions have fields
+      for (let i = 0; i < newEndpoint.conditions.length; i++) {
+        const condition = newEndpoint.conditions[i];
+        if (!condition.field.trim()) {
+          errors[`condition-${i}-field`] = true;
+        }
+      }
+    }
+    
+    // If there are validation errors, set them and return
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
     const cleanPath = newEndpoint.path.startsWith('/') ? newEndpoint.path : `/${newEndpoint.path}`;
     
     // Check for duplicate endpoint (same method + path)
@@ -427,6 +478,14 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     const updatedFields = [...newEndpoint.fields, { ...newField }];
     setNewEndpoint({ ...newEndpoint, fields: updatedFields });
     
+    // Clear validation error for this field if it exists
+    const fieldErrorKey = `field-${newEndpoint.fields.length}-name`;
+    if (validationErrors[fieldErrorKey]) {
+      const newErrors = { ...validationErrors };
+      delete newErrors[fieldErrorKey];
+      setValidationErrors(newErrors);
+    }
+    
     // Reset field form
     setNewField({
       name: '',
@@ -451,6 +510,14 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
 
     const updatedConditions = [...newEndpoint.conditions, { ...newCondition }];
     setNewEndpoint({ ...newEndpoint, conditions: updatedConditions });
+    
+    // Clear validation error for this condition if it exists
+    const conditionErrorKey = `condition-${newEndpoint.conditions.length}-field`;
+    if (validationErrors[conditionErrorKey]) {
+      const newErrors = { ...validationErrors };
+      delete newErrors[conditionErrorKey];
+      setValidationErrors(newErrors);
+    }
     
     // Reset condition form
     setNewCondition({
@@ -779,8 +846,16 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   type="text"
                   placeholder="/users"
                   value={newEndpoint.path}
-                  onChange={(e) => setNewEndpoint({ ...newEndpoint, path: e.target.value })}
-                  className={inputStyles}
+                  onChange={(e) => {
+                    setNewEndpoint({ ...newEndpoint, path: e.target.value });
+                    // Clear validation error when user starts typing
+                    if (validationErrors.path) {
+                      const newErrors = { ...validationErrors };
+                      delete newErrors.path;
+                      setValidationErrors(newErrors);
+                    }
+                  }}
+                  className={`${inputStyles} ${validationErrors.path ? 'border-red-500' : ''}`}
                 />
                 {(newEndpoint.method === 'PUT' || newEndpoint.method === 'PATCH' || newEndpoint.method === 'DELETE') && (
                   <p className="mt-1 text-xs text-slate-400">
@@ -807,8 +882,16 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                 <input
                   type="number"
                   value={newEndpoint.statusCode}
-                  onChange={(e) => setNewEndpoint({ ...newEndpoint, statusCode: parseInt(e.target.value) })}
-                  className={inputStyles}
+                  onChange={(e) => {
+                    setNewEndpoint({ ...newEndpoint, statusCode: parseInt(e.target.value) || 0 });
+                    // Clear validation error when user starts typing
+                    if (validationErrors.statusCode) {
+                      const newErrors = { ...validationErrors };
+                      delete newErrors.statusCode;
+                      setValidationErrors(newErrors);
+                    }
+                  }}
+                  className={`${inputStyles} ${validationErrors.statusCode ? 'border-red-500' : ''}`}
                 />
               </div>
               {/* Show Generate JSON option only for GET methods */}
@@ -902,8 +985,17 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       type="text"
                       placeholder="e.g., name"
                       value={newField.name}
-                      onChange={(e) => setNewField({ ...newField, name: e.target.value })}
-                      className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                      onChange={(e) => {
+                        setNewField({ ...newField, name: e.target.value });
+                        // Clear validation error when user starts typing
+                        const fieldErrorKey = `field-${newEndpoint.fields.length}-name`;
+                        if (validationErrors[fieldErrorKey]) {
+                          const newErrors = { ...validationErrors };
+                          delete newErrors[fieldErrorKey];
+                          setValidationErrors(newErrors);
+                        }
+                      }}
+                      className={`w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400 ${validationErrors['field-' + newEndpoint.fields.length + '-name'] ? 'border-red-500' : ''}`}
                     />
                   </div>
                   <div>
@@ -1043,8 +1135,17 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                           type="text"
                           placeholder="e.g., id"
                           value={newCondition.field}
-                          onChange={(e) => setNewCondition({ ...newCondition, field: e.target.value })}
-                          className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                          onChange={(e) => {
+                            setNewCondition({ ...newCondition, field: e.target.value });
+                            // Clear validation error when user starts typing
+                            const conditionErrorKey = `condition-${newEndpoint.conditions.length}-field`;
+                            if (validationErrors[conditionErrorKey]) {
+                              const newErrors = { ...validationErrors };
+                              delete newErrors[conditionErrorKey];
+                              setValidationErrors(newErrors);
+                            }
+                          }}
+                          className={`w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400 ${validationErrors['condition-' + newEndpoint.conditions.length + '-field'] ? 'border-red-500' : ''}`}
                         />
                       </div>
                       <div>
@@ -1190,12 +1291,21 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                 Add Endpoint
               </button>
               <button
-                onClick={() => setShowAddEndpoint(false)}
+                onClick={() => {
+                  setShowAddEndpoint(false);
+                  // Clear validation errors when closing the form
+                  setValidationErrors({});
+                }}
                 className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
               >
                 Cancel
               </button>
             </div>
+            {Object.keys(validationErrors).length > 0 && (
+              <div className="mt-3 text-sm text-red-400">
+                Please fill in all required fields (highlighted in red)
+              </div>
+            )}
           </div>
         )}
       </div>
