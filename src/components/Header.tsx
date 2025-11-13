@@ -311,6 +311,12 @@ export default function Header() {
                     <div>
                       <p className="text-sm font-semibold">{session?.user?.name}</p>
                       <p className="text-xs text-slate-300">{session?.user?.email}</p>
+                      {/* Display account type in mobile menu */}
+                      <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                        <p className="text-xs font-semibold capitalize text-white">
+                          {session?.user?.accountType || 'free'}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -394,6 +400,18 @@ export default function Header() {
               <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">Signed in</p>
               <p className="mt-2 text-lg font-semibold">{session?.user?.name || 'Member'}</p>
               <p className="text-sm text-slate-300">{session?.user?.email || 'No email'}</p>
+              {/* Display account type */}
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Account Type</p>
+                <p className="mt-1 font-semibold capitalize text-white">
+                  {session?.user?.accountType || 'free'}
+                </p>
+                {session?.user?.accountType === 'free' && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Upgrade to unlock premium features
+                  </p>
+                )}
+              </div>
             </div>
 
             <nav className="space-y-3">

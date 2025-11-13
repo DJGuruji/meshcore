@@ -377,8 +377,20 @@ export default function Home() {
                     ? 'Choose a project on the left to continue building, or craft a new mock server.'
                     : 'Create your first API space to design endpoints, configure auth, and collaborate.'}
                 </p>
-
-               
+                
+                {/* Display account type for authenticated users */}
+                {status === 'authenticated' && session?.user && (
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+                    <p className="text-indigo-200">
+                      Account Type: <span className="font-semibold capitalize">{session.user.accountType || 'free'}</span>
+                    </p>
+                    {session.user.accountType === 'free' && (
+                      <p className="mt-2 text-xs text-slate-400">
+                        Upgrade to unlock premium features
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-10 grid gap-4 text-left text-xs text-slate-300 sm:grid-cols-3">
                   <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">

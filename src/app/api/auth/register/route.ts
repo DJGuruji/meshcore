@@ -41,12 +41,13 @@ export async function POST(request: NextRequest) {
     const emailVerificationToken = generateSecureToken();
     const emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     
-    // Create user with default role and email verification fields
+    // Create user with default role, account type, and email verification fields
     const user = await User.create({
       name,
       email,
       password,
       role: 'user', // Default role
+      accountType: 'free', // Default account type
       emailVerificationToken,
       emailVerificationTokenExpiry
     });
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      accountType: user.accountType,
       message: 'Registration successful. Please check your email to verify your account.'
     });
   } catch (error: any) {

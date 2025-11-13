@@ -62,3 +62,130 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
     html,
   });
 };
+
+export const sendProjectExpirationReminder = async (
+  email: string, 
+  projectName: string, 
+  daysUntilDeletion: number
+) => {
+  const subject = daysUntilDeletion <= 0 
+    ? `Your Project "${projectName}" Has Been Deleted` 
+    : `Your Project "${projectName}" Will Be Deleted in ${daysUntilDeletion} Day${daysUntilDeletion !== 1 ? 's' : ''}`;
+  
+  const actionText = daysUntilDeletion <= 0 
+    ? 'has been permanently deleted from our system' 
+    : `will be automatically deleted in ${daysUntilDeletion} day${daysUntilDeletion !== 1 ? 's' : ''}`;
+  
+  const suggestionText = daysUntilDeletion <= 0 
+    ? 'If you need to recreate this project, you can do so at any time.' 
+    : 'If you wish to keep this project, please upgrade your account to prevent automatic deletion.';
+  
+  const html = `
+    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+      <h2 style="color: #1f2937;">Project Expiration Notice</h2>
+      <p>Your mock server project <strong>"${projectName}"</strong> ${actionText}.</p>
+      <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>What you can do:</strong></p>
+        <p style="margin: 8px 0 0 0;">${suggestionText}</p>
+      </div>
+      <p>If you have any questions or need assistance, please contact our support team.</p>
+      <p>Thank you for using our service!</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject,
+    html,
+  });
+};
+
+export const sendProjectDeletionConfirmation = async (
+  email: string, 
+  projectName: string
+) => {
+  const html = `
+    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+      <h2 style="color: #1f2937;">Project Deletion Confirmation</h2>
+      <p>Your mock server project <strong>"${projectName}"</strong> has been successfully deleted from our system.</p>
+      <p>This deletion was either automatic based on your account type expiration policy or manually initiated by you.</p>
+      <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Need to recreate this project?</strong></p>
+        <p style="margin: 8px 0 0 0;">You can create a new project with the same configuration at any time through our platform.</p>
+      </div>
+      <p>If you believe this deletion was made in error, please contact our support team immediately.</p>
+      <p>Thank you for using our service!</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Project "${projectName}" Deletion Confirmation`,
+    html,
+  });
+};
+
+export const sendProjectCreationConfirmation = async (
+  email: string,
+  projectName: string,
+  accountType: string,
+  expiresAt: Date | null
+) => {
+  // Format expiration information based on account type
+  let expirationInfo = '';
+  if (expiresAt) {
+    const formattedDate = expiresAt.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    switch (accountType) {
+      case 'free':
+        expirationInfo = `This project will be automatically deleted on ${formattedDate} (2 weeks from creation).`;
+        break;
+      case 'freemium':
+        expirationInfo = `This project will be automatically deleted on ${formattedDate} (2 months from creation).`;
+        break;
+      case 'pro':
+        expirationInfo = `This project will be automatically deleted on ${formattedDate} (1 year from creation).`;
+        break;
+      default:
+        expirationInfo = `This project will be automatically deleted on ${formattedDate}.`;
+    }
+  } else {
+    expirationInfo = 'This project will not be automatically deleted as part of your Ultra-Pro account benefits.';
+  }
+  
+  const html = `
+    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+      <h2 style="color: #1f2937;">Project Created Successfully</h2>
+      <p>Congratulations! Your mock server project <strong>"${projectName}"</strong> has been created successfully.</p>
+      
+      <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Project Details:</strong></p>
+        <p style="margin: 8px 0 0 0;">Name: ${projectName}</p>
+        <p style="margin: 4px 0 0 0;">Account Type: ${accountType.charAt(0).toUpperCase() + accountType.slice(1)}</p>
+        <p style="margin: 4px 0 0 0;">${expirationInfo}</p>
+      </div>
+      
+      <p>You can now start configuring your endpoints and testing your APIs.</p>
+      
+      ${expiresAt ? `
+      <div style="background-color: #fffbeb; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+        <p style="margin: 0;"><strong>Important Reminder:</strong></p>
+        <p style="margin: 8px 0 0 0;">To prevent automatic deletion, consider upgrading your account. You'll receive email notifications before your project is scheduled for deletion.</p>
+      </div>
+      ` : ''}
+      
+      <p>If you have any questions or need assistance, please contact our support team.</p>
+      <p>Thank you for using our service!</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Project "${projectName}" Created Successfully`,
+    html,
+  });
+};
