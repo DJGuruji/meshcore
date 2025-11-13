@@ -42,6 +42,11 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // Check if email is verified
+          if (!user.emailVerified) {
+            throw new Error("Please verify your email address before signing in");
+          }
+
           // Return user without password
           return {
             id: user._id.toString(),
@@ -51,7 +56,7 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error("Authentication error:", error);
-          return null;
+          throw error; // Re-throw to be handled by NextAuth
         }
       }
     })
@@ -82,6 +87,14 @@ export const authOptions: NextAuthOptions = {
     error: "/auth/error",
   },
   secret: process.env.NEXTAUTH_SECRET || "your-default-secret-do-not-use-in-production",
+  // Handle sign in errors
+  events: {
+    async signIn({ user, account, profile, isNewUser, error }) {
+      if (error) {
+        console.error("Sign in error:", error);
+      }
+    }
+  }
 };
 
 // Extend next-auth types

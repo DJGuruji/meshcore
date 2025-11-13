@@ -1,20 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function SignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
+
+  // Handle query parameters for verification messages
+  useEffect(() => {
+    if (searchParams.get('verified') === 'true') {
+      setSuccess('Email verified successfully! You can now sign in.');
+    }
+    
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      switch (errorParam) {
+        case 'invalid-token':
+          setError('Invalid verification token.');
+          break;
+        case 'invalid-or-expired-token':
+          setError('Invalid or expired verification token.');
+          break;
+        case 'verification-failed':
+          setError('Email verification failed. Please try again.');
+          break;
+        default:
+          setError('An error occurred. Please try again.');
+      }
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +58,7 @@ export default function SignIn() {
     try {
       setLoading(true);
       setError('');
+      setSuccess('');
       
       const result = await signIn('credentials', {
         redirect: false,
@@ -41,7 +68,7 @@ export default function SignIn() {
       });
       
       if (result?.error) {
-        setError('Invalid email or password');
+        setError(result.error);
         // Reset the Turnstile token
         setTurnstileToken('');
         return;
@@ -85,6 +112,12 @@ export default function SignIn() {
           {error && (
             <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="mb-5 rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-200">
+              {success}
             </div>
           )}
 

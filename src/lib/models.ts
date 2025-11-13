@@ -34,6 +34,19 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     select: false, // Don't include in query results by default
   },
+  // Email verification fields
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false
+  },
+  emailVerificationTokenExpiry: {
+    type: Date,
+    select: false
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

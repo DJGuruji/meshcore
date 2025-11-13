@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
@@ -9,16 +9,25 @@ import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function Register() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
+
+  // Handle query parameters for registration messages
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setSuccess('Registration successful! Please check your email to verify your account.');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,17 +60,26 @@ export default function Register() {
     try {
       setLoading(true);
       setError('');
+      setSuccess('');
       
       // Register the user
-      await axios.post('/api/auth/register', {
+      const response = await axios.post('/api/auth/register', {
         name,
         email,
         password,
         turnstileToken,
       });
       
-      // Redirect to sign in page after successful registration
-      router.push('/auth/signin?registered=true');
+      // Show success message
+      setSuccess(response.data.message || 'Registration successful! Please check your email to verify your account.');
+      
+      // Clear form
+      setName('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setAcceptedTerms(false);
+      setTurnstileToken('');
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Registration failed';
       setError(errorMessage);
@@ -98,6 +116,12 @@ export default function Register() {
           {error && (
             <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="mt-6 rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-200">
+              {success}
             </div>
           )}
 
