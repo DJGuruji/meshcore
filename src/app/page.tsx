@@ -225,7 +225,7 @@ export default function Home() {
             {[
               { icon: '⚡', title: 'Mock Server', desc: 'Design endpoints with auth, payloads, and status codes instantly.' },
               { icon: '🧪', title: 'API Tester', desc: 'Send requests, inspect responses, and share collections effortlessly.' },
-              { icon: '🧰', title: 'Dev Toolkit', desc: 'JWT decode, JSON validate, and more power utilities in one place.' },
+              { icon: '🧰', title: 'GraphQL tester', desc: 'Run GraphQL queries and mutations with schema introspection, variables, and real-time results.' },
             ].map((card) => (
               <div
                 key={card.title}
