@@ -4,6 +4,8 @@ import connectDB from '@/lib/db';
 import { ApiProject } from '@/lib/models';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
+import axios from 'axios';
+import cacheService from '@/lib/cacheService';
 
 // GET a specific project
 export async function GET(
@@ -22,6 +24,19 @@ export async function GET(
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+    }
+    
+    // Try to get cached response first
+    const cacheKey = `project_${id}_${session.user.id}`;
+    
+    try {
+      const cachedProject = await cacheService.get(cacheKey);
+      if (cachedProject) {
+        console.log(`Cache hit for project: ${cacheKey}`);
+        return NextResponse.json(cachedProject);
+      }
+    } catch (cacheError) {
+      console.error('Cache retrieval error:', cacheError);
     }
     
     await connectDB();
@@ -43,6 +58,14 @@ export async function GET(
         headerName: 'Authorization',
         tokenPrefix: 'Bearer'
       };
+    }
+    
+    // Cache the response for 5 minutes
+    try {
+      await cacheService.set(cacheKey, projectData, { ttl: 300 }); // 5 minutes
+      console.log(`Cached project: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache storage error:', cacheError);
     }
     
     return NextResponse.json(projectData);
@@ -141,6 +164,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
     
+    // Invalidate cache for this project and user's projects list
+    try {
+      const projectCacheKey = `project_${id}_${session.user.id}`;
+      const userProjectsCacheKey = `user_projects_${session.user.id}`;
+      
+      await cacheService.del(projectCacheKey);
+      await cacheService.del(userProjectsCacheKey);
+      
+      console.log(`Invalidated cache for project: ${projectCacheKey}`);
+      console.log(`Invalidated cache for user projects: ${userProjectsCacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
+    }
+    
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error updating project:', error);
@@ -178,6 +215,20 @@ export async function DELETE(
     
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    
+    // Invalidate cache for this project and user's projects list
+    try {
+      const projectCacheKey = `project_${id}_${session.user.id}`;
+      const userProjectsCacheKey = `user_projects_${session.user.id}`;
+      
+      await cacheService.del(projectCacheKey);
+      await cacheService.del(userProjectsCacheKey);
+      
+      console.log(`Invalidated cache for project: ${projectCacheKey}`);
+      console.log(`Invalidated cache for user projects: ${userProjectsCacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
     }
     
     return NextResponse.json({ message: 'Project deleted successfully' });
