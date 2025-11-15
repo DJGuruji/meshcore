@@ -1,11 +1,53 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ApiProject } from '@/lib/models';
+import { ApiProject as ApiProjectModel } from '@/lib/models';
+
+// Define the ApiProject interface to match the Mongoose model structure
+interface ApiProjectType {
+  _id: string;
+  name: string;
+  baseUrl: string;
+  authentication?: {
+    enabled: boolean;
+    token?: string | null;
+    headerName?: string;
+    tokenPrefix?: string;
+  };
+  endpoints: {
+    _id: string;
+    path: string;
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    responseBody: string;
+    statusCode: number;
+    description?: string;
+    requiresAuth?: boolean | null;
+    fields?: {
+      name: string;
+      type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+      required: boolean;
+      description?: string;
+    }[];
+    dataSource?: string;
+    conditions?: {
+      field: string;
+      operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
+      value: string | number | boolean;
+    }[];
+    pagination?: {
+      enabled: boolean;
+      defaultLimit: number;
+      maxLimit: number;
+    };
+  }[];
+  user: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface MockServerState {
-  projects: ApiProject[];
-  selectedProject: ApiProject | null;
+  projects: ApiProjectType[];
+  selectedProject: ApiProjectType | null;
   isLoading: boolean;
   isCreatingProject: boolean;
 }
