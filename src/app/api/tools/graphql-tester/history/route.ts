@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/db';
 import { GraphQLTesterHistory } from '@/lib/models';
+import cacheService from '@/lib/cacheService';
 
 // GET history for user
 export async function GET(request: NextRequest) {
@@ -11,6 +12,19 @@ export async function GET(request: NextRequest) {
     
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Try to get cached response first
+    const cacheKey = `graphql_history_${session.user.id}_${request.url}`;
+    
+    try {
+      const cachedData = await cacheService.get(cacheKey);
+      if (cachedData) {
+        console.log(`Cache hit for GraphQL history: ${cacheKey}`);
+        return NextResponse.json(cachedData);
+      }
+    } catch (cacheError) {
+      console.error('Cache retrieval error:', cacheError);
     }
 
     await connectDB();
@@ -30,12 +44,22 @@ export async function GET(request: NextRequest) {
       user: session.user.id 
     });
     
-    return NextResponse.json({
+    const result = {
       history,
       total,
       limit,
       offset
-    });
+    };
+
+    // Cache the response for 2 minutes (shorter since history changes frequently)
+    try {
+      await cacheService.set(cacheKey, result, { ttl: 120 }); // 2 minutes
+      console.log(`Cached GraphQL history: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache storage error:', cacheError);
+    }
+    
+    return NextResponse.json(result);
 
   } catch (error) {
     return NextResponse.json({ 
@@ -79,6 +103,15 @@ export async function POST(request: NextRequest) {
       user: userId
     });
 
+    // Invalidate cache for this user's GraphQL history
+    try {
+      // Delete all GraphQL history cache entries for this user
+      const deletedCount = await cacheService.delPattern(`graphql_history_${userId}_*`);
+      console.log(`Invalidated ${deletedCount} GraphQL history cache entries for user: ${userId}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
+    }
+
     return NextResponse.json(historyItem, { status: 201 });
 
   } catch (error) {
@@ -118,6 +151,15 @@ export async function DELETE(request: NextRequest) {
       await GraphQLTesterHistory.deleteMany({ 
         user: session.user.id 
       });
+    }
+
+    // Invalidate cache for this user's GraphQL history
+    try {
+      // Delete all GraphQL history cache entries for this user
+      const deletedCount = await cacheService.delPattern(`graphql_history_${session.user.id}_*`);
+      console.log(`Invalidated ${deletedCount} GraphQL history cache entries for user: ${session.user.id}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json({ message: 'History cleared successfully' });

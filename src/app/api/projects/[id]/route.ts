@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import connectDB from '@/lib/db';
 import { ApiProject } from '@/lib/models';
+import { User } from '@/lib/models';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
+import axios from 'axios';
+import cacheService from '@/lib/cacheService';
 
 // GET a specific project
 export async function GET(
@@ -24,7 +27,27 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
     }
     
+    // Try to get cached response first
+    const cacheKey = `project_${id}_${session.user.id}`;
+    
+    try {
+      const cachedProject = await cacheService.get(cacheKey);
+      if (cachedProject) {
+        console.log(`Cache hit for project: ${cacheKey}`);
+        return NextResponse.json(cachedProject);
+      }
+    } catch (cacheError) {
+      console.error('Cache retrieval error:', cacheError);
+    }
+    
     await connectDB();
+    
+    // Check if user is blocked (need to get user first)
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
+    
     const project = await ApiProject.findOne({ 
       _id: id, 
       user: session.user.id 
@@ -43,6 +66,14 @@ export async function GET(
         headerName: 'Authorization',
         tokenPrefix: 'Bearer'
       };
+    }
+    
+    // Cache the response for 5 minutes
+    try {
+      await cacheService.set(cacheKey, projectData, { ttl: 300 }); // 5 minutes
+      console.log(`Cached project: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache storage error:', cacheError);
     }
     
     return NextResponse.json(projectData);
@@ -72,6 +103,12 @@ export async function PUT(
     
     await connectDB();
     const data = await request.json();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
     
     console.log('Updating project ID:', id);
     console.log('User ID:', session.user.id);
@@ -141,6 +178,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
     
+    // Invalidate cache for this project and user's projects list
+    try {
+      const projectCacheKey = `project_${id}_${session.user.id}`;
+      const userProjectsCacheKey = `user_projects_${session.user.id}`;
+      
+      await cacheService.del(projectCacheKey);
+      await cacheService.del(userProjectsCacheKey);
+      
+      console.log(`Invalidated cache for project: ${projectCacheKey}`);
+      console.log(`Invalidated cache for user projects: ${userProjectsCacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
+    }
+    
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error updating project:', error);
@@ -171,6 +222,13 @@ export async function DELETE(
     }
     
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
+    
     const project = await ApiProject.findOneAndDelete({ 
       _id: id, 
       user: session.user.id 
@@ -178,6 +236,20 @@ export async function DELETE(
     
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    
+    // Invalidate cache for this project and user's projects list
+    try {
+      const projectCacheKey = `project_${id}_${session.user.id}`;
+      const userProjectsCacheKey = `user_projects_${session.user.id}`;
+      
+      await cacheService.del(projectCacheKey);
+      await cacheService.del(userProjectsCacheKey);
+      
+      console.log(`Invalidated cache for project: ${projectCacheKey}`);
+      console.log(`Invalidated cache for user projects: ${userProjectsCacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
     }
     
     return NextResponse.json({ message: 'Project deleted successfully' });

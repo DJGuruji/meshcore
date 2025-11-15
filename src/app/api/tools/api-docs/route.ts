@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/db';
 import mongoose from 'mongoose';
+import { User } from '@/lib/models';
+import cacheService from '@/lib/cacheService';
 
 // API Documentation Schema
 const ApiDocSchema = new mongoose.Schema({
@@ -49,20 +51,52 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const docId = searchParams.get('id');
 
-    await connectDB();
+    // Try to get cached response first
+    const cacheKey = docId 
+      ? `api_doc_${docId}_${session.user.id}`
+      : `user_api_docs_${session.user.id}`;
+    
+    try {
+      const cachedData = await cacheService.get(cacheKey);
+      if (cachedData) {
+        console.log(`Cache hit for API docs: ${cacheKey}`);
+        return NextResponse.json(cachedData);
+      }
+    } catch (cacheError) {
+      console.error('Cache retrieval error:', cacheError);
+    }
 
+    await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
+
+    let result;
     if (docId) {
       // Get specific documentation
       const doc = await ApiDoc.findOne({ _id: docId, user: session.user.id });
       if (!doc) {
         return NextResponse.json({ error: 'Documentation not found' }, { status: 404 });
       }
-      return NextResponse.json(doc);
+      result = doc;
+    } else {
+      // Get all documentations for user
+      const docs = await ApiDoc.find({ user: session.user.id }).sort({ createdAt: -1 });
+      result = docs;
     }
 
-    // Get all documentations for user
-    const docs = await ApiDoc.find({ user: session.user.id }).sort({ createdAt: -1 });
-    return NextResponse.json(docs);
+    // Cache the response for 5 minutes
+    try {
+      await cacheService.set(cacheKey, result, { ttl: 300 }); // 5 minutes
+      console.log(`Cached API docs: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache storage error:', cacheError);
+    }
+
+    return NextResponse.json(result);
 
   } catch (error) {
     return NextResponse.json({ 
@@ -89,6 +123,12 @@ export async function POST(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const doc = await ApiDoc.create({
       name,
@@ -98,6 +138,15 @@ export async function POST(request: NextRequest) {
       endpoints: endpoints || [],
       user: session.user.id
     });
+
+    // Invalidate cache for this user's API docs
+    try {
+      const cacheKey = `user_api_docs_${session.user.id}`;
+      await cacheService.del(cacheKey);
+      console.log(`Invalidated cache for user API docs: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
+    }
 
     return NextResponse.json(doc, { status: 201 });
 
@@ -126,6 +175,12 @@ export async function PUT(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const doc = await ApiDoc.findOneAndUpdate(
       { _id: id, user: session.user.id },
@@ -135,6 +190,20 @@ export async function PUT(request: NextRequest) {
 
     if (!doc) {
       return NextResponse.json({ error: 'Documentation not found' }, { status: 404 });
+    }
+
+    // Invalidate cache for this doc and user's API docs
+    try {
+      const docCacheKey = `api_doc_${id}_${session.user.id}`;
+      const userDocsCacheKey = `user_api_docs_${session.user.id}`;
+      
+      await cacheService.del(docCacheKey);
+      await cacheService.del(userDocsCacheKey);
+      
+      console.log(`Invalidated cache for API doc: ${docCacheKey}`);
+      console.log(`Invalidated cache for user API docs: ${userDocsCacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json(doc);
@@ -164,11 +233,31 @@ export async function DELETE(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const doc = await ApiDoc.findOneAndDelete({ _id: id, user: session.user.id });
 
     if (!doc) {
       return NextResponse.json({ error: 'Documentation not found' }, { status: 404 });
+    }
+
+    // Invalidate cache for this doc and user's API docs
+    try {
+      const docCacheKey = `api_doc_${id}_${session.user.id}`;
+      const userDocsCacheKey = `user_api_docs_${session.user.id}`;
+      
+      await cacheService.del(docCacheKey);
+      await cacheService.del(userDocsCacheKey);
+      
+      console.log(`Invalidated cache for API doc: ${docCacheKey}`);
+      console.log(`Invalidated cache for user API docs: ${userDocsCacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json({ message: 'Documentation deleted successfully' });

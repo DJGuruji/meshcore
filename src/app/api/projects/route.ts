@@ -4,14 +4,29 @@ import connectDB from '@/lib/db';
 import { ApiProject, User } from '@/lib/models';
 import { authOptions } from '@/lib/auth';
 import { sendProjectCreationConfirmation } from '@/lib/email';
+import axios from 'axios';
+import cacheService from '@/lib/cacheService';
 
 // GET all API projects for authenticated user
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Try to get cached response first
+    const cacheKey = `user_projects_${session.user.id}`;
+    
+    try {
+      const cachedProjects = await cacheService.get(cacheKey);
+      if (cachedProjects) {
+        console.log(`Cache hit for user projects: ${cacheKey}`);
+        return NextResponse.json(cachedProjects);
+      }
+    } catch (cacheError) {
+      console.error('Cache retrieval error:', cacheError);
     }
     
     await connectDB();
@@ -20,6 +35,11 @@ export async function GET() {
     const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    // Check if user is blocked
+    if (user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
     // Find all projects for the user
@@ -102,6 +122,14 @@ export async function GET() {
       return projectData;
     });
     
+    // Cache the response for 5 minutes
+    try {
+      await cacheService.set(cacheKey, processedProjects, { ttl: 300 }); // 5 minutes
+      console.log(`Cached user projects: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache storage error:', cacheError);
+    }
+    
     return NextResponse.json(processedProjects);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
@@ -124,6 +152,11 @@ export async function POST(request: NextRequest) {
     const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    // Check if user is blocked
+    if (user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
     // Calculate expiration date based on account type
@@ -160,6 +193,15 @@ export async function POST(request: NextRequest) {
     };
     
     const project = await ApiProject.create(projectData);
+    
+    // Invalidate cache for this user's projects
+    try {
+      const cacheKey = `user_projects_${session.user.id}`;
+      await cacheService.del(cacheKey);
+      console.log(`Invalidated cache for user projects: ${cacheKey}`);
+    } catch (cacheError) {
+      console.error('Cache invalidation error:', cacheError);
+    }
     
     // Send project creation confirmation email
     if (user.email) {
