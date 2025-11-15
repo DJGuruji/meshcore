@@ -33,6 +33,12 @@ const UserSchema = new mongoose.Schema({
     default: 'free',
     required: true
   },
+  // Block state field
+  blocked: {
+    type: Boolean,
+    default: false,
+    required: true
+  },
   resetToken: {
     type: String,
     select: false, // Don't include in query results by default

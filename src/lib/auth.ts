@@ -47,13 +47,19 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Please verify your email address before signing in");
           }
 
+          // Check if user is blocked
+          if ((user as any).blocked) {
+            throw new Error("Your account has been blocked. Please contact support.");
+          }
+
           // Return user without password
           return {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
             role: user.role, // Include user role
-            accountType: user.accountType // Include account type
+            accountType: user.accountType, // Include account type
+            blocked: (user as any).blocked // Include blocked status
           };
         } catch (error) {
           console.error("Authentication error:", error);
@@ -72,6 +78,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role; // Include user role in token
         token.accountType = user.accountType; // Include account type in token
+        token.blocked = user.blocked; // Include blocked status in token
       }
       return token;
     },
@@ -80,6 +87,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as string; // Include user role in session
         session.user.accountType = token.accountType as string; // Include account type in session
+        session.user.blocked = token.blocked as boolean; // Include blocked status in session
       }
       return session;
     }
@@ -106,6 +114,7 @@ declare module "next-auth" {
     id: string;
     role?: string; // Add role property
     accountType?: string; // Add account type property
+    blocked?: boolean; // Add blocked property
   }
   
   interface Session {
@@ -116,6 +125,7 @@ declare module "next-auth" {
       image?: string | null;
       role?: string; // Add role property
       accountType?: string; // Add account type property
+      blocked?: boolean; // Add blocked property
     };
   }
 }
@@ -125,5 +135,6 @@ declare module "next-auth/jwt" {
     id: string;
     role?: string; // Add role property
     accountType?: string; // Add account type property
+    blocked?: boolean; // Add blocked property
   }
 }

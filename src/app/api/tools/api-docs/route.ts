@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/db';
 import mongoose from 'mongoose';
+import { User } from '@/lib/models';
 import cacheService from '@/lib/cacheService';
 
 // API Documentation Schema
@@ -66,6 +67,12 @@ export async function GET(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     let result;
     if (docId) {
@@ -116,6 +123,12 @@ export async function POST(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const doc = await ApiDoc.create({
       name,
@@ -162,6 +175,12 @@ export async function PUT(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const doc = await ApiDoc.findOneAndUpdate(
       { _id: id, user: session.user.id },
@@ -214,6 +233,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const doc = await ApiDoc.findOneAndDelete({ _id: id, user: session.user.id });
 

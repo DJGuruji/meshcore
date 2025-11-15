@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/db';
 import { ApiTesterEnvironment } from '@/lib/models';
+import { User } from '@/lib/models';
 import cacheService from '@/lib/cacheService';
 
 // GET all environments for user
@@ -33,6 +34,12 @@ export async function GET(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     let result;
     if (environmentId) {
@@ -89,6 +96,12 @@ export async function POST(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     // Ensure user.id exists
     const userId = (session.user as any).id || (session.user as any)._id;
@@ -143,6 +156,12 @@ export async function PUT(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const environment = await ApiTesterEnvironment.findOneAndUpdate(
       { _id: id, user: session.user.id },
@@ -195,6 +214,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
 
     const environment = await ApiTesterEnvironment.findOneAndDelete({ 
       _id: id, 

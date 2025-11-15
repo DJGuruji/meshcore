@@ -17,13 +17,19 @@ class CacheService {
    */
   async get<T = any>(key: string): Promise<T | null> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${this.baseUrl}/${encodeURIComponent(key)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Include cookies/session if needed
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.status === 404) {
         return null;
@@ -36,7 +42,11 @@ class CacheService {
       const data = await response.json();
       return data.value as T;
     } catch (error) {
-      console.error('Cache GET error:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Cache GET error: Request timeout');
+      } else {
+        console.error('Cache GET error:', error);
+      }
       // Return null on error to allow fallback to direct data fetching
       return null;
     }
@@ -47,6 +57,9 @@ class CacheService {
    */
   async set<T>(key: string, value: T, options?: CacheOptions): Promise<boolean> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
@@ -58,7 +71,10 @@ class CacheService {
           value,
           ttl: options?.ttl,
         }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -67,7 +83,11 @@ class CacheService {
       const data = await response.json();
       return !!data.key;
     } catch (error) {
-      console.error('Cache SET error:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Cache SET error: Request timeout');
+      } else {
+        console.error('Cache SET error:', error);
+      }
       // Return false on error to allow fallback to direct data fetching
       return false;
     }
@@ -78,13 +98,19 @@ class CacheService {
    */
   async del(key: string): Promise<boolean> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${this.baseUrl}/${encodeURIComponent(key)}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Include cookies/session if needed
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.status === 404) {
         return false;
@@ -97,7 +123,11 @@ class CacheService {
       const data = await response.json();
       return !!data.key;
     } catch (error) {
-      console.error('Cache DELETE error:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Cache DELETE error: Request timeout');
+      } else {
+        console.error('Cache DELETE error:', error);
+      }
       // Return false on error to allow fallback to direct data fetching
       return false;
     }
@@ -108,13 +138,19 @@ class CacheService {
    */
   async exists(key: string): Promise<boolean> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${this.baseUrl}/${encodeURIComponent(key)}`, {
         method: 'HEAD',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Include cookies/session if needed
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.status === 404) {
         return false;
@@ -126,7 +162,11 @@ class CacheService {
 
       return response.status === 200;
     } catch (error) {
-      console.error('Cache EXISTS error:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Cache EXISTS error: Request timeout');
+      } else {
+        console.error('Cache EXISTS error:', error);
+      }
       // Return false on error to allow fallback to direct data fetching
       return false;
     }
@@ -137,13 +177,19 @@ class CacheService {
    */
   async delPattern(pattern: string): Promise<number> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${this.baseUrl}/pattern/${encodeURIComponent(pattern)}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Include cookies/session if needed
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -152,7 +198,11 @@ class CacheService {
       const data = await response.json();
       return data.deletedCount || 0;
     } catch (error) {
-      console.error('Cache DELETE pattern error:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Cache DELETE pattern error: Request timeout');
+      } else {
+        console.error('Cache DELETE pattern error:', error);
+      }
       // Return 0 on error to allow fallback to direct data fetching
       return 0;
     }

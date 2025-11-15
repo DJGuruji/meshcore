@@ -37,6 +37,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
+    // Check if user is blocked
+    if (user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
+    
     // Find all projects for the user
     const projects = await ApiProject.find({ user: session.user.id }).sort({ createdAt: -1 });
     
@@ -147,6 +152,11 @@ export async function POST(request: NextRequest) {
     const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    // Check if user is blocked
+    if (user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
     // Calculate expiration date based on account type

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import connectDB from '@/lib/db';
 import { ApiProject } from '@/lib/models';
+import { User } from '@/lib/models';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
 import axios from 'axios';
@@ -40,6 +41,13 @@ export async function GET(
     }
     
     await connectDB();
+    
+    // Check if user is blocked (need to get user first)
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
+    
     const project = await ApiProject.findOne({ 
       _id: id, 
       user: session.user.id 
@@ -95,6 +103,12 @@ export async function PUT(
     
     await connectDB();
     const data = await request.json();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
     
     console.log('Updating project ID:', id);
     console.log('User ID:', session.user.id);
@@ -208,6 +222,13 @@ export async function DELETE(
     }
     
     await connectDB();
+    
+    // Check if user is blocked
+    const user = await User.findById(session.user.id);
+    if (user && user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
+    
     const project = await ApiProject.findOneAndDelete({ 
       _id: id, 
       user: session.user.id 
