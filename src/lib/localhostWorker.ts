@@ -20,7 +20,7 @@ class LocalhostWorkerManager {
   };
 
   /**
-   * Register the Service Worker
+   * Register the Service Worker with retry logic
    */
   async register(): Promise<LocalhostWorkerStatus> {
     // Check if Service Workers are supported
@@ -34,36 +34,59 @@ class LocalhostWorkerManager {
       return this.status;
     }
 
-    try {
-      console.log('[LocalhostWorker] Registering Service Worker...');
-      // Register the Service Worker
-      this.registration = await navigator.serviceWorker.register(
-        '/localhost-worker.js',
-        { scope: '/' }
-      );
+    const maxRetries = 3;
+    const retryDelay = 1000;
 
-      console.log('[LocalhostWorker] Service Worker registered:', this.registration);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[LocalhostWorker] Registration attempt ${attempt}/${maxRetries}...`);
+        
+        // Register the Service Worker with updateViaCache to force fresh registration
+        this.registration = await navigator.serviceWorker.register(
+          '/localhost-worker.js',
+          { 
+            scope: '/',
+            updateViaCache: 'none' // Force fresh registration
+          }
+        );
 
-      // Wait for Service Worker to be active
-      if (this.registration.active) {
-        this.worker = this.registration.active;
-        this.status = { registered: true, active: true };
-        console.log('[LocalhostWorker] Service Worker already active');
-      } else {
-        await this.waitForActivation();
+        console.log('[LocalhostWorker] Service Worker registered:', this.registration);
+
+        // If there's a waiting worker, activate it immediately
+        if (this.registration.waiting) {
+          console.log('[LocalhostWorker] Waiting worker found, activating...');
+          this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        // Wait for Service Worker to be active
+        if (this.registration.active) {
+          this.worker = this.registration.active;
+          this.status = { registered: true, active: true };
+          console.log('[LocalhostWorker] ✅ Service Worker already active');
+        } else {
+          await this.waitForActivation();
+        }
+
+        console.log('[LocalhostWorker] ✅ Service Worker status:', this.status);
+        return this.status;
+        
+      } catch (error: any) {
+        console.error(`[LocalhostWorker] Attempt ${attempt} failed:`, error.name, error.message);
+        
+        if (attempt < maxRetries) {
+          console.log(`[LocalhostWorker] Retrying in ${retryDelay * attempt}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        } else {
+          this.status = {
+            registered: false,
+            active: false,
+            error: error.message || 'Failed to register Service Worker after 3 attempts',
+          };
+        }
       }
-
-      console.log('[LocalhostWorker] Service Worker status:', this.status);
-      return this.status;
-    } catch (error: any) {
-      console.error('[LocalhostWorker] Registration failed:', error.name, error.message);
-      this.status = {
-        registered: false,
-        active: false,
-        error: error.message || 'Failed to register Service Worker',
-      };
-      return this.status;
     }
+
+    return this.status;
   }
 
   /**

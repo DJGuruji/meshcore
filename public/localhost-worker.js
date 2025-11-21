@@ -41,20 +41,27 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('message', async (event) => {
   const { type, requestId, request } = event.data;
 
+  // Handle skip waiting message for immediate activation
+  if (type === 'SKIP_WAITING') {
+    console.log('[LocalhostWorker] Received SKIP_WAITING, activating immediately...');
+    self.skipWaiting();
+    return;
+  }
+
   if (type === 'FETCH_LOCALHOST') {
     console.log('[LocalhostWorker] Received fetch request:', requestId, request.url);
-    
+
     try {
       // Parse the URL to check if it's a localhost URL
       const requestURL = new URL(request.url);
-      const isLocalhost = requestURL.hostname === 'localhost' || 
-                         requestURL.hostname === '127.0.0.1' || 
-                         requestURL.hostname === '[::1]';
-      
+      const isLocalhost = requestURL.hostname === 'localhost' ||
+        requestURL.hostname === '127.0.0.1' ||
+        requestURL.hostname === '[::1]';
+
       // Check for HTTPS -> HTTP (mixed content) issue
       const isHTTPS = self.location.protocol === 'https:';
       const isHTTPRequest = requestURL.protocol === 'http:';
-      
+
       // For localhost URLs, we can bypass mixed content restrictions
       // because we're in a Service Worker context with elevated permissions
       if (isHTTPS && isHTTPRequest && isLocalhost) {
@@ -65,7 +72,7 @@ self.addEventListener('message', async (event) => {
 
       // Perform fetch in Service Worker context (bypasses CORS!)
       const startTime = Date.now();
-      
+
       const response = await fetch(request.url, {
         method: request.method || 'GET',
         headers: request.headers || {},
@@ -79,7 +86,7 @@ self.addEventListener('message', async (event) => {
       // Read response body (works even without CORS headers!)
       let responseBody;
       const contentType = response.headers.get('content-type') || '';
-      
+
       if (contentType.includes('application/json')) {
         try {
           responseBody = await response.json();
@@ -112,7 +119,7 @@ self.addEventListener('message', async (event) => {
         time: endTime - startTime,
         size: responseSize
       };
-      
+
       // Send response via MessageChannel port
       event.ports[0].postMessage(result);
       console.log('[LocalhostWorker] Response sent back to main thread');
