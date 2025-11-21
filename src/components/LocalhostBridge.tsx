@@ -140,7 +140,8 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
         
         // Check if Service Worker is active - if so, use it even for localhost URLs
         // This will properly bypass CORS without mixed content issues
-        const workerStatus = localhostWorker.getStatus();
+        let workerStatus = localhostWorker.getStatus();
+        
         console.log('[LocalhostBridge] Worker status:', workerStatus);
         
         if (workerStatus.active) {
