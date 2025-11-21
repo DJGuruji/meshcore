@@ -75,9 +75,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { requestId, method, url, statusCode, responseTime, responseSize } = body;
+    const { 
+      requestId, 
+      method, 
+      url, 
+      statusCode, 
+      responseTime, 
+      responseSize,
+      requestData // Full request data including headers, params, body, auth, graphql
+    } = body;
 
     await connectDB();
+
+    const userId = (session.user as any).id || (session.user as any)._id;
 
     const history = await ApiTesterHistory.create({
       requestId: requestId || null,
@@ -86,7 +96,8 @@ export async function POST(request: NextRequest) {
       statusCode,
       responseTime,
       responseSize,
-      user: session.user.id
+      user: userId,
+      requestData: requestData || null
     });
 
     return NextResponse.json(history, { status: 201 });
