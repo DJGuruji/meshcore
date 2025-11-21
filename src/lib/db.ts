@@ -36,6 +36,17 @@ async function connectDB(): Promise<Mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      // Connection Pool Settings (Critical for Scale)
+      maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10'), // Max connections per serverless instance
+      minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE || '2'),  // Keep minimum connections warm
+      maxIdleTimeMS: parseInt(process.env.MONGODB_MAX_IDLE_TIME_MS || '10000'), // Close idle connections after 10s
+      serverSelectionTimeoutMS: parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || '5000'), // Fail fast if MongoDB is down
+      socketTimeoutMS: parseInt(process.env.MONGODB_SOCKET_TIMEOUT_MS || '45000'), // Socket timeout
+      // Retry Logic
+      retryWrites: process.env.MONGODB_RETRY_WRITES !== 'false', // Default: true
+      retryReads: process.env.MONGODB_RETRY_READS !== 'false',   // Default: true
+      // Compression (Reduces bandwidth)
+      compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts);

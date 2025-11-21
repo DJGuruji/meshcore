@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/db';
-import { ApiTesterHistory } from '@/lib/models';
+import { getToken } from 'next-auth/jwt';
 
-// API Tester - Send HTTP Request
+// Enable Edge Runtime
+export const runtime = 'edge';
+
+// API Tester - Send HTTP Request (Edge Runtime)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Use JWT token instead of session for Edge compatibility
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     
-    if (!session || !session.user) {
+    if (!token || !token.sub) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -63,7 +64,8 @@ export async function POST(request: NextRequest) {
       if (auth && auth.type !== 'none') {
         switch (auth.type) {
           case 'basic':
-            const basicAuth = Buffer.from(`${auth.basic.username}:${auth.basic.password}`).toString('base64');
+            // Use btoa instead of Buffer for Edge compatibility
+            const basicAuth = btoa(`${auth.basic.username}:${auth.basic.password}`);
             requestHeaders['Authorization'] = `Basic ${basicAuth}`;
             break;
           
@@ -153,35 +155,37 @@ export async function POST(request: NextRequest) {
       // Calculate response size
       const responseSize = new Blob([responseText]).size;
 
-      // Save to history
-      try {
-        await connectDB();
-        const userId = (session.user as any).id || (session.user as any)._id;
-        
-        if (userId) {
-          await ApiTesterHistory.create({
-            method: method.toUpperCase(),
-            url: finalUrl.toString(),
-            statusCode: response.status,
-            responseTime: endTime - startTime,
-            responseSize,
-            timestamp: new Date(),
-            user: userId,
-            requestData: {
-              headers: headers.filter((h: any) => h.enabled),
-              params: params.filter((p: any) => p.enabled),
-              body: requestBody,
-              auth: auth,
-              // Add GraphQL data to history if present
-              graphqlQuery: graphqlQuery,
-              graphqlVariables: graphqlVariables
-            }
-          });
+      // Save to history asynchronously (fire-and-forget)
+      // This doesn't block the response
+      const historyData = {
+        method: method.toUpperCase(),
+        url: finalUrl.toString(),
+        statusCode: response.status,
+        responseTime: endTime - startTime,
+        responseSize,
+        requestData: {
+          headers: headers.filter((h: any) => h.enabled),
+          params: params.filter((p: any) => p.enabled),
+          body: requestBody,
+          auth: auth,
+          graphqlQuery: graphqlQuery,
+          graphqlVariables: graphqlVariables
         }
-      } catch (historyError) {
-        console.error('Failed to save request history:', historyError);
-        // Don't fail the request if history save fails
-      }
+      };
+
+      // Async history save - don't await
+      fetch(new URL('/api/tools/api-tester/history', request.url).toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Forward the cookie for authentication
+          'Cookie': request.headers.get('cookie') || ''
+        },
+        body: JSON.stringify(historyData)
+      }).catch(err => {
+        // Log error but don't fail the request
+        console.error('Failed to save history:', err);
+      });
 
       return NextResponse.json({
         status: response.status,

@@ -451,7 +451,7 @@ export default function ApiTesterPage() {
   const [consoleLogs, setConsoleLogs] = useState<any[]>(currentTab?.consoleLogs || []);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'tests'>('params');
+  const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'tests docs'>('params');
   const [responseTab, setResponseTab] = useState<'body' | 'headers' | 'info' | 'tests' | 'console' | 'payload'>('body');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showCodeGen, setShowCodeGen] = useState(false);
@@ -1600,7 +1600,7 @@ export default function ApiTesterPage() {
           {/* Tabs */}
           <div className="border-b border-white/5 bg-transparent">
             <div className="flex gap-1 px-4">
-              {(['params', 'headers', 'body', 'auth', 'scripts', 'tests'] as const).map((tab) => (
+              {(['params', 'headers', 'body', 'auth', 'scripts', 'tests docs'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -1820,24 +1820,27 @@ export default function ApiTesterPage() {
             )}
 
             {activeTab === 'scripts' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Pre-request Script</label>
-                  <p className="text-xs text-slate-400 mb-2">Execute JavaScript before sending the request. Use pm.environment.set() to set variables.</p>
-                  <textarea
-                    value={currentRequest.preRequestScript || ''}
-                    onChange={(e) => setCurrentRequest({ ...currentRequest, preRequestScript: e.target.value })}
-                    placeholder={`// Example:\npm.environment.set("timestamp", Date.now());\npm.variables.set("myVar", "value");`}
-                    className="w-full h-48 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
-                  />
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Pre-request Script</label>
+                    <p className="text-xs text-slate-400 mb-2">Execute JavaScript before sending the request. Use pm.environment.set() to set variables.</p>
+                    <textarea
+                      value={currentRequest.preRequestScript || ''}
+                      onChange={(e) => setCurrentRequest({ ...currentRequest, preRequestScript: e.target.value })}
+                      placeholder={`// Example:\npm.environment.set("timestamp", Date.now());\npm.variables.set("myVar", "value");`}
+                      className="w-full h-48 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Test Script</label>
-                  <p className="text-xs text-slate-400 mb-2">Write tests to validate the response using pm.test() and pm.expect().</p>
-                  <textarea
-                    value={currentRequest.testScript || ''}
-                    onChange={(e) => setCurrentRequest({ ...currentRequest, testScript: e.target.value })}
-                    placeholder={`// Example:
+                <div className="flex-1">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Test Script</label>
+                    <p className="text-xs text-slate-400 mb-2">Write tests to validate the response using pm.test() and pm.expect().</p>
+                    <textarea
+                      value={currentRequest.testScript || ''}
+                      onChange={(e) => setCurrentRequest({ ...currentRequest, testScript: e.target.value })}
+                      placeholder={`// Example:
 pm.test("Status code is 200", function() {
   pm.expect(pm.response.status).to.equal(200);
 });
@@ -1845,13 +1848,14 @@ pm.test("Status code is 200", function() {
 pm.test("Response has data", function() {
   pm.expect(pm.response.body).to.have.property("data");
 });`}
-                    className="w-full h-48 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
-                  />
+                      className="w-full h-48 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
+                    />
+                  </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'tests' && (
+            {activeTab === 'tests docs' && (
               <div className="space-y-4">
                 <div className="bg-slate-800 rounded p-4">
                   <h3 className="text-sm font-semibold text-yellow-400 mb-2">Test Documentation</h3>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { ApiProject, MockServerData } from '@/lib/models';
 import { extractTokenFromHeader } from '@/lib/tokenUtils';
+import cache from '@/lib/cache';
 
 // Helper function to match endpoint path with project name
 function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string): boolean {
@@ -204,6 +205,12 @@ async function handleRequest(request: NextRequest, method: string) {
                 await mockData.save();
                 console.log('Stored POST data:', requestBody);
                 
+                // Invalidate cache for this endpoint (fire-and-forget)
+                const cacheKeyPattern = `mock:${project._id}:${endpoint._id}:*`;
+                cache.del(cacheKeyPattern).catch(err => {
+                  console.error('Failed to invalidate cache:', err);
+                });
+                
                 // Return success response with the stored data
                 const successResponse = NextResponse.json({ 
                   message: 'Data stored successfully',
@@ -286,6 +293,12 @@ async function handleRequest(request: NextRequest, method: string) {
                       await MockServerData.deleteOne({ _id: id });
                     }
                     
+                    // Invalidate cache for this endpoint (fire-and-forget)
+                    const cacheKeyPattern = `mock:${project._id}:${endpoint._id}:*`;
+                    cache.del(cacheKeyPattern).catch(err => {
+                      console.error('Failed to invalidate cache:', err);
+                    });
+                    
                     const deleteResponse = NextResponse.json({ 
                       message: 'Data deleted successfully',
                       deletedData: filteredData
@@ -317,6 +330,12 @@ async function handleRequest(request: NextRequest, method: string) {
                         }
                       );
                     }
+                    
+                    // Invalidate cache for this endpoint (fire-and-forget)
+                    const cacheKeyPattern = `mock:${project._id}:${endpoint._id}:*`;
+                    cache.del(cacheKeyPattern).catch(err => {
+                      console.error('Failed to invalidate cache:', err);
+                    });
                     
                     const updateResponse = NextResponse.json({ 
                       message: 'Data updated successfully',
@@ -351,6 +370,19 @@ async function handleRequest(request: NextRequest, method: string) {
           
           // Handle GET endpoints with data source
           if (method === 'GET' && endpoint.dataSource) {
+            // Generate cache key
+            const cacheKey = `mock:${project._id}:${endpoint._id}:${fullPath}`;
+            
+            // Try to get from cache first
+            const cachedResponse = await cache.get(cacheKey);
+            if (cachedResponse) {
+              console.log(`[Cache HIT] ${cacheKey}`);
+              const response = NextResponse.json(cachedResponse, { status: endpoint.statusCode });
+              return addCorsHeaders(response);
+            }
+            
+            console.log(`[Cache MISS] ${cacheKey}`);
+            
             // Find the source endpoint
             const sourceEndpoint = project.endpoints.find((ep: typeof endpoint) => 
               ep._id && endpoint.dataSource && 
@@ -454,6 +486,11 @@ async function handleRequest(request: NextRequest, method: string) {
                 const responseData = paginationInfo 
                   ? { data: paginatedData, pagination: paginationInfo }
                   : paginatedData;
+                
+                // Cache the response (fire-and-forget, don't await)
+                cache.set(cacheKey, responseData, { ttl: 300 }).catch(err => {
+                  console.error('Failed to cache response:', err);
+                });
                 
                 const response = NextResponse.json(responseData, { status: endpoint.statusCode });
                 return addCorsHeaders(response);
