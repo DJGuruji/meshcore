@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">1. Introduction</h2>
             <p className="text-slate-300 mb-4">
-              Sadasya (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services.
+              EchoStorm (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services.
             </p>
             <p className="text-slate-300">
               Please read this Privacy Policy carefully. If you do not agree with the terms of this Privacy Policy, please do not access our website or use our services.
