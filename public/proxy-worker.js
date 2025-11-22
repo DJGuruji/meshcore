@@ -78,13 +78,24 @@ self.addEventListener('message', async (event) => {
 
       // Perform fetch in Service Worker context (bypasses CORS!)
       const startTime = Date.now();
-
-      const response = await fetch(proxyRequest.url, {
+      console.log('[ProxyWorker] About to fetch:', proxyRequest.url, {
         method: proxyRequest.method || 'GET',
         headers: proxyRequest.headers || {},
         body: proxyRequest.body || null,
-        // No 'mode' restriction - Service Worker can read any response!
       });
+
+      let response;
+      try {
+        response = await fetch(proxyRequest.url, {
+          method: proxyRequest.method || 'GET',
+          headers: proxyRequest.headers || {},
+          body: proxyRequest.body || null,
+          // No 'mode' restriction - Service Worker can read any response!
+        });
+      } catch (fetchError) {
+        console.error('[ProxyWorker] Fetch failed:', fetchError.name, fetchError.message);
+        throw new Error(`Failed to connect to localhost server: ${fetchError.message}`);
+      }
 
       const endTime = Date.now();
       console.log('[ProxyWorker] Proxy request successful:', requestId, response.status);
@@ -92,15 +103,19 @@ self.addEventListener('message', async (event) => {
       // Read response body (works even without CORS headers!)
       let responseBody;
       const contentType = response.headers.get('content-type') || '';
+      console.log('[ProxyWorker] Response content-type:', contentType);
 
       if (contentType.includes('application/json')) {
         try {
           responseBody = await response.json();
+          console.log('[ProxyWorker] Parsed JSON response');
         } catch (e) {
+          console.log('[ProxyWorker] Failed to parse JSON, falling back to text');
           responseBody = await response.text();
         }
       } else {
         responseBody = await response.text();
+        console.log('[ProxyWorker] Read text response');
       }
 
       // Calculate response size
@@ -131,7 +146,7 @@ self.addEventListener('message', async (event) => {
       console.log('[ProxyWorker] Response sent back to main thread');
 
     } catch (error) {
-      console.error('[ProxyWorker] Proxy request failed:', requestId, error.name, error.message);
+      console.error('[ProxyWorker] Proxy request failed:', requestId, error.name, error.message, error.stack);
       // Send error response back to main thread
       const result = {
         requestId,
@@ -140,7 +155,11 @@ self.addEventListener('message', async (event) => {
         errorType: error.name || 'Error'
       };
 
-      event.ports[0].postMessage(result);
+      try {
+        event.ports[0].postMessage(result);
+      } catch (postError) {
+        console.error('[ProxyWorker] Failed to send error response:', postError);
+      }
     }
   }
 });

@@ -679,19 +679,34 @@ export default function ApiTesterPage() {
         throw new Error('This URL cannot be proxied. Only localhost URLs are supported.');
       }
       
-      // Execute request via proxy manager
-      console.log('[LocalhostRelay] Executing request directly via proxy manager');
-      const proxyResponse = await proxyManager.executeRequest({
-        url: finalUrl,
-        method: currentRequest.method,
-        headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
-        body: currentRequest.body.type === 'json' ? currentRequest.body.json : 
-          currentRequest.body.type === 'raw' ? currentRequest.body.raw : 
-          undefined
-      });
-      
-      res = { data: proxyResponse };
-      toast.success('✅ Localhost request executed via proxy!');
+      // Always try the proxy manager first for localhost URLs if it's active and should proxy this URL
+      if (proxyStatus.active && shouldUseProxy) {
+        console.log('[API Tester] Using proxy manager for localhost request');
+        try {
+          console.log('[API Tester] Executing proxy request:', {
+            url: finalUrl,
+            method: currentRequest.method,
+            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+          });
+          
+          const proxyResponse = await proxyManager.executeRequest({
+            url: finalUrl,
+            method: currentRequest.method,
+            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+            body: currentRequest.body.type === 'json' ? currentRequest.body.json : 
+                  currentRequest.body.type === 'raw' ? currentRequest.body.raw : 
+                  undefined
+          });
+          
+          console.log('[API Tester] Proxy response received:', proxyResponse);
+          res = { data: proxyResponse };
+          toast.success('✅ Localhost request executed via proxy!');
+          return; // Exit early if proxy succeeds
+        } catch (proxyError) {
+          console.error('[API Tester] Proxy manager failed:', proxyError);
+          // Continue to fallbacks if proxy fails
+        }
+      }
     } else {
       // Non-localhost URL → Use server-side proxy
       toast.loading('Routing request through secure proxy...', { duration: 2000 });
@@ -707,6 +722,11 @@ export default function ApiTesterPage() {
       
       res = await axios.post('/api/tools/api-tester/proxy', requestData);
       toast.success('✅ Request executed via proxy!');
+    }
+
+    // Ensure we have a response
+    if (!res) {
+      throw new Error('Failed to execute request - no response received');
     }
 
     // Process response
@@ -735,6 +755,7 @@ export default function ApiTesterPage() {
     } catch (historyError) {
       console.error('Failed to save to history:', historyError);
     }
+
 
     // Update tab with response
     setRequestTabs(tabs => tabs.map(tab => 
