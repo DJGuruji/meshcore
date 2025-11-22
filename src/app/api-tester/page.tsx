@@ -422,7 +422,7 @@ export default function ApiTesterPage() {
     request: {
       name: 'Untitled Request',
       method: 'GET',
-      url: '',
+      url: 'http://localhost:3000/api/users', // Provide a helpful default
       headers: [],
       params: [],
       body: { type: 'none' },
@@ -522,6 +522,27 @@ export default function ApiTesterPage() {
       return;
     }
 
+    // Validate URL format
+    try {
+      new URL(currentRequest.url);
+    } catch (e) {
+      toast.error('Please enter a valid URL (e.g., http://localhost:3000/api/users)');
+      return;
+    }
+
+    // Check for localhost URLs without paths
+    const urlObj = new URL(currentRequest.url);
+    const isLocalhost = (
+      urlObj.hostname === 'localhost' ||
+      urlObj.hostname === '127.0.0.1' ||
+      urlObj.hostname === '[::1]'
+    );
+  
+    if (isLocalhost && urlObj.pathname === '/') {
+      toast.error('Localhost URLs should include a path (e.g., http://localhost:3000/api/users, /api/test, or /health)');
+      return;
+    }
+
     setIsLoading(true);
     
     // Clear current tab's response
@@ -552,129 +573,239 @@ export default function ApiTesterPage() {
           console.error('Pre-request script error:', err);
           toast.error('Pre-request script failed');
         }
-      }
+    }
 
-      const finalUrl = replaceVariables(currentRequest.url, preRequestVariables);
-      let res;
+    const finalUrl = replaceVariables(currentRequest.url, preRequestVariables);
+    let res;
+    
+    // Check if this is a localhost URL
+    const isLocalhost = isLocalhostUrl(finalUrl);
+    const isProductionUI = typeof window !== 'undefined' && 
+                          !window.location.hostname.includes('localhost') &&
+                          !window.location.hostname.includes('127.0.0.1');
+    
+    // Log decision logic for debugging
+    console.log('[API Tester] Decision logic:', {
+      finalUrl,
+      isLocalhost,
+      isProductionUI,
+      relayReady: localhostRelay.isReady,
+      relayStatus: localhostRelay.status
+    });
+    
+    // Decision logic:
+    // 1. If localhost URL + production UI + relay ready → Use WebSocket relay
+    // 2. If localhost URL + development UI → Use client-side fetch
+    // 3. If HTTPS URL → Use server-side proxy
+    
+    if (isLocalhost && isProductionUI && localhostRelay.isReady) {
+      // Production + Localhost URL → Use WebSocket Relay!
+      toast.loading('Connecting to your local API via secure relay...', { duration: 2000 });
       
-      // Check if this is a localhost URL
-      const isLocalhost = isLocalhostUrl(finalUrl);
-      const isProductionUI = typeof window !== 'undefined' && 
-                            !window.location.hostname.includes('localhost') &&
-                            !window.location.hostname.includes('127.0.0.1');
-      
-      // Log decision logic for debugging
-      console.log('[API Tester] Decision logic:', {
-        finalUrl,
-        isLocalhost,
-        isProductionUI,
-        relayReady: localhostRelay.isReady,
-        relayStatus: localhostRelay.status
-      });
-      
-      // Decision logic:
-      // 1. If localhost URL + production UI + relay ready → Use WebSocket relay
-      // 2. If localhost URL + development UI → Use client-side fetch
-      // 3. If HTTPS URL → Use server-side proxy
-      
-      if (isLocalhost && isProductionUI && localhostRelay.isReady) {
-        // Production + Localhost URL → Use WebSocket Relay!
-        toast.loading('Connecting to your local API via secure relay...', { duration: 2000 });
-        
-        try {
-          const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          const relayResponse = await localhostRelay.executeRequest({
-            requestId,
-            method: currentRequest.method,
-            url: finalUrl,
-            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
-            params: currentRequest.params,
-            body: currentRequest.body,
-            auth: currentRequest.auth
-          });
-          
-          res = { data: relayResponse };
-          toast.success('✅ Localhost request executed via relay!');
-        } catch (error: any) {
-          throw error;
-        }
-      } else if (isLocalhost && isProductionUI && !localhostRelay.isReady) {
-        // Localhost + Production but relay not ready → Show helpful message
-        throw new Error(
-          '🔌 WebSocket relay is connecting... Please wait a moment and try again.\n\n' +
-          'Or run this app locally for instant localhost testing:\n' +
-          '→ npm run dev'
-        );
-      } else if (isClientSideUrl(finalUrl)) {
-        // Client-side: Direct browser request (for localhost in dev, http, local IPs)
-        res = await sendClientSideRequest(finalUrl);
-      } else {
-        // Server-side: Proxy through Next.js API (for https production APIs)
-        res = await axios.post('/api/tools/api-tester/send', {
+      try {
+        const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const relayResponse = await localhostRelay.executeRequest({
+          requestId,
           method: currentRequest.method,
           url: finalUrl,
-          headers: currentRequest.headers,
+          headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
           params: currentRequest.params,
-          requestBody: currentRequest.body,
+          body: currentRequest.body,
           auth: currentRequest.auth
         });
+        
+        res = { data: relayResponse };
+        toast.success('✅ Localhost request executed via relay!');
+      } catch (error: any) {
+        throw error;
       }
-
-      const currentTestResults: TestResult[] = [];
+    } else if (isLocalhost) {
+      // Localhost URL in any environment → Try direct client-side fetch with proxy
+      toast.loading('Testing localhost API directly...', { duration: 2000 });
       
-      // Run test script if exists
-      if (currentRequest.testScript && res.data) {
-        try {
-          const testRes = await axios.post('/api/tools/api-tester/run-script', {
-            type: 'test',
-            script: currentRequest.testScript,
-            request: currentRequest,
-            response: res.data,
-            environment: selectedEnvironment?.variables || []
-          });
-          if (testRes.data.tests) {
-            currentTestResults.push(...testRes.data.tests);
+      try {
+        // Try proxy manager first
+        const proxyStatus = (await import('@/lib/proxyManager')).proxyManager.getStatus();
+        if (proxyStatus.active) {
+          const { proxyManager } = await import('@/lib/proxyManager');
+          if (proxyManager.shouldProxy(finalUrl)) {
+            console.log('[API Tester] Using proxy manager for localhost request');
+            const proxyResponse = await proxyManager.executeRequest({
+              url: finalUrl,
+              method: currentRequest.method,
+              headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+              body: currentRequest.body.type === 'json' ? currentRequest.body.json : 
+                    currentRequest.body.type === 'raw' ? currentRequest.body.raw : 
+                    undefined
+            });
+            
+            res = { data: proxyResponse };
+            toast.success('✅ Localhost request executed via proxy!');
+          } else {
+            throw new Error('Proxy manager cannot handle this URL');
           }
-          if (testRes.data.logs) {
-            currentLogs.push(...testRes.data.logs);
-          }
-        } catch (err) {
-          console.error('Test script error:', err);
-          toast.error('Test script failed');
-        }
-      }
-
-      // Update current tab with response, tests, and logs
-      setRequestTabs(tabs => tabs.map(tab => 
-        tab.id === activeTabId 
-          ? { 
-              ...tab, 
-              request: {
-                ...tab.request,
-                name: getRequestName(currentRequest.method, currentRequest.url)
-              },
-              response: res.data,
-              testResults: currentTestResults,
-              consoleLogs: currentLogs,
-              isSaved: false
+        } else {
+          // Fallback to direct fetch
+          console.log('[API Tester] Using direct fetch for localhost request');
+          const fetchOptions: RequestInit = {
+            method: currentRequest.method,
+            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+          };
+          
+          if (currentRequest.body && currentRequest.body.type !== 'none') {
+            if (currentRequest.body.type === 'json') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
+              fetchOptions.body = currentRequest.body.json;
+            } else if (currentRequest.body.type === 'raw') {
+              fetchOptions.body = currentRequest.body.raw;
             }
-          : tab
-      ));
-
-      toast.success(`Request completed in ${res.data.time}ms`);
-      fetchHistory(); // Refresh history
-    } catch (error: any) {
-      const errorData = error.response?.data || { error: true, message: error.message };
-      setRequestTabs(tabs => tabs.map(tab => 
-        tab.id === activeTabId 
-          ? { ...tab, response: errorData }
-          : tab
-      ));
-      toast.error('Request failed');
-    } finally {
-      setIsLoading(false);
+          }
+          
+          const response = await fetch(finalUrl, fetchOptions);
+          
+          // Parse response
+          const contentType = response.headers.get('content-type') || '';
+          let body;
+          if (contentType.includes('application/json')) {
+            body = await response.json();
+          } else {
+            body = await response.text();
+          }
+          
+          res = {
+            data: {
+              status: response.status,
+              statusText: response.statusText,
+              headers: Object.fromEntries(response.headers.entries()),
+              body,
+              time: 0, // We don't have timing info from direct fetch
+              size: 0 // We don't have size info from direct fetch
+            }
+          };
+          
+          toast.success('✅ Localhost request executed directly!');
+        }
+      } catch (error: any) {
+        console.error('[API Tester] Localhost request failed:', error);
+        throw error;
+      }
+    } else {
+      // Non-localhost URL → Use server-side proxy
+      toast.loading('Routing request through secure proxy...', { duration: 2000 });
+      
+      const requestData = {
+        method: currentRequest.method,
+        url: finalUrl,
+        headers: currentRequest.headers.filter(h => h.enabled).map(h => ({ key: h.key, value: h.value })),
+        params: currentRequest.params.filter(p => p.enabled),
+        body: currentRequest.body,
+        auth: currentRequest.auth
+      };
+      
+      res = await axios.post('/api/tools/api-tester/proxy', requestData);
+      toast.success('✅ Request executed via proxy!');
     }
-  };
+
+    // Process response
+    const processedResponse = {
+      ...res.data,
+      timestamp: new Date().toISOString()
+    };
+
+    // Save to history
+    try {
+      await axios.post('/api/tools/api-tester/history', {
+        method: currentRequest.method,
+        url: finalUrl,
+        statusCode: processedResponse.status,
+        responseTime: processedResponse.time,
+        responseSize: processedResponse.size,
+        timestamp: processedResponse.timestamp,
+        requestData: {
+          headers: currentRequest.headers,
+          params: currentRequest.params,
+          body: currentRequest.body,
+          auth: currentRequest.auth
+        }
+      });
+      fetchHistory(); // Refresh history
+    } catch (historyError) {
+      console.error('Failed to save to history:', historyError);
+    }
+
+    // Update tab with response
+    setRequestTabs(tabs => tabs.map(tab => 
+      tab.id === activeTabId 
+        ? { ...tab, response: processedResponse, consoleLogs: currentLogs }
+        : tab
+    ));
+
+    // Set response for current tab
+    setResponse(processedResponse);
+    
+    // Run test script if exists
+    if (currentRequest.testScript) {
+      try {
+        const testRes = await axios.post('/api/tools/api-tester/run-script', {
+          type: 'test',
+          script: currentRequest.testScript,
+          request: currentRequest,
+          response: processedResponse,
+          environment: selectedEnvironment?.variables || []
+        });
+        
+        const results = testRes.data.results || [];
+        setTestResults(results);
+        
+        // Update tab with test results
+        setRequestTabs(tabs => tabs.map(tab => 
+          tab.id === activeTabId 
+            ? { ...tab, testResults: results }
+            : tab
+        ));
+        
+        // Show test results summary
+        const passedTests = results.filter((r: any) => r.passed).length;
+        const totalTests = results.length;
+        if (totalTests > 0) {
+          toast.success(`Tests: ${passedTests}/${totalTests} passed`);
+        }
+      } catch (err) {
+        console.error('Test script error:', err);
+        toast.error('Test script failed');
+      }
+    }
+
+  } catch (error: any) {
+    console.error('[API Tester] Request failed:', error);
+    
+    // Show error in response area
+    const errorResponse = {
+      error: true,
+      message: error.response?.data?.message || error.message || 'Request failed',
+      timestamp: new Date().toISOString()
+    };
+    
+    setRequestTabs(tabs => tabs.map(tab => 
+      tab.id === activeTabId 
+        ? { ...tab, response: errorResponse }
+        : tab
+    ));
+    
+    setResponse(errorResponse);
+    
+    // Show user-friendly error message
+    if (error.response?.data?.message) {
+      toast.error(error.response.data.message);
+    } else if (error.message) {
+      toast.error(error.message);
+    } else {
+      toast.error('Request failed - check console for details');
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Helper to check if URL is localhost
   const isLocalhostUrl = (url: string): boolean => {
