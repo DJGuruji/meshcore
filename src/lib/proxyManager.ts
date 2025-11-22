@@ -155,6 +155,22 @@ class ProxyManager {
   async executeRequest(request: ProxyRequest): Promise<ProxyResponse> {
     console.log('[ProxyManager] Sending proxy request:', request.url);
     
+    // Validate the URL
+    try {
+      const url = new URL(request.url);
+      
+      // Check if it's a bare domain without path
+      if (url.pathname === '/') {
+        console.warn('[ProxyManager] Warning: Request to bare domain detected, this may cause timeout');
+        // For localhost bare domains, provide a clearer error message
+        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]') {
+          throw new Error('Please specify a complete URL path for localhost (e.g., http://localhost:3000/api/users)');
+        }
+      }
+    } catch (e) {
+      throw new Error('Invalid URL format: ' + request.url + '. ' + (e as Error).message);
+    }
+    
     if (!this.worker || !this.status.active) {
       throw new Error('Service Worker not active. Call register() first.');
     }
@@ -197,9 +213,9 @@ class ProxyManager {
         [messageChannel.port2]
       );
 
-      // Timeout after 30 seconds
+      // Timeout after 30 seconds with a more descriptive message
       setTimeout(() => {
-        reject(new Error('Request timeout'));
+        reject(new Error('Request timeout - localhost server may not be running, not accessible, or the URL is incomplete (e.g., missing path like /api/users)'));
       }, 30000);
     });
   }
@@ -231,7 +247,9 @@ class ProxyManager {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname;
       
-      return (
+      // Only proxy HTTP requests to localhost addresses
+      const isHttp = urlObj.protocol === 'http:';
+      const isLocalhost = (
         hostname === 'localhost' ||
         hostname === '127.0.0.1' ||
         hostname === '[::1]' ||
@@ -239,7 +257,10 @@ class ProxyManager {
         hostname.match(/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) !== null ||
         hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/) !== null
       );
+      
+      return isHttp && isLocalhost;
     } catch (e) {
+      console.error('[ProxyManager] Error parsing URL for proxy check:', e);
       return false;
     }
   }
