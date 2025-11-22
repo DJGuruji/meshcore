@@ -371,24 +371,24 @@ export default function ApiTesterPage() {
   const getStatusMessage = (statusCode: number): { message: string; category: string } => {
     const messages: Record<number, { message: string; category: string }> = {
       // Success Responses (2xx)
-      200: { message: "Success — Your API obeyed!", category: "success" },
+      200: { message: "Success  Your API obeyed!", category: "success" },
       201: { message: "Done! You just built something great.", category: "success" },
-      202: { message: "Got it — we're processing your request like a pro.", category: "success" },
-      204: { message: "All good — nothing to show, everything to love.", category: "success" },
+      202: { message: "Got it  we're processing your request like a pro.", category: "success" },
+      204: { message: "All good  nothing to show, everything to love.", category: "success" },
       
       // Redirects (3xx)
-      301: { message: "We've moved… permanently! Like a codebase refactor.", category: "redirect" },
-      302: { message: "We found it — taking you to the right endpoint.", category: "redirect" },
+      301: { message: "We've moved permanently! Like a codebase refactor.", category: "redirect" },
+      302: { message: "We found it  taking you to the right endpoint.", category: "redirect" },
       304: { message: "Still the same. Why change what's already perfect?", category: "redirect" },
       
       // Client Errors (4xx)
       400: { message: "Your request is confused. Maybe too much coffee?", category: "client-error" },
-      401: { message: "Access denied — tokens before glory!", category: "client-error" },
+      401: { message: "Access denied  tokens before glory!", category: "client-error" },
       403: { message: "Nice try, hacker. But not today.", category: "client-error" },
-      404: { message: "We looked everywhere — nothing here but 404 ghosts.", category: "client-error" },
-      405: { message: "That method doesn't belong here — try another tool.", category: "client-error" },
-      408: { message: "Took too long — your API went for a coffee break.", category: "client-error" },
-      409: { message: "Conflict detected — merge your data like Git pros do.", category: "client-error" },
+      404: { message: "We looked everywhere  nothing here but 404 ghosts.", category: "client-error" },
+      405: { message: "That method doesn't belong here  try another tool.", category: "client-error" },
+      408: { message: "Took too long  your API went for a coffee break.", category: "client-error" },
+      409: { message: "Conflict detected  merge your data like Git pros do.", category: "client-error" },
       410: { message: "This endpoint packed up and left town.", category: "client-error" },
       413: { message: "That's heavy! Maybe trim it down a bit.", category: "client-error" },
       415: { message: "We don't speak that format. Try JSON, it's fluent.", category: "client-error" },
@@ -396,16 +396,16 @@ export default function ApiTesterPage() {
       429: { message: "Whoa there! Rate limits exist for a reason. Chill for a sec.", category: "client-error" },
       
       // Server Errors (5xx)
-      500: { message: "Something blew up — but that's on us.", category: "server-error" },
-      501: { message: "Not built yet — it's still in the dev lab.", category: "server-error" },
-      502: { message: "Server relay failed — clouds are moody today.", category: "server-error" },
+      500: { message: "Something blew up  but that's on us.", category: "server-error" },
+      501: { message: "Not built yet  it's still in the dev lab.", category: "server-error" },
+      502: { message: "Server relay failed  clouds are moody today.", category: "server-error" },
       503: { message: "Server's napping. Try waking it later.", category: "server-error" },
-      504: { message: "The network took a detour — timeout adventure!", category: "server-error" },
-      507: { message: "Memory full — like your weekend schedule.", category: "server-error" },
+      504: { message: "The network took a detour  timeout adventure!", category: "server-error" },
+      507: { message: "Memory full  like your weekend schedule.", category: "server-error" },
       509: { message: "Whoa! You flooded the pipes. Ease up, champ.", category: "server-error" },
       
       // Bonus
-      100: { message: "Keep going — you're doing great.", category: "info" },
+      100: { message: "Keep going  you're doing great.", category: "info" },
       522: { message: "Your request got lost in space.", category: "server-error" },
       530: { message: "Authentication Required.", category: "client-error" },
     };
@@ -601,12 +601,12 @@ export default function ApiTesterPage() {
     });
     
     // Decision logic:
-    // 1. If localhost URL + production UI + relay ready → Use WebSocket relay
-    // 2. If localhost URL + development UI → Use client-side fetch
-    // 3. If HTTPS URL → Use server-side proxy
+    // 1. If localhost URL + production UI + relay ready  Use WebSocket relay
+    // 2. If localhost URL + development UI  Use client-side fetch
+    // 3. If HTTPS URL  Use server-side proxy
     
     if (isLocalhost && isProductionUI && localhostRelay.isReady) {
-      // Production + Localhost URL → Use WebSocket Relay!
+      // Production + Localhost URL  Use WebSocket Relay!
       toast.loading('Connecting to your local API via secure relay...', { duration: 2000 });
       
       try {
@@ -622,12 +622,12 @@ export default function ApiTesterPage() {
         });
         
         res = { data: relayResponse };
-        toast.success('✅ Localhost request executed via relay!');
+        toast.success(' Localhost request executed via zero-config relay!');
       } catch (error: any) {
         throw error;
       }
     } else if (isLocalhost) {
-      // Localhost URL in any environment → Try direct client-side fetch
+      // Localhost URL in any environment  Try direct client-side fetch
       toast.loading('Testing localhost API directly...', { duration: 2000 });
       
       try {
@@ -669,7 +669,7 @@ export default function ApiTesterPage() {
           }
         };
         
-        toast.success('✅ Localhost request executed directly!');
+        toast.success(' Localhost request executed directly!');
       } catch (fetchError) {
         console.error('[API Tester] Direct fetch failed:', fetchError);
         
@@ -704,10 +704,10 @@ export default function ApiTesterPage() {
           }
         };
         
-        toast.success('✅ Localhost request executed with limited CORS access!');
+        toast.success(' Localhost request executed with limited CORS access!');
       }
     } else {
-      // Non-localhost URL → Use server-side proxy
+      // Non-localhost URL  Use server-side proxy
       toast.loading('Routing request through secure proxy...', { duration: 2000 });
       
       const requestData = {
@@ -720,7 +720,7 @@ export default function ApiTesterPage() {
       };
       
       res = await axios.post('/api/tools/api-tester/proxy', requestData);
-      toast.success('✅ Request executed via proxy!');
+      toast.success(' Request executed via proxy!');
     }
 
     // Ensure we have a response
@@ -1423,7 +1423,7 @@ export default function ApiTesterPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#030712]">
         <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-3 text-sm text-slate-300 shadow-xl shadow-black/60">
-          Preparing API tester…
+          Preparing API tester
         </div>
       </div>
     );
@@ -2469,7 +2469,7 @@ pm.test("Response has data", function() {
             <div className="p-4 border-b border-slate-700 flex justify-between items-center">
               <h2 className="text-lg font-bold text-yellow-400">Activity History</h2>
               <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-white">
-                ✕
+                  ✕
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -2532,7 +2532,7 @@ pm.test("Response has data", function() {
               onClick={() => setIsHistorySidebarOpen(false)} 
               className="text-slate-400 hover:text-white"
             >
-              ✕
+                ✕
             </button>
           </div>
 
