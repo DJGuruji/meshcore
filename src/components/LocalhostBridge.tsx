@@ -14,6 +14,7 @@
 import { useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { localhostWorker } from '@/lib/localhostWorker';
+import { proxyManager } from '@/lib/proxyManager';
 
 interface LocalhostRequest {
   requestId: string;
@@ -33,24 +34,30 @@ interface Props {
 export default function LocalhostBridge({ socket, isReady }: Props) {
   const processingRef = useRef<Set<string>>(new Set());
 
-  // Register Service Worker on mount
+  // Register Service Worker and Proxy Manager on mount
   useEffect(() => {
-    const registerWorker = async () => {
+    const registerWorkers = async () => {
       try {
         console.log('[LocalhostBridge] Registering Service Worker...');
-        const status = await localhostWorker.register();
-        console.log('[LocalhostBridge] Service Worker registration result:', status);
-        if (status.active) {
+        const workerStatus = await localhostWorker.register();
+        console.log('[LocalhostBridge] Service Worker registration result:', workerStatus);
+        
+        console.log('[LocalhostBridge] Registering Proxy Manager...');
+        const proxyStatus = await proxyManager.register();
+        console.log('[LocalhostBridge] Proxy Manager registration result:', proxyStatus);
+        
+        if (workerStatus.active) {
           console.log('[LocalhostBridge] ✅ Service Worker active - CORS bypass enabled!');
-        } else {
-          console.log('[LocalhostBridge] Service Worker not active, will use direct fetch');
+        }
+        if (proxyStatus.active) {
+          console.log('[LocalhostBridge] ✅ Proxy Manager active - Additional CORS bypass available!');
         }
       } catch (error) {
-        console.error('[LocalhostBridge] Failed to register Service Worker:', error);
+        console.error('[LocalhostBridge] Failed to register workers:', error);
       }
     };
 
-    registerWorker();
+    registerWorkers();
   }, []);
 
   useEffect(() => {
@@ -131,20 +138,49 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           }
         }
 
-        // For localhost URLs, execute fetch directly without using Service Worker
-        // This is because localhost URLs are meant to be handled by the WebSocket relay
-        // and the Service Worker will block mixed content (HTTPS -> HTTP) requests
-        const isLocalhostUrl = finalUrl.hostname === 'localhost' || 
-                              finalUrl.hostname === '127.0.0.1' || 
-                              finalUrl.hostname === '[::1]';
+        // Check if we should use the proxy manager for this request
+        const shouldUseProxy = proxyManager.shouldProxy(finalUrl.toString());
+        const proxyStatus = proxyManager.getStatus();
         
-        // Check if Service Worker is active - if so, use it even for localhost URLs
-        // This will properly bypass CORS without mixed content issues
+        // Check if Service Worker is active
         let workerStatus = localhostWorker.getStatus();
         
         console.log('[LocalhostBridge] Worker status:', workerStatus);
+        console.log('[LocalhostBridge] Proxy status:', proxyStatus);
         
-        if (workerStatus.active) {
+        if (proxyStatus.active && shouldUseProxy) {
+          console.log('[LocalhostBridge] 🚀 Executing via Proxy Manager:', request.method, request.url);
+          
+          try {
+            // Execute via Proxy Manager (bypasses CORS!)
+            const result = await proxyManager.executeRequest({
+              url: finalUrl.toString(),
+              method: request.method,
+              headers: requestHeaders,
+              body: requestBody,
+            });
+
+            const endTime = Date.now();
+            console.log('[LocalhostBridge] 🔓 Using Proxy Manager - No CORS restrictions!');
+
+            // Send successful response back to relay
+            socket.emit('localhost:fetchComplete', {
+              requestId: request.requestId,
+              status: result.status,
+              statusText: result.statusText || '',
+              headers: result.headers,
+              body: result.body,
+              time: result.time || (endTime - startTime),
+              size: result.size || 0,
+              timestamp: new Date().toISOString(),
+            });
+
+            console.log(`[LocalhostBridge] ✅ Fetch completed: ${result.status} in ${result.time || (endTime - startTime)}ms`);
+          } catch (proxyError) {
+            console.error('[LocalhostBridge] Proxy Manager fetch failed:', proxyError);
+            throw proxyError;
+          }
+        } else if (workerStatus.active) {
           console.log('[LocalhostBridge] 🚀 Executing via Service Worker:', request.method, request.url);
           
           try {
@@ -176,7 +212,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
             console.error('[LocalhostBridge] Service Worker fetch failed:', workerError);
             throw workerError;
           }
-        } else if (isLocalhostUrl) {
+        } else {
           console.log('[LocalhostBridge] Executing localhost URL directly (bypassing Service Worker)');
           
           try {
@@ -259,58 +295,6 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
               error: errorMessage,
             });
           }
-        } else {
-          // Fallback to direct fetch if Service Worker is not available and not localhost
-          console.log('[LocalhostBridge] Service Worker not active, using direct fetch');
-          
-          // Execute fetch directly with CORS mode
-          const response = await fetch(finalUrl.toString(), {
-            method: request.method.toUpperCase(),
-            headers: requestHeaders,
-            body: requestBody,
-            mode: 'cors', // Explicitly set CORS mode
-          });
-
-          const endTime = Date.now();
-
-          // Get response body
-          const contentType = response.headers.get('content-type') || '';
-          let responseBody: any;
-          let responseText = '';
-
-          try {
-            responseText = await response.text();
-            if (contentType.includes('application/json')) {
-              responseBody = JSON.parse(responseText);
-            } else {
-              responseBody = responseText;
-            }
-          } catch (e) {
-            responseBody = responseText;
-          }
-
-          // Get response headers
-          const responseHeaders: Record<string, string> = {};
-          response.headers.forEach((value, key) => {
-            responseHeaders[key] = value;
-          });
-
-          // Calculate response size
-          const responseSize = new Blob([responseText]).size;
-
-          // Send successful response back to relay
-          socket.emit('localhost:fetchComplete', {
-            requestId: request.requestId,
-            status: response.status,
-            statusText: response.statusText,
-            headers: responseHeaders,
-            body: responseBody,
-            time: endTime - startTime,
-            size: responseSize,
-            timestamp: new Date().toISOString(),
-          });
-
-          console.log(`[LocalhostBridge] Fetch completed: ${response.status} in ${endTime - startTime}ms`);
         }
       } catch (error: any) {
         const endTime = Date.now();
