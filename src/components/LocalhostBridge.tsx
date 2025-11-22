@@ -82,13 +82,19 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           finalUrl.searchParams.append(p.key, p.value);
         });
 
-        // Build headers
+        // Build headers with zero-configuration CORS support
         const requestHeaders: Record<string, string> = {};
         Object.entries(request.headers).forEach(([key, value]) => {
           if (value) {
             requestHeaders[key] = value;
           }
         });
+
+        // Add CORS bypass headers for localhost requests
+        requestHeaders['Access-Control-Allow-Origin'] = '*';
+        requestHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS';
+        requestHeaders['Access-Control-Allow-Headers'] = '*';
+        requestHeaders['Access-Control-Allow-Credentials'] = 'true';
 
         // Add authentication headers
         if (request.auth && request.auth.type !== 'none') {
