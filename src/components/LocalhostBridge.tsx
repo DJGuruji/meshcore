@@ -272,13 +272,8 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
         if (isMixedContent && window.location.protocol === 'https:') {
           errorMessage = 
             'Mixed Content Blocked: HTTPS page cannot fetch HTTP localhost\n\n' +
-            'The request is now being routed through our server-side proxy automatically.\n' +
-            'If you see this error, the proxy may have failed.\n\n' +
-            'Alternative solutions:\n' +
-            '1. Setup HTTPS on localhost (recommended):\n' +
-            '   - Use mkcert or ngrok\n' +
-            '2. Run app locally:\n' +
-            '   - Add sadasya.vercel.app to allowed origins when testing localhost API';
+            'Add the domain sadasya.vercel.app to the allowed origins:\n' +
+            'or use ngrok to make the url public for testing\n\n';
         }
 
         // Send error response back to relay

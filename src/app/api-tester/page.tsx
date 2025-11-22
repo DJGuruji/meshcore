@@ -542,13 +542,6 @@ export default function ApiTesterPage() {
       urlObj.hostname === '[::1]'
     );
   
-    if (isLocalhost && urlObj.pathname === '/') {
-      // Show warning but don't block the request
-      toast('Note: Testing bare localhost URL. Make sure your server handles root path requests.', {
-        icon: 'ℹ️',
-        duration: 4000
-      });
-    }
 
     setIsLoading(true);
     
