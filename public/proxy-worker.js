@@ -5,7 +5,7 @@
  * when testing localhost APIs from the production frontend.
  * 
  * How it works:
- * 1. Intercepts fetch requests to localhost URLs
+ * 1. Receives proxy requests via postMessage from main thread
  * 2. Executes requests with elevated permissions (bypassing CORS)
  * 3. Returns full response data to the main thread
  * 
@@ -142,91 +142,5 @@ self.addEventListener('message', async (event) => {
 
       event.ports[0].postMessage(result);
     }
-  }
-});
-
-/**
- * Handle proxy request
- */
-async function handleProxyRequest(request) {
-  try {
-    console.log('[ProxyWorker] Handling proxy request:', request.url);
-    
-    // Parse URL to check for bare domains
-    const url = new URL(request.url);
-    if (url.pathname === '/' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]')) {
-      console.warn('[ProxyWorker] Warning: Request to bare localhost domain detected');
-      
-      // Return a helpful error instead of trying to guess paths
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid Request', 
-          message: 'Please specify a complete URL path for localhost (e.g., http://localhost:3000/api/users)',
-          type: 'PathRequired',
-          suggestion: 'Add a specific path to your localhost URL like /api/users, /api/test, or /health'
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-    
-    // Execute fetch with elevated permissions
-    const response = await fetch(request.url, {
-      method: request.method || 'GET',
-      headers: request.headers || {},
-      body: request.body || null,
-      // No mode restriction in Service Worker context
-    });
-
-    console.log('[ProxyWorker] Proxy request completed:', response.status);
-    
-    // Return the response as-is (bypassing CORS)
-    return response;
-  } catch (error) {
-    console.error('[ProxyWorker] Proxy request failed:', error);
-    
-    // Return an error response
-    return new Response(
-      JSON.stringify({ 
-        error: 'Proxy Error', 
-        message: error.message || 'Failed to execute proxy request. Make sure your localhost server is running and accessible.',
-        type: error.name || 'Error',
-        suggestion: 'Check that your localhost server is running on the specified port and that the URL path is correct (e.g., http://localhost:3000/api/users)'
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-  }
-}
-
-// Add event listener for fetch events
-self.addEventListener('fetch', (event) => {
-  try {
-    const url = new URL(event.request.url);
-    
-    // Check if this is a localhost request that should be proxied
-    const isLocalhost = url.hostname === 'localhost' ||
-      url.hostname === '127.0.0.1' ||
-      url.hostname === '[::1]' ||
-      url.hostname.match(/^192\.168\.\d{1,3}\.\d{1,3}$/) ||
-      url.hostname.match(/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) ||
-      url.hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/);
-
-    // Only intercept HTTP requests to localhost
-    const isHttp = url.protocol === 'http:';
-
-    if (isLocalhost && isHttp) {
-      console.log('[ProxyWorker] Intercepting localhost request:', event.request.url);
-      
-      // Handle the request by proxying it
-      event.respondWith(handleProxyRequest(event.request));
-    }
-  } catch (e) {
-    // If there's an error parsing the URL, let the request pass through normally
-    console.warn('[ProxyWorker] Error parsing URL, letting request pass through:', e);
   }
 });

@@ -51,6 +51,19 @@ class ProxyManager {
       return this.status;
     }
 
+    // Check if we're in localhost development - Service Workers might not work properly
+    if (typeof window !== 'undefined') {
+      const isLocalhostDev = window.location.hostname === 'localhost' || 
+                            window.location.hostname === '127.0.0.1' ||
+                            window.location.hostname === '[::1]';
+      if (isLocalhostDev) {
+        console.log('[ProxyManager] Running in localhost development, Service Workers may not be needed');
+        // In localhost development, we might not need the proxy
+        this.status = { registered: true, active: true };
+        return this.status;
+      }
+    }
+
     const maxRetries = 3;
     const retryDelay = 1000;
 
@@ -157,16 +170,7 @@ class ProxyManager {
     
     // Validate the URL
     try {
-      const url = new URL(request.url);
-      
-      // Check if it's a bare domain without path
-      if (url.pathname === '/') {
-        console.warn('[ProxyManager] Warning: Request to bare domain detected, this may cause timeout');
-        // For localhost bare domains, provide a clearer error message
-        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]') {
-          throw new Error('Please specify a complete URL path for localhost (e.g., http://localhost:3000/api/users)');
-        }
-      }
+      new URL(request.url);
     } catch (e) {
       throw new Error('Invalid URL format: ' + request.url + '. ' + (e as Error).message);
     }
@@ -215,7 +219,7 @@ class ProxyManager {
 
       // Timeout after 30 seconds with a more descriptive message
       setTimeout(() => {
-        reject(new Error('Request timeout - localhost server may not be running, not accessible, or the URL is incomplete (e.g., missing path like /api/users)'));
+        reject(new Error('Request timeout - localhost server may not be running or accessible'));
       }, 30000);
     });
   }

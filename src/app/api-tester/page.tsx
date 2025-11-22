@@ -475,8 +475,32 @@ export default function ApiTesterPage() {
       fetchCollections();
       fetchEnvironments();
       fetchHistory();
+      
+      // Initialize proxy manager
+      initializeProxyManager();
     }
   }, [status, router]);
+
+  // Initialize proxy manager for localhost requests
+  const initializeProxyManager = async () => {
+    try {
+      console.log('[API Tester] Initializing proxy manager...');
+      const { proxyManager } = await import('@/lib/proxyManager');
+      const status = proxyManager.getStatus();
+      console.log('[API Tester] Proxy manager initial status:', status);
+      
+      if (!status.active) {
+        // Try to register the proxy manager
+        console.log('[API Tester] Registering proxy manager...');
+        const newStatus = await proxyManager.register();
+        console.log('[API Tester] Proxy manager registered:', newStatus);
+      } else {
+        console.log('[API Tester] Proxy manager already active');
+      }
+    } catch (error) {
+      console.error('[API Tester] Failed to initialize proxy manager:', error);
+    }
+  };
 
   const fetchHistory = async () => {
     try {
@@ -530,7 +554,7 @@ export default function ApiTesterPage() {
       return;
     }
 
-    // Check for localhost URLs without paths
+    // Check for localhost URLs without paths - show warning but allow request to proceed
     const urlObj = new URL(currentRequest.url);
     const isLocalhost = (
       urlObj.hostname === 'localhost' ||
@@ -539,8 +563,11 @@ export default function ApiTesterPage() {
     );
   
     if (isLocalhost && urlObj.pathname === '/') {
-      toast.error('Localhost URLs should include a path (e.g., http://localhost:3000/api/users, /api/test, or /health)');
-      return;
+      // Show warning but don't block the request
+      toast('Note: Testing bare localhost URL. Make sure your server handles root path requests.', {
+        icon: 'ℹ️',
+        duration: 4000
+      });
     }
 
     setIsLoading(true);
@@ -624,29 +651,55 @@ export default function ApiTesterPage() {
       toast.loading('Testing localhost API directly...', { duration: 2000 });
       
       try {
-        // Try proxy manager first
-        const proxyStatus = (await import('@/lib/proxyManager')).proxyManager.getStatus();
-        if (proxyStatus.active) {
-          const { proxyManager } = await import('@/lib/proxyManager');
-          if (proxyManager.shouldProxy(finalUrl)) {
-            console.log('[API Tester] Using proxy manager for localhost request');
+        console.log('[API Tester] Handling localhost request:', finalUrl);
+        
+        // Import and initialize proxy manager
+        const { proxyManager } = await import('@/lib/proxyManager');
+        
+        // Try to get proxy manager status
+        let proxyStatus = proxyManager.getStatus();
+        console.log('[API Tester] Proxy manager status:', proxyStatus);
+        
+        // If not active, try to register it
+        if (!proxyStatus.active) {
+          try {
+            console.log('[API Tester] Attempting to register proxy manager...');
+            proxyStatus = await proxyManager.register();
+            console.log('[API Tester] Proxy manager registration result:', proxyStatus);
+          } catch (registerError) {
+            console.error('[API Tester] Failed to register proxy manager:', registerError);
+          }
+        }
+        
+        // Check if we should use the proxy for this URL
+        const shouldUseProxy = proxyManager.shouldProxy(finalUrl);
+        console.log('[API Tester] Should use proxy for URL:', shouldUseProxy, finalUrl);
+        
+        // Always try the proxy manager first for localhost URLs if it's active and should proxy this URL
+        if (proxyStatus.active && shouldUseProxy) {
+          console.log('[API Tester] Using proxy manager for localhost request');
+          try {
             const proxyResponse = await proxyManager.executeRequest({
               url: finalUrl,
               method: currentRequest.method,
               headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
               body: currentRequest.body.type === 'json' ? currentRequest.body.json : 
-                    currentRequest.body.type === 'raw' ? currentRequest.body.raw : 
-                    undefined
+                currentRequest.body.type === 'raw' ? currentRequest.body.raw : 
+                undefined
             });
             
             res = { data: proxyResponse };
             toast.success('✅ Localhost request executed via proxy!');
-          } else {
-            throw new Error('Proxy manager cannot handle this URL');
+            return; // Exit early if proxy succeeds
+          } catch (proxyError) {
+            console.error('[API Tester] Proxy manager failed:', proxyError);
+            // Continue to fallbacks if proxy fails
           }
-        } else {
-          // Fallback to direct fetch
-          console.log('[API Tester] Using direct fetch for localhost request');
+        }
+        
+        // Fallback 1: Try direct fetch with CORS mode
+        console.log('[API Tester] Using direct fetch for localhost request (proxy not available)');
+        try {
           const fetchOptions: RequestInit = {
             method: currentRequest.method,
             headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
@@ -684,9 +737,47 @@ export default function ApiTesterPage() {
           };
           
           toast.success('✅ Localhost request executed directly!');
+          return; // Exit early if direct fetch succeeds
+        } catch (fetchError) {
+          console.error('[API Tester] Direct fetch failed:', fetchError);
+          // Continue to final fallback
         }
+        
+        // Final fallback: Try fetch with no-cors mode (limited functionality)
+        console.log('[API Tester] Using no-cors fetch as final fallback');
+        const fetchOptions: RequestInit = {
+          method: currentRequest.method,
+          headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+          mode: 'no-cors' // This will limit what we can read from the response
+        };
+        
+        if (currentRequest.body && currentRequest.body.type !== 'none') {
+          if (currentRequest.body.type === 'json') {
+            (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
+            fetchOptions.body = currentRequest.body.json;
+          } else if (currentRequest.body.type === 'raw') {
+            fetchOptions.body = currentRequest.body.raw;
+          }
+        }
+        
+        const response = await fetch(finalUrl, fetchOptions);
+        
+        // With no-cors mode, we can't read most response data
+        res = {
+          data: {
+            status: response.status,
+            statusText: response.statusText,
+            headers: {}, // Can't read headers in no-cors mode
+            body: 'Response body not accessible due to CORS restrictions', // Can't read body in no-cors mode
+            time: 0,
+            size: 0
+          }
+        };
+        
+        toast.success('✅ Localhost request executed with limited CORS access!');
+        
       } catch (error: any) {
-        console.error('[API Tester] Localhost request failed:', error);
+        console.error('[API Tester] All localhost request methods failed:', error);
         throw error;
       }
     } else {
