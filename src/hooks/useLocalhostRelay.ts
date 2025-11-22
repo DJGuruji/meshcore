@@ -14,7 +14,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
-import { proxyManager } from '@/lib/proxyManager';
 
 interface LocalhostRequest {
   requestId: string;
@@ -163,40 +162,7 @@ export function useLocalhostRelay() {
   // Execute localhost request via relay with validation
   const executeRequest = useCallback(async (request: LocalhostRequest): Promise<LocalhostResponse> => {
     return new Promise((resolve, reject) => {
-      // Check if we can execute the request directly via proxy (bypassing relay)
-      const canUseProxy = proxyManager.getStatus().active && proxyManager.shouldProxy(request.url);
-      
-      if (canUseProxy) {
-        // Execute directly via proxy manager for better performance
-        console.log('[LocalhostRelay] Executing request directly via proxy manager');
-        
-        proxyManager.executeRequest({
-          url: request.url,
-          method: request.method,
-          headers: request.headers,
-          body: request.body
-        }).then(result => {
-          resolve({
-            requestId: request.requestId,
-            status: result.status,
-            statusText: result.statusText,
-            headers: result.headers,
-            body: result.body,
-            time: result.time,
-            size: result.size,
-            timestamp: new Date().toISOString()
-          });
-        }).catch(error => {
-          reject({ 
-            error: true, 
-            message: error.message || 'Proxy request failed'
-          });
-        });
-        
-        return;
-      }
-      
-      // Fall back to relay if proxy is not available
+      // Check if we can connect to the relay
       if (!socketRef.current || status !== 'ready') {
         reject({ 
           error: true, 

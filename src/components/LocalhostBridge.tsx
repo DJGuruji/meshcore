@@ -14,7 +14,6 @@
 import { useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { localhostWorker } from '@/lib/localhostWorker';
-import { proxyManager } from '@/lib/proxyManager';
 
 interface LocalhostRequest {
   requestId: string;
@@ -34,30 +33,23 @@ interface Props {
 export default function LocalhostBridge({ socket, isReady }: Props) {
   const processingRef = useRef<Set<string>>(new Set());
 
-  // Register Service Worker and Proxy Manager on mount
+  // Register Service Worker on mount
   useEffect(() => {
-    const registerWorkers = async () => {
+    const registerWorker = async () => {
       try {
         console.log('[LocalhostBridge] Registering Service Worker...');
         const workerStatus = await localhostWorker.register();
         console.log('[LocalhostBridge] Service Worker registration result:', workerStatus);
         
-        console.log('[LocalhostBridge] Registering Proxy Manager...');
-        const proxyStatus = await proxyManager.register();
-        console.log('[LocalhostBridge] Proxy Manager registration result:', proxyStatus);
-        
         if (workerStatus.active) {
           console.log('[LocalhostBridge] ✅ Service Worker active - CORS bypass enabled!');
         }
-        if (proxyStatus.active) {
-          console.log('[LocalhostBridge] ✅ Proxy Manager active - Additional CORS bypass available!');
-        }
       } catch (error) {
-        console.error('[LocalhostBridge] Failed to register workers:', error);
+        console.error('[LocalhostBridge] Failed to register worker:', error);
       }
     };
 
-    registerWorkers();
+    registerWorker();
   }, []);
 
   useEffect(() => {
@@ -138,49 +130,12 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
           }
         }
 
-        // Check if we should use the proxy manager for this request
-        const shouldUseProxy = proxyManager.shouldProxy(finalUrl.toString());
-        const proxyStatus = proxyManager.getStatus();
-        
         // Check if Service Worker is active
         let workerStatus = localhostWorker.getStatus();
         
         console.log('[LocalhostBridge] Worker status:', workerStatus);
-        console.log('[LocalhostBridge] Proxy status:', proxyStatus);
         
-        if (proxyStatus.active && shouldUseProxy) {
-          console.log('[LocalhostBridge] 🚀 Executing via Proxy Manager:', request.method, request.url);
-          
-          try {
-            // Execute via Proxy Manager (bypasses CORS!)
-            const result = await proxyManager.executeRequest({
-              url: finalUrl.toString(),
-              method: request.method,
-              headers: requestHeaders,
-              body: requestBody,
-            });
-
-            const endTime = Date.now();
-            console.log('[LocalhostBridge] 🔓 Using Proxy Manager - No CORS restrictions!');
-
-            // Send successful response back to relay
-            socket.emit('localhost:fetchComplete', {
-              requestId: request.requestId,
-              status: result.status,
-              statusText: result.statusText || '',
-              headers: result.headers,
-              body: result.body,
-              time: result.time || (endTime - startTime),
-              size: result.size || 0,
-              timestamp: new Date().toISOString(),
-            });
-
-            console.log(`[LocalhostBridge] ✅ Fetch completed: ${result.status} in ${result.time || (endTime - startTime)}ms`);
-          } catch (proxyError) {
-            console.error('[LocalhostBridge] Proxy Manager fetch failed:', proxyError);
-            throw proxyError;
-          }
-        } else if (workerStatus.active) {
+        if (workerStatus.active) {
           console.log('[LocalhostBridge] 🚀 Executing via Service Worker:', request.method, request.url);
           
           try {
