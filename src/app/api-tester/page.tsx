@@ -476,31 +476,11 @@ export default function ApiTesterPage() {
       fetchEnvironments();
       fetchHistory();
       
-      // Initialize proxy manager
-      initializeProxyManager();
+      
     }
   }, [status, router]);
 
-  // Initialize proxy manager for localhost requests
-  const initializeProxyManager = async () => {
-    try {
-      console.log('[API Tester] Initializing proxy manager...');
-      const { proxyManager } = await import('@/lib/proxyManager');
-      const status = proxyManager.getStatus();
-      console.log('[API Tester] Proxy manager initial status:', status);
-      
-      if (!status.active) {
-        // Try to register the proxy manager
-        console.log('[API Tester] Registering proxy manager...');
-        const newStatus = await proxyManager.register();
-        console.log('[API Tester] Proxy manager registered:', newStatus);
-      } else {
-        console.log('[API Tester] Proxy manager already active');
-      }
-    } catch (error) {
-      console.error('[API Tester] Failed to initialize proxy manager:', error);
-    }
-  };
+
 
   const fetchHistory = async () => {
     try {
