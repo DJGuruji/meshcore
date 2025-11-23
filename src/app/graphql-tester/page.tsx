@@ -266,6 +266,16 @@ export default function GraphQLTesterPage() {
         e.preventDefault();
         setActiveTab('auth');
       }
+      // Ctrl/Cmd + Alt + B = Response Body
+      else if (e.key.toLowerCase() === 'b' && e.altKey) {
+        e.preventDefault();
+        setResponseTab('body');
+      }
+      // Ctrl/Cmd + Alt + I = Response Info
+      else if (e.key.toLowerCase() === 'i' && e.altKey) {
+        e.preventDefault();
+        setResponseTab('info');
+      }
       // Ctrl/Cmd + Enter = Send Request
       else if (e.key === 'Enter' && !e.altKey) {
         e.preventDefault();
@@ -277,7 +287,7 @@ export default function GraphQLTesterPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [setActiveTab]);
+  }, [setActiveTab, setResponseTab]);
 
   // Mouse event handlers for resizing the response section
   useEffect(() => {
@@ -1818,6 +1828,8 @@ function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: 'Ctrl/Cmd + Alt + Q', description: 'Switch to Query tab' },
     { key: 'Ctrl/Cmd + Alt + C', description: 'Switch to CodeQL tab' },
     { key: 'Ctrl/Cmd + Alt + A', description: 'Switch to Auth tab' },
+    { key: 'Ctrl/Cmd + Alt + B', description: 'Switch to Response Body tab' },
+    { key: 'Ctrl/Cmd + Alt + I', description: 'Switch to Response Info tab' },
   ];
 
   return (
@@ -1845,6 +1857,7 @@ function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="mt-6 text-center text-xs text-slate-400">
             <p>Tip: Use Ctrl/Cmd + Enter to send requests, or Ctrl/Cmd + Alt + Letter to switch tabs</p>
+            <p className="mt-1">Use Alt + B for Body tab, Alt + I for Info tab in response section</p>
           </div>
         </div>
       </div>
