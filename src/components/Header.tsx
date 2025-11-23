@@ -27,7 +27,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'Mockserver', href: '/' },
-  { name: 'API Tester', href: '/api-tester' },
+  { name: 'Rest API Tester', href: '/api-tester' },
   { name: 'CodeQL', href: '/graphql-tester' },
 ];
 

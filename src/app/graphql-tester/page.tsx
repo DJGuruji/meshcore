@@ -13,6 +13,7 @@ import {
   FolderIcon
 } from '@heroicons/react/24/outline';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
+import CodeEditor from '@/components/CodeEditor';
 
 const inputStyles =
   'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
@@ -1106,12 +1107,15 @@ export default function GraphQLTesterPage() {
                       Format
                     </button>
                   </div>
-                  <textarea
-                    value={query}
-                    onChange={(e) => updateCurrentTab({ query: e.target.value })}
-                    placeholder="query { users { id name email } }"
-                    className={`${textareaStyles} flex-1`}
-                  />
+                  <div className="flex-1">
+                    <CodeEditor
+                      value={query}
+                      onChange={(value) => updateCurrentTab({ query: value })}
+                      language="javascript"
+                      placeholder="query { users { id name email } }"
+                      className="h-full"
+                    />
+                  </div>
                 </div>
 
                 <div className={`${sectionCard} flex flex-col`}>
@@ -1124,12 +1128,15 @@ export default function GraphQLTesterPage() {
                       Format
                     </button>
                   </div>
-                  <textarea
-                    value={variables}
-                    onChange={(e) => updateCurrentTab({ variables: e.target.value })}
-                    placeholder='{ "id": "123" }'
-                    className={`${textareaStyles} flex-1`}
-                  />
+                  <div className="flex-1">
+                    <CodeEditor
+                      value={variables}
+                      onChange={(value) => updateCurrentTab({ variables: value })}
+                      language="json"
+                      placeholder='{ "id": "123" }'
+                      className="h-full"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -1314,9 +1321,15 @@ export default function GraphQLTesterPage() {
               ) : (
                 <>
                   {responseTab === 'body' && (
-                    <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-white">
-                      {JSON.stringify(response.data, null, 2)}
-                    </pre>
+                    <div className="h-full">
+                      <CodeEditor
+                        value={typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
+                        onChange={() => {}} // Read-only
+                        language="json"
+                        readOnly={true}
+                        className="h-full"
+                      />
+                    </div>
                   )}
 
                   {responseTab === 'info' && (
