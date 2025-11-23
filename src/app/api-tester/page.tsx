@@ -21,6 +21,12 @@ const LocalhostBridge = dynamic(() => import('@/components/LocalhostBridge'), {
   loading: () => null
 });
 
+// Dynamically import CodeEditor to avoid SSR issues
+const CodeEditor = dynamic(() => import('@/components/CodeEditor'), {
+  ssr: false,
+  loading: () => <div className="w-full h-64 bg-slate-800 rounded border border-slate-600 animate-pulse"></div>
+});
+
 const inputStyles =
   'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
 const textareaStyles =
@@ -1903,21 +1909,25 @@ export default function ApiTesterPage() {
                 </div>
 
                 {currentRequest.body.type === 'json' && (
-                  <textarea
-                    value={currentRequest.body.json || ''}
-                    onChange={(e) => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, json: e.target.value } })}
-                    placeholder='{"key": "value"}'
-                    className="w-full h-64 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
-                  />
+                  <div className="w-full" style={{ height: '300px' }}>
+                    <CodeEditor
+                      value={currentRequest.body.json || ''}
+                      onChange={(value) => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, json: value } })}
+                      language="json"
+                      placeholder='{"key": "value"}'
+                    />
+                  </div>
                 )}
 
                 {currentRequest.body.type === 'raw' && (
-                  <textarea
-                    value={currentRequest.body.raw || ''}
-                    onChange={(e) => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, raw: e.target.value } })}
-                    placeholder="Raw text"
-                    className="w-full h-64 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
-                  />
+                  <div className="w-full" style={{ height: '300px' }}>
+                    <CodeEditor
+                      value={currentRequest.body.raw || ''}
+                      onChange={(value) => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, raw: value } })}
+                      language="text"
+                      placeholder="Raw text"
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -1972,22 +1982,28 @@ export default function ApiTesterPage() {
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Pre-request Script</label>
                     <p className="text-xs text-slate-400 mb-2">Execute JavaScript before sending the request. Use pm.environment.set() to set variables.</p>
-                    <textarea
-                      value={currentRequest.preRequestScript || ''}
-                      onChange={(e) => setCurrentRequest({ ...currentRequest, preRequestScript: e.target.value })}
-                      placeholder={`// Example:\npm.environment.set("timestamp", Date.now());\npm.variables.set("myVar", "value");`}
-                      className="w-full h-48 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
-                    />
+                    <div className="w-full" style={{ height: '300px' }}>
+                      <CodeEditor
+                        value={currentRequest.preRequestScript || ''}
+                        onChange={(value) => setCurrentRequest({ ...currentRequest, preRequestScript: value })}
+                        language="javascript"
+                        placeholder={`// Example:
+pm.environment.set("timestamp", Date.now());
+pm.variables.set("myVar", "value");`}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="flex-1">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Test Script</label>
                     <p className="text-xs text-slate-400 mb-2">Write tests to validate the response using pm.test() and pm.expect().</p>
-                    <textarea
-                      value={currentRequest.testScript || ''}
-                      onChange={(e) => setCurrentRequest({ ...currentRequest, testScript: e.target.value })}
-                      placeholder={`// Example:
+                    <div className="w-full" style={{ height: '300px' }}>
+                      <CodeEditor
+                        value={currentRequest.testScript || ''}
+                        onChange={(value) => setCurrentRequest({ ...currentRequest, testScript: value })}
+                        language="javascript"
+                        placeholder={`// Example:
 pm.test("Status code is 200", function() {
   pm.expect(pm.response.status).to.equal(200);
 });
@@ -1995,8 +2011,8 @@ pm.test("Status code is 200", function() {
 pm.test("Response has data", function() {
   pm.expect(pm.response.body).to.have.property("data");
 });`}
-                      className="w-full h-48 p-3 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none font-mono text-sm"
-                    />
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2124,11 +2140,16 @@ pm.test("Response has data", function() {
             ) : (
               <>
                 {responseTab === 'body' && (
-                  <pre className="text-sm text-slate-300 font-mono whitespace-pre-wrap">
-                    {typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
-                      ? (currentTab?.response?.body || currentTab?.response)
-                      : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
-                  </pre>
+                  <div className="w-full" style={{ height: '400px' }}>
+                    <CodeEditor
+                      value={typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                        ? (currentTab?.response?.body || currentTab?.response)
+                        : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
+                      onChange={() => {}} // Read-only, no-op
+                      language="json"
+                      readOnly={true}
+                    />
+                  </div>
                 )}
 
                 {responseTab === 'headers' && currentTab?.response?.headers && (
