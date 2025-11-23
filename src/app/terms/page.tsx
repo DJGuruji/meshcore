@@ -29,7 +29,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">1. Introduction</h2>
             <p className="text-slate-300 mb-4">
-              Welcome to Sadasya (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). These Terms and Conditions (&quot;Terms&quot;) govern your access to and use of our website and services. By accessing or using our website, you agree to be bound by these Terms and our Privacy Policy.
+              Welcome to EchoStorm (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). These Terms and Conditions (&quot;Terms&quot;) govern your access to and use of our website and services. By accessing or using our website, you agree to be bound by these Terms and our Privacy Policy.
             </p>
             <p className="text-slate-300">
               If you do not agree to these Terms, please do not access or use our website.
@@ -39,7 +39,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">2. Services</h2>
             <p className="text-slate-300 mb-4">
-              Sadasya provides a platform for developers and teams to create, test, and manage APIs. Our services include but are not limited to:
+              EchoStorm provides a platform for developers and teams to create, test, and manage APIs. Our services include but are not limited to:
             </p>
             <ul className="list-disc pl-6 text-slate-300 space-y-2 mb-4">
               <li>Mock API server creation and management</li>
@@ -89,7 +89,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">5. Intellectual Property</h2>
             <p className="text-slate-300 mb-4">
-              All content, features, and functionality on our website are owned by Sadasya or its licensors and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
+              All content, features, and functionality on our website are owned by EchoStorm or its licensors and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
             </p>
             <p className="text-slate-300">
               You may not reproduce, distribute, modify, or create derivative works of any content from our website without our express written permission.
@@ -135,7 +135,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">9. Limitation of Liability</h2>
             <p className="text-slate-300 mb-4">
-              To the maximum extent permitted by law, Sadasya shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or business opportunities.
+              To the maximum extent permitted by law, EchoStorm shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or business opportunities.
             </p>
             <p className="text-slate-300">
               Our total liability for any claims arising out of or related to these Terms shall not exceed the amount you have paid to us in the past twelve months.
@@ -145,7 +145,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">10. Indemnification</h2>
             <p className="text-slate-300">
-              You agree to indemnify, defend, and hold harmless Sadasya and its affiliates from and against any claims, liabilities, damages, losses, and expenses arising out of or in any way connected with your access to or use of our services.
+              You agree to indemnify, defend, and hold harmless EchoStorm and its affiliates from and against any claims, liabilities, damages, losses, and expenses arising out of or in any way connected with your access to or use of our services.
             </p>
           </section>
 

@@ -242,7 +242,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
                 'CORS Error: Your localhost API needs to have proper CORS headers to be accessed from the browser.\n\n' +
                 'Solutions:\n' +
                 '1. Add CORS headers to your localhost server:\n' +
-                '   - Access-Control-Allow-Origin: https://sadasya.vercel.app\n' +
+                '   - Access-Control-Allow-Origin: https://echostorm.vercel.app\n' +
                 '   - Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n' +
                 '   - Access-Control-Allow-Headers: *\n\n' +
                 '2. Use the WebSocket relay (should be working automatically)\n' +
@@ -272,7 +272,7 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
         if (isMixedContent && window.location.protocol === 'https:') {
           errorMessage = 
             'Mixed Content Blocked: HTTPS page cannot fetch HTTP localhost\n\n' +
-            'Add the domain sadasya.vercel.app to the allowed origins:\n' +
+            'Add the domain EchoStorm.vercel.app to the allowed origins:\n' +
             'or use ngrok to make the url public for testing\n\n';
         }
 
