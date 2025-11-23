@@ -215,6 +215,8 @@ export default function GraphQLTesterPage() {
   const [responseTab, setResponseTab] = useState<'body' | 'info'>('body');
   const [showHistory, setShowHistory] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [responseSectionHeight, setResponseSectionHeight] = useState(300); // Default height
+  const [isResizing, setIsResizing] = useState(false);
 
   // Collections and Environments
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -276,6 +278,38 @@ export default function GraphQLTesterPage() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [setActiveTab]);
+
+  // Mouse event handlers for resizing the response section
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      // Calculate new height based on mouse position
+      const newHeight = window.innerHeight - e.clientY;
+      
+      // Limit height to between 200px and 75% of viewport height
+      const maxHeight = window.innerHeight * 0.75;
+      const minHeight = 200;
+      
+      if (newHeight >= minHeight && newHeight <= maxHeight) {
+        setResponseSectionHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const fetchCollections = async () => {
     try {
@@ -1308,152 +1342,162 @@ export default function GraphQLTesterPage() {
             )}
           </div>
           {/* Response Section */}
-          <div className="flex h-72 flex-col border-t border-white/5 bg-[#050c1f]/80">
-            <div className="border-b border-white/5">
-              <div className="flex items-center gap-2 px-6 py-3">
-                {(['body', 'info'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setResponseTab(tab)}
-                    className={`rounded-2xl px-4 py-2 text-sm font-semibold capitalize transition ${
-                      responseTab === tab
-                        ? 'bg-white/10 text-white shadow-inner shadow-white/10'
-                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
+          <div className="flex flex-col border-t border-white/5 bg-[#050c1f]/80" style={{ height: `${responseSectionHeight}px` }}>
+            {/* Resize Handle */}
+            <div 
+              className="h-2 cursor-row-resize bg-white/10 hover:bg-indigo-400/40 transition-colors flex items-center justify-center"
+              onMouseDown={() => setIsResizing(true)}
+            >
+              <div className="w-8 h-1 bg-slate-500 rounded-full"></div>
+            </div>
+            
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="border-b border-white/5">
+                <div className="flex items-center gap-2 px-6 py-3">
+                  {(['body', 'info'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setResponseTab(tab)}
+                      className={`rounded-2xl px-4 py-2 text-sm font-semibold capitalize transition ${
+                        responseTab === tab
+                          ? 'bg-white/10 text-white shadow-inner shadow-white/10'
+                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
 
-                {response && (
-                  <div className="ml-auto flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(JSON.stringify(response.data, null, 2));
-                        toast.success('Response copied to clipboard');
-                      }}
-                      className="rounded-2xl border border-white/10 p-2 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
-                      title="Copy response"
-                    >
-                      <DocumentDuplicateIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `graphql-response-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                      }}
-                      className="rounded-2xl border border-white/10 p-2 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
-                      title="Download response"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                    </button>
+                  {response && (
+                    <div className="ml-auto flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(JSON.stringify(response.data, null, 2));
+                          toast.success('Response copied to clipboard');
+                        }}
+                        className="rounded-2xl border border-white/10 p-2 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                        title="Copy response"
+                      >
+                        <DocumentDuplicateIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `graphql-response-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="rounded-2xl border border-white/10 p-2 text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                        title="Download response"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto bg-black/40 px-6 py-4">
+                {!response ? (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                    Send a request to see the response
                   </div>
+                ) : (
+                  <>
+                    {responseTab === 'body' && (
+                      <div className="h-full space-y-4">
+                        {/* Status Info */}
+                        {response.status && (() => {
+                          const statusInfo = getStatusMessage(response.status);
+                          return (
+                            <div
+                              className={`rounded-3xl border px-4 py-3 text-sm shadow-inner ${
+                                statusInfo.category === 'success'
+                                  ? 'border-green-500/40 bg-green-500/10 text-green-200'
+                                  : statusInfo.category === 'redirect'
+                                  ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
+                                  : statusInfo.category === 'client-error'
+                                  ? 'border-orange-500/40 bg-orange-500/10 text-orange-200'
+                                  : 'border-red-500/40 bg-red-500/10 text-red-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="text-2xl font-bold">Status: {response.status} {response.statusText}</div>
+                                <div className="text-xs text-white/60">
+                                  Size: {response.size} Bytes • Time: {response.time} ms
+                                </div>
+                              </div>
+                              <div className="mt-1 text-sm text-white">{statusInfo.message}</div>
+                            </div>
+                          );
+                        })()}
+                        
+                        <CodeEditor
+                          value={typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
+                          onChange={() => {}} // Read-only
+                          language="json"
+                          readOnly={true}
+                          className="h-full"
+                        />
+                      </div>
+                    )}
+
+                    {responseTab === 'info' && (
+                      <div className="space-y-4">
+                        {response.status && (() => {
+                          const statusInfo = getStatusMessage(response.status);
+                          return (
+                            <div
+                              className={`rounded-3xl border px-4 py-3 text-sm shadow-inner ${
+                                statusInfo.category === 'success'
+                                  ? 'border-green-500/40 bg-green-500/10 text-green-200'
+                                  : statusInfo.category === 'redirect'
+                                  ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
+                                  : statusInfo.category === 'client-error'
+                                  ? 'border-orange-500/40 bg-orange-500/10 text-orange-200'
+                                  : 'border-red-500/40 bg-red-500/10 text-red-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="text-2xl font-bold">{response.status}</div>
+                                <div className="text-xs text-white/60">
+                                  {response.statusText} • {response.time}ms • {(response.size / 1024).toFixed(2)} KB
+                                </div>
+                              </div>
+                              <div className="mt-1 text-sm text-white">{statusInfo.message}</div>
+                            </div>
+                          );
+                        })()}
+
+                        <div className="grid grid-cols-1 gap-3 text-xs text-slate-200 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                            <div className="text-slate-400">Response Time</div>
+                            <div className="text-lg font-semibold text-white">{response.time}ms</div>
+                          </div>
+                          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                            <div className="text-slate-400">Payload Size</div>
+                            <div className="text-lg font-semibold text-white">
+                              {(response.size / 1024).toFixed(2)} KB
+                            </div>
+                          </div>
+                        </div>
+
+                        {response.timestamp && (
+                          <div className="text-xs text-slate-400">
+                            Recorded at {new Date(response.timestamp).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-            </div>
-            <div className="flex-1 overflow-y-auto bg-black/40 px-6 py-4">
-              {!response ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                  Send a request to see the response
-                </div>
-              ) : (
-                <>
-                  {responseTab === 'body' && (
-                    <div className="h-full space-y-4">
-                      {/* Status Info */}
-                      {response.status && (() => {
-                        const statusInfo = getStatusMessage(response.status);
-                        return (
-                          <div
-                            className={`rounded-3xl border px-4 py-3 text-sm shadow-inner ${
-                              statusInfo.category === 'success'
-                                ? 'border-green-500/40 bg-green-500/10 text-green-200'
-                                : statusInfo.category === 'redirect'
-                                ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
-                                : statusInfo.category === 'client-error'
-                                ? 'border-orange-500/40 bg-orange-500/10 text-orange-200'
-                                : 'border-red-500/40 bg-red-500/10 text-red-200'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="text-2xl font-bold">Status: {response.status} {response.statusText}</div>
-                              <div className="text-xs text-white/60">
-                                Size: {response.size} Bytes • Time: {response.time} ms
-                              </div>
-                            </div>
-                            <div className="mt-1 text-sm text-white">{statusInfo.message}</div>
-                          </div>
-                        );
-                      })()}
-                      
-                      <CodeEditor
-                        value={typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
-                        onChange={() => {}} // Read-only
-                        language="json"
-                        readOnly={true}
-                        className="h-full"
-                      />
-                    </div>
-                  )}
-
-                  {responseTab === 'info' && (
-                    <div className="space-y-4">
-                      {response.status && (() => {
-                        const statusInfo = getStatusMessage(response.status);
-                        return (
-                          <div
-                            className={`rounded-3xl border px-4 py-3 text-sm shadow-inner ${
-                              statusInfo.category === 'success'
-                                ? 'border-green-500/40 bg-green-500/10 text-green-200'
-                                : statusInfo.category === 'redirect'
-                                ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
-                                : statusInfo.category === 'client-error'
-                                ? 'border-orange-500/40 bg-orange-500/10 text-orange-200'
-                                : 'border-red-500/40 bg-red-500/10 text-red-200'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="text-2xl font-bold">{response.status}</div>
-                              <div className="text-xs text-white/60">
-                                {response.statusText} • {response.time}ms • {(response.size / 1024).toFixed(2)} KB
-                              </div>
-                            </div>
-                            <div className="mt-1 text-sm text-white">{statusInfo.message}</div>
-                          </div>
-                        );
-                      })()}
-
-                      <div className="grid grid-cols-1 gap-3 text-xs text-slate-200 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                          <div className="text-slate-400">Response Time</div>
-                          <div className="text-lg font-semibold text-white">{response.time}ms</div>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                          <div className="text-slate-400">Payload Size</div>
-                          <div className="text-lg font-semibold text-white">
-                            {(response.size / 1024).toFixed(2)} KB
-                          </div>
-                        </div>
-                      </div>
-
-                      {response.timestamp && (
-                        <div className="text-xs text-slate-400">
-                          Recorded at {new Date(response.timestamp).toLocaleString()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </div>
         {/* History Side Panel */}
