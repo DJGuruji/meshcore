@@ -1763,9 +1763,9 @@ export default function ApiTesterPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#030712]/40 backdrop-blur">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#040714]/70 backdrop-blur">
         {/* Tab Bar */}
-        <div className="flex items-center overflow-x-auto border-b border-white/5 bg-transparent px-4 scrollbar-thin scrollbar-thumb-slate-700">
+        <div className="flex items-center overflow-x-auto border-b border-white/5 bg-[#050c1f]/80 px-4 scrollbar-thin scrollbar-thumb-slate-700">
           {requestTabs.map((tab, index) => (
             <div
               key={tab.id}
@@ -1877,7 +1877,7 @@ export default function ApiTesterPage() {
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-white/5 bg-transparent">
+          <div className="border-b border-white/5 bg-[#050c1f]/80">
             <div className="flex gap-1 px-4">
               {(['params', 'headers', 'body', 'auth', 'scripts', 'tests docs'] as const).map((tab) => {
                 // Create keyboard shortcut hint
