@@ -718,7 +718,7 @@ export default function ApiTesterPage() {
         auth: currentRequest.auth
       };
       
-      res = await axios.post('/api/tools/api-tester/proxy', requestData);
+      res = await axios.post('/api/tools/api-tester/send', requestData);
       toast.success(' Request executed via proxy!');
     }
 
