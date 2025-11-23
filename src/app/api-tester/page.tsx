@@ -314,7 +314,7 @@ function SaveRequestModal({ onClose, onSave, collections }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
       <div className="w-full max-w-md overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl">
         <div className={modalHeader}>
-          <h2 className="text-base font-semibold tracking-wide text-white">Save Request to Collection</h2>
+          <h2 className="text-base font-semibold tracking-wide text-white">Save Request</h2>
           <button
             onClick={onClose}
             className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
@@ -324,24 +324,20 @@ function SaveRequestModal({ onClose, onSave, collections }: {
         </div>
         <div className="space-y-4 px-5 py-6">
           <div className={sectionCard}>
-            <label className={labelStyles}>Select Collection</label>
+            <label className={labelStyles}>Collection</label>
             <select
               value={selectedCollectionId}
               onChange={(e) => setSelectedCollectionId(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-              autoFocus
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
             >
-              <option value="">Choose a collection...</option>
+              <option value="">Select a collection</option>
               {collections.map((collection) => (
                 <option key={collection._id} value={collection._id}>
-                  {collection.name} ({collection.requests.length} requests)
+                  {collection.name}
                 </option>
               ))}
             </select>
           </div>
-          {collections.length === 0 && (
-            <p className="text-sm text-slate-400">No collections yet. Create one first!</p>
-          )}
         </div>
         <div className={modalFooter}>
           <button
@@ -355,8 +351,52 @@ function SaveRequestModal({ onClose, onSave, collections }: {
             disabled={!selectedCollectionId}
             className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Request
+            Save
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
+  const shortcuts = [
+    { key: 'Alt + P', description: 'Switch to Params tab' },
+    { key: 'Alt + H', description: 'Switch to Headers tab' },
+    { key: 'Alt + B', description: 'Switch to Body tab' },
+    { key: 'Alt + A', description: 'Switch to Auth tab' },
+    { key: 'Alt + S', description: 'Switch to Scripts tab' },
+    { key: 'Alt + T', description: 'Switch to Tests tab' },
+    { key: 'Ctrl/Cmd + Enter', description: 'Send request' },
+    { key: 'Enter (on URL field)', description: 'Send request' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+      <div className="w-full max-w-md overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl">
+        <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
+          <h2 className="text-base font-semibold tracking-wide text-white">Keyboard Shortcuts</h2>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+        <div className="px-5 py-6">
+          <div className="space-y-3">
+            {shortcuts.map((shortcut, index) => (
+              <div key={index} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3">
+                <span className="text-sm text-slate-300">{shortcut.description}</span>
+                <kbd className="rounded-lg bg-slate-700 px-2 py-1 text-xs font-semibold text-white">
+                  {shortcut.key}
+                </kbd>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 text-center text-xs text-slate-400">
+            <p>Tip: Use Alt + First letter of tab name to switch tabs quickly</p>
+          </div>
         </div>
       </div>
     </div>
@@ -470,6 +510,7 @@ export default function ApiTesterPage() {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
   // WebSocket Localhost Relay
   const localhostRelay = useLocalhostRelay();
@@ -481,10 +522,57 @@ export default function ApiTesterPage() {
       fetchCollections();
       fetchEnvironments();
       fetchHistory();
-      
-      
     }
   }, [status, router]);
+
+  // Keyboard shortcuts for switching tabs
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when modifier keys are pressed
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) return;
+      
+      // Ctrl/Cmd + Alt + P = Params
+      if (e.key.toLowerCase() === 'p' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('params');
+      }
+      // Ctrl/Cmd + Alt + H = Headers
+      else if (e.key.toLowerCase() === 'h' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('headers');
+      }
+      // Ctrl/Cmd + Alt + B = Body
+      else if (e.key.toLowerCase() === 'b' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('body');
+      }
+      // Ctrl/Cmd + Alt + A = Auth
+      else if (e.key.toLowerCase() === 'a' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('auth');
+      }
+      // Ctrl/Cmd + Alt + S = Scripts
+      else if (e.key.toLowerCase() === 's' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('scripts');
+      }
+      // Ctrl/Cmd + Alt + T = Tests
+      else if (e.key.toLowerCase() === 't' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('tests docs');
+      }
+      // Ctrl/Cmd + Enter = Send Request
+      else if (e.key === 'Enter' && !e.altKey) {
+        e.preventDefault();
+        sendRequest();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [setActiveTab]);
 
 
 
@@ -1728,10 +1816,14 @@ export default function ApiTesterPage() {
                 type="text"
                 value={currentRequest.url}
                 onChange={(e) => setCurrentRequest({ ...currentRequest, url: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    sendRequest();
+                  }
+                }}
                 placeholder="https://api.example.com/endpoint or http://localhost:3000/api"
                 className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               />
-              
               <button
                 onClick={saveRequestToCollection}
                 className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
@@ -1753,19 +1845,29 @@ export default function ApiTesterPage() {
           {/* Tabs */}
           <div className="border-b border-white/5 bg-transparent">
             <div className="flex gap-1 px-4">
-              {(['params', 'headers', 'body', 'auth', 'scripts', 'tests docs'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`rounded-2xl px-4 py-2 text-sm font-medium capitalize transition ${
-                    activeTab === tab
-                      ? 'bg-white/10 text-white shadow-inner shadow-black/40'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
+              {(['params', 'headers', 'body', 'auth', 'scripts', 'tests docs'] as const).map((tab) => {
+                // Create keyboard shortcut hint
+                const shortcut = tab === 'params' ? 'Alt+P' : 
+                               tab === 'headers' ? 'Alt+H' : 
+                               tab === 'body' ? 'Alt+B' : 
+                               tab === 'auth' ? 'Alt+A' : 
+                               tab === 'scripts' ? 'Alt+S' : 'Alt+T';
+                
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium capitalize transition ${
+                      activeTab === tab
+                        ? 'bg-white/10 text-white shadow-inner shadow-black/40'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                    title={`Switch to ${tab} tab (${shortcut})`}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
               <div className="flex-1"></div>
               <button
                 onClick={() => setIsHistorySidebarOpen(!isHistorySidebarOpen)}
@@ -1778,6 +1880,13 @@ export default function ApiTesterPage() {
                 className="rounded-2xl px-4 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-white/5 hover:text-white"
               >
                 Code
+              </button>
+              <button
+                onClick={() => setShowKeyboardShortcuts(true)}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-white/5 hover:text-white"
+                title="Keyboard Shortcuts"
+              >
+                ⌨️
               </button>
             </div>
           </div>
@@ -2623,6 +2732,13 @@ pm.test("Response has data", function() {
         <div 
           className="fixed inset-0 bg-black/30 z-40"
           onClick={() => setIsHistorySidebarOpen(false)}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showKeyboardShortcuts && (
+        <KeyboardShortcutsModal
+          onClose={() => setShowKeyboardShortcuts(false)}
         />
       )}
 

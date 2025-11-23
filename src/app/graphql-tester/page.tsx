@@ -214,7 +214,8 @@ export default function GraphQLTesterPage() {
   const [activeTab, setActiveTab] = useState<'query' | 'codeql' | 'auth'>('query');
   const [responseTab, setResponseTab] = useState<'body' | 'info'>('body');
   const [showHistory, setShowHistory] = useState(false);
-  
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+
   // Collections and Environments
   const [collections, setCollections] = useState<Collection[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
@@ -241,6 +242,40 @@ export default function GraphQLTesterPage() {
       fetchHistory();
     }
   }, [status, router]);
+
+  // Keyboard shortcuts for switching tabs
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when modifier keys are pressed
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) return;
+      
+      // Ctrl/Cmd + Alt + Q = Query
+      if (e.key.toLowerCase() === 'q' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('query');
+      }
+      // Ctrl/Cmd + Alt + C = CodeQL
+      else if (e.key.toLowerCase() === 'c' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('codeql');
+      }
+      // Ctrl/Cmd + Alt + A = Auth
+      else if (e.key.toLowerCase() === 'a' && e.altKey) {
+        e.preventDefault();
+        setActiveTab('auth');
+      }
+      // Ctrl/Cmd + Enter = Send Request
+      else if (e.key === 'Enter' && !e.altKey) {
+        e.preventDefault();
+        sendRequest();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [setActiveTab]);
 
   const fetchCollections = async () => {
     try {
@@ -1045,6 +1080,11 @@ export default function GraphQLTesterPage() {
                 type="text"
                 value={url}
                 onChange={(e) => updateCurrentTab({ url: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    sendRequest();
+                  }
+                }}
                 placeholder="https://your-graphql-endpoint.com/graphql"
                 className={`${inputStyles} flex-1`}
               />
@@ -1089,6 +1129,13 @@ export default function GraphQLTesterPage() {
                 className="rounded-2xl px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white"
               >
                 Activity {history.length > 0 && `(${history.length})`}
+              </button>
+              <button
+                onClick={() => setShowKeyboardShortcuts(true)}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold text-indigo-200 transition hover:bg-white/5 hover:text-white"
+                title="Keyboard Shortcuts"
+              >
+                ⌨️
               </button>
             </div>
           </div>
@@ -1574,6 +1621,13 @@ export default function GraphQLTesterPage() {
         </div>
       )}
 
+      {/* Keyboard Shortcuts Modal */}
+      {showKeyboardShortcuts && (
+        <KeyboardShortcutsModal
+          onClose={() => setShowKeyboardShortcuts(false)}
+        />
+      )}
+
       {/* Environment Creation/Edit Modal */}
       {showEnvironmentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
@@ -1684,5 +1738,46 @@ export default function GraphQLTesterPage() {
       )}
     </div>
       </div>
+  );
+}
+
+function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
+  const shortcuts = [
+    { key: 'Ctrl/Cmd + Enter', description: 'Send request' },
+    { key: 'Enter (on URL field)', description: 'Send request' },
+    { key: 'Ctrl/Cmd + Alt + Q', description: 'Switch to Query tab' },
+    { key: 'Ctrl/Cmd + Alt + C', description: 'Switch to CodeQL tab' },
+    { key: 'Ctrl/Cmd + Alt + A', description: 'Switch to Auth tab' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+      <div className="w-full max-w-md overflow-hidden rounded-[32px] border border-white/10 bg-[#050915]/95 text-white shadow-[0_25px_60px_rgba(2,6,23,0.85)] backdrop-blur-2xl">
+        <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
+          <h2 className="text-base font-semibold tracking-wide text-white">Keyboard Shortcuts</h2>
+          <button
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 px-3 py-1 text-sm text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+        <div className="px-5 py-6">
+          <div className="space-y-3">
+            {shortcuts.map((shortcut, index) => (
+              <div key={index} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3">
+                <span className="text-sm text-slate-300">{shortcut.description}</span>
+                <kbd className="rounded-lg bg-slate-700 px-2 py-1 text-xs font-semibold text-white">
+                  {shortcut.key}
+                </kbd>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 text-center text-xs text-slate-400">
+            <p>Tip: Use Ctrl/Cmd + Enter to send requests, or Ctrl/Cmd + Alt + Letter to switch tabs</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
