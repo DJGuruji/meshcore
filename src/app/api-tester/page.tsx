@@ -511,6 +511,8 @@ export default function ApiTesterPage() {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [responseSectionHeight, setResponseSectionHeight] = useState(400); // Default height
+  const [isResizing, setIsResizing] = useState(false);
 
   // WebSocket Localhost Relay
   const localhostRelay = useLocalhostRelay();
@@ -573,6 +575,38 @@ export default function ApiTesterPage() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [setActiveTab]);
+
+  // Mouse event handlers for resizing the response section
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      // Calculate new height based on mouse position
+      const newHeight = window.innerHeight - e.clientY;
+      
+      // Limit height to between 200px and 75% of viewport height
+      const maxHeight = window.innerHeight * 0.75;
+      const minHeight = 200;
+      
+      if (newHeight >= minHeight && newHeight <= maxHeight) {
+        setResponseSectionHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
 
 
@@ -2159,407 +2193,347 @@ pm.test("Response has data", function() {
         </div>
 
         {/* Response Section */}
-        <div className="flex-1 flex flex-col overflow-hidden border-l border-white/5 bg-white/5">
-          <div className="border-b border-white/5">
-            <div className="flex gap-1 px-4">
-              {(['body', 'headers', 'info', 'tests', 'console', 'payload'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setResponseTab(tab)}
-                  className={`rounded-2xl px-4 py-2 text-sm font-medium capitalize transition ${
-                    responseTab === tab
-                      ? 'bg-white/10 text-white shadow-inner shadow-black/40'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  {tab}
-                  {tab === 'tests' && (currentTab?.testResults || []).length > 0 && (
-                    <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                      (currentTab?.testResults || []).every(t => t.passed) ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                    }`}>
-                      {(currentTab?.testResults || []).filter(t => t.passed).length}/{(currentTab?.testResults || []).length}
-                    </span>
-                  )}
-                </button>
-              ))}
-              {/* Response Action Buttons */}
-              {currentTab?.response && (
-                <div className="ml-auto flex items-center gap-1">
-                  {/* Copy Button */}
-                  <button
-                    onClick={() => {
-                      const responseText = typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
-                        ? (currentTab?.response?.body || currentTab?.response)
-                        : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2);
-                      navigator.clipboard.writeText(responseText);
-                      toast.success('Response copied to clipboard');
-                    }}
-                    className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
-                    title="Copy response"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                  
-                  {/* Download Button */}
-                  <button
-                    onClick={() => {
-                      const responseText = typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
-                        ? (currentTab?.response?.body || currentTab?.response)
-                        : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2);
-                      const blob = new Blob([responseText], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `api-response-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
-                    title="Download response"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                  </button>
-                  
-                  {/* Filter Button */}
-                  <button
-                    onClick={() => toast.success('Filter feature coming soon')}
-                    className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
-                    title="Filter response"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
+        <div className="flex flex-col overflow-hidden border-l border-white/5 bg-white/5" style={{ height: `${responseSectionHeight}px` }}>
+          {/* Resize Handle */}
+          <div 
+            className="h-2 cursor-row-resize bg-white/10 hover:bg-indigo-400/40 transition-colors flex items-center justify-center"
+            onMouseDown={() => setIsResizing(true)}
+          >
+            <div className="w-8 h-1 bg-slate-500 rounded-full"></div>
           </div>
-
-          <div className="flex-1 overflow-y-auto bg-black/10 p-4">
-            {!currentTab?.response ? (
-              <div className="flex items-center justify-center h-full text-slate-500">
-                Send a request to see the response
+          
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="border-b border-white/5">
+              <div className="flex gap-1 px-4">
+                {(['body', 'headers', 'info', 'tests', 'console', 'payload'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setResponseTab(tab)}
+                    className={`rounded-2xl px-4 py-2 text-sm font-medium capitalize transition ${
+                      responseTab === tab
+                        ? 'bg-white/10 text-white shadow-inner shadow-black/40'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    {tab}
+                    {tab === 'tests' && (currentTab?.testResults || []).length > 0 && (
+                      <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                        (currentTab?.testResults || []).every(t => t.passed) ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                      }`}>
+                        {(currentTab?.testResults || []).filter(t => t.passed).length}/{(currentTab?.testResults || []).length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+                {/* Response Action Buttons */}
+                {currentTab?.response && (
+                  <div className="ml-auto flex items-center gap-1">
+                    {/* Copy Button */}
+                    <button
+                      onClick={() => {
+                        const responseText = typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                          ? (currentTab?.response?.body || currentTab?.response)
+                          : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2);
+                        navigator.clipboard.writeText(responseText);
+                        toast.success('Response copied to clipboard');
+                      }}
+                      className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                      title="Copy response"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    
+                    {/* Download Button */}
+                    <button
+                      onClick={() => {
+                        const responseText = typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                          ? (currentTab?.response?.body || currentTab?.response)
+                          : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2);
+                        const blob = new Blob([responseText], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `api-response-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                      title="Download response"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    </button>
+                    
+                    {/* Filter Button */}
+                    <button
+                      onClick={() => toast.success('Filter feature coming soon')}
+                      className="rounded-full p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                      title="Filter response"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
-            ) : (
-              <>
-                {responseTab === 'body' && (
-                  <div className="space-y-4">
-                    {/* Status Info */}
-                    {currentTab?.response?.status && (() => {
-                      const statusInfo = getStatusMessage(currentTab.response.status);
-                      const statusCode = currentTab.response.status;
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-black/10 p-4">
+              {!currentTab?.response ? (
+                <div className="flex items-center justify-center h-full text-slate-500">
+                  Send a request to see the response
+                </div>
+              ) : (
+                <>
+                  {responseTab === 'body' && (
+                    <div className="space-y-4">
+                      {/* Status Info */}
+                      {currentTab?.response?.status && (() => {
+                        const statusInfo = getStatusMessage(currentTab.response.status);
+                        const statusCode = currentTab.response.status;
+                        
+                        return (
+                          <div className={`p-4 rounded-lg border-2 ${
+                            statusInfo.category === 'success' ? 'bg-green-900/20 border-green-500/50' :
+                            statusInfo.category === 'redirect' ? 'bg-blue-900/20 border-blue-500/50' :
+                            statusInfo.category === 'client-error' ? 'bg-orange-900/20 border-orange-500/50' :
+                            statusInfo.category === 'server-error' ? 'bg-red-900/20 border-red-500/50' :
+                            'bg-slate-800/50 border-slate-600'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-start gap-3">
+                                <div className={`text-2xl font-bold ${
+                                  statusInfo.category === 'success' ? 'text-green-400' :
+                                  statusInfo.category === 'redirect' ? 'text-blue-400' :
+                                  statusInfo.category === 'client-error' ? 'text-orange-400' :
+                                  statusInfo.category === 'server-error' ? 'text-red-400' :
+                                  'text-slate-400'
+                                }`}>
+                                  Status: {statusCode} {currentTab.response.statusText}
+                                </div>
+                              </div>
+                              <div className="text-xs text-white/60">
+                                Size: {currentTab?.response?.size || 0} Bytes • Time: {currentTab?.response?.time || 0} ms
+                              </div>
+                            </div>
+                            <div className="mt-2 text-sm italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
+                              "{statusInfo.message}"
+                            </div>
+                          </div>
+                        );
+                      })()}
                       
-                      return (
-                        <div className={`p-4 rounded-lg border-2 ${
-                          statusInfo.category === 'success' ? 'bg-green-900/20 border-green-500/50' :
-                          statusInfo.category === 'redirect' ? 'bg-blue-900/20 border-blue-500/50' :
-                          statusInfo.category === 'client-error' ? 'bg-orange-900/20 border-orange-500/50' :
-                          statusInfo.category === 'server-error' ? 'bg-red-900/20 border-red-500/50' :
-                          'bg-slate-800/50 border-slate-600'
-                        }`}>
-                          <div className="flex items-center justify-between">
+                      <div className="w-full" style={{ height: `${responseSectionHeight - 200}px` }}>
+                        <CodeEditor
+                          value={typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                            ? (currentTab?.response?.body || currentTab?.response)
+                            : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
+                          onChange={() => {}} // Read-only, no-op
+                          language="json"
+                          readOnly={true}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {responseTab === 'headers' && currentTab?.response?.headers && (
+                    <div className="space-y-2">
+                      {Object.entries(currentTab.response.headers).map(([key, value]) => (
+                        <div key={key} className="flex gap-2 text-sm">
+                          <span className="text-yellow-400">{key}:</span>
+                          <span className="text-slate-300">{value as string}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {responseTab === 'info' && (
+                    <div className="space-y-4">
+                      {/* Status Code with Engaging Message */}
+                      {currentTab?.response?.status && (() => {
+                        const statusInfo = getStatusMessage(currentTab.response.status);
+                        const statusCode = currentTab.response.status;
+                        
+                        return (
+                          <div className={`p-4 rounded-lg border-2 ${
+                            statusInfo.category === 'success' ? 'bg-green-900/20 border-green-500/50' :
+                            statusInfo.category === 'redirect' ? 'bg-blue-900/20 border-blue-500/50' :
+                            statusInfo.category === 'client-error' ? 'bg-orange-900/20 border-orange-500/50' :
+                            statusInfo.category === 'server-error' ? 'bg-red-900/20 border-red-500/50' :
+                            'bg-slate-800/50 border-slate-600'
+                          }`}>
                             <div className="flex items-start gap-3">
-                              <div className={`text-2xl font-bold ${
+                              <div className={`text-3xl font-bold ${
                                 statusInfo.category === 'success' ? 'text-green-400' :
                                 statusInfo.category === 'redirect' ? 'text-blue-400' :
                                 statusInfo.category === 'client-error' ? 'text-orange-400' :
                                 statusInfo.category === 'server-error' ? 'text-red-400' :
                                 'text-slate-400'
                               }`}>
-                                Status: {statusCode} {currentTab.response.statusText}
+                                {statusCode}
+                              </div>
+                              <div className="flex-1">
+                                <div className={`text-sm font-semibold mb-1 ${
+                                  statusInfo.category === 'success' ? 'text-green-300' :
+                                  statusInfo.category === 'redirect' ? 'text-blue-300' :
+                                  statusInfo.category === 'client-error' ? 'text-orange-300' :
+                                  statusInfo.category === 'server-error' ? 'text-red-300' :
+                                  'text-slate-300'
+                                }`}>
+                                  {currentTab.response.statusText}
+                                </div>
+                                <div className="text-xs italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
+                                  "{statusInfo.message}"
+                                </div>
                               </div>
                             </div>
-                            <div className="text-xs text-white/60">
-                              Size: {currentTab?.response?.size || 0} Bytes • Time: {currentTab?.response?.time || 0} ms
-                            </div>
                           </div>
-                          <div className="mt-2 text-sm italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
-                            "{statusInfo.message}"
+                        );
+                      })()}
+
+                      {/* Performance Metrics */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                          <div className="text-xs text-slate-400 mb-1">Response Time</div>
+                          <div className="text-lg font-semibold text-yellow-400">
+                            {currentTab?.response?.time}ms
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {currentTab?.response?.time < 200 ? 'Lightning fast!' :
+                             currentTab?.response?.time < 500 ? 'Pretty quick!' :
+                             currentTab?.response?.time < 1000 ? 'Not bad!' :
+                             'Could be faster...'}
                           </div>
                         </div>
-                      );
-                    })()}
-                    
-                    <div className="w-full" style={{ height: '400px' }}>
-                      <CodeEditor
-                        value={typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
-                          ? (currentTab?.response?.body || currentTab?.response)
-                          : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
-                        onChange={() => {}} // Read-only, no-op
-                        language="json"
-                        readOnly={true}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {responseTab === 'headers' && currentTab?.response?.headers && (
-                  <div className="space-y-2">
-                    {Object.entries(currentTab.response.headers).map(([key, value]) => (
-                      <div key={key} className="flex gap-2 text-sm">
-                        <span className="text-yellow-400">{key}:</span>
-                        <span className="text-slate-300">{value as string}</span>
+                        
+                        <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                          <div className="text-xs text-slate-400 mb-1">Response Size</div>
+                          <div className="text-lg font-semibold text-yellow-400">
+                            {((currentTab?.response?.size || 0) / 1024).toFixed(2)} KB
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {(currentTab?.response?.size || 0) < 1024 ? 'Tiny payload!' :
+                             (currentTab?.response?.size || 0) < 10240 ? 'Compact size!' :
+                             (currentTab?.response?.size || 0) < 102400 ? 'Moderate load' :
+                             'Heavy response!'}
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
 
-                {responseTab === 'info' && (
-                  <div className="space-y-4">
-                    {/* Status Code with Engaging Message */}
-                    {currentTab?.response?.status && (() => {
-                      const statusInfo = getStatusMessage(currentTab.response.status);
-                      const statusCode = currentTab.response.status;
-                      
-                      return (
-                        <div className={`p-4 rounded-lg border-2 ${
-                          statusInfo.category === 'success' ? 'bg-green-900/20 border-green-500/50' :
-                          statusInfo.category === 'redirect' ? 'bg-blue-900/20 border-blue-500/50' :
-                          statusInfo.category === 'client-error' ? 'bg-orange-900/20 border-orange-500/50' :
-                          statusInfo.category === 'server-error' ? 'bg-red-900/20 border-red-500/50' :
-                          'bg-slate-800/50 border-slate-600'
+                  {responseTab === 'headers' && currentTab?.response?.headers && (
+                    <div className="space-y-4">
+                      {Object.entries(currentTab?.response?.headers).map(([key, value], index) => (
+                        <div key={index} className="p-4 rounded-lg border-2 bg-gray-900/20 border-gray-500/50">
+                          <div className="flex items-start gap-3">
+                            <div className="text-3xl font-bold text-gray-400">
+                              {key}
+                            </div>
+                            <div className="text-3xl font-bold text-gray-400">
+                              {value as string}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {responseTab === 'tests' && (
+                    <div className="space-y-4">
+                      {currentTab?.testResults?.map((testResult, index) => (
+                        <div key={index} className={`p-4 rounded-lg border-2 ${
+                          testResult.passed ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'
                         }`}>
                           <div className="flex items-start gap-3">
                             <div className={`text-3xl font-bold ${
-                              statusInfo.category === 'success' ? 'text-green-400' :
-                              statusInfo.category === 'redirect' ? 'text-blue-400' :
-                              statusInfo.category === 'client-error' ? 'text-orange-400' :
-                              statusInfo.category === 'server-error' ? 'text-red-400' :
-                              'text-slate-400'
+                              testResult.passed ? 'text-green-400' : 'text-red-400'
                             }`}>
-                              {statusCode}
+                              {testResult.passed ? '✓' : '✗'}
                             </div>
                             <div className="flex-1">
                               <div className={`text-sm font-semibold mb-1 ${
-                                statusInfo.category === 'success' ? 'text-green-300' :
-                                statusInfo.category === 'redirect' ? 'text-blue-300' :
-                                statusInfo.category === 'client-error' ? 'text-orange-300' :
-                                statusInfo.category === 'server-error' ? 'text-red-300' :
-                                'text-slate-300'
+                                testResult.passed ? 'text-green-300' : 'text-red-300'
                               }`}>
-                                {currentTab.response.statusText}
+                                {testResult.name}
                               </div>
                               <div className="text-xs italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
-                                "{statusInfo.message}"
+                                {testResult.error}
                               </div>
                             </div>
                           </div>
                         </div>
-                      );
-                    })()}
+                      ))}
+                    </div>
+                  )}
 
-                    {/* Performance Metrics */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                        <div className="text-xs text-slate-400 mb-1">Response Time</div>
-                        <div className="text-lg font-semibold text-yellow-400">
-                          {currentTab?.response?.time}ms
+                  {responseTab === 'console' && (
+                    <div className="space-y-4">
+                      {currentTab?.consoleLogs?.map((log, index) => (
+                        <div key={index} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+                          <pre className="text-sm text-slate-300 font-mono whitespace-pre-wrap">
+                            {log}
+                          </pre>
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          {currentTab?.response?.time < 200 ? 'Lightning fast!' :
-                           currentTab?.response?.time < 500 ? 'Pretty quick!' :
-                           currentTab?.response?.time < 1000 ? 'Not bad!' :
-                           'Could be faster...'}
+                      ))}
+                    </div>
+                  )}
+
+                  {responseTab === 'payload' && (
+                    <div className="space-y-6">
+                      {/* Request Payload Section */}
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                        <h3 className="text-sm font-semibold text-yellow-400 mb-3 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          Request Payload
+                        </h3>
+                        <div className="w-full" style={{ height: '200px' }}>
+                          <CodeEditor
+                            value={JSON.stringify({
+                              method: currentRequest.method,
+                              url: currentRequest.url,
+                              headers: currentRequest.headers.filter(h => h.enabled),
+                              body: currentRequest.body
+                            }, null, 2)}
+                            onChange={() => {}}
+                            language="json"
+                            readOnly={true}
+                          />
                         </div>
                       </div>
                       
-                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                        <div className="text-xs text-slate-400 mb-1">Response Size</div>
-                        <div className="text-lg font-semibold text-yellow-400">
-                          {((currentTab?.response?.size || 0) / 1024).toFixed(2)} KB
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          {(currentTab?.response?.size || 0) < 1024 ? 'Tiny payload!' :
-                           (currentTab?.response?.size || 0) < 10240 ? 'Compact size!' :
-                           (currentTab?.response?.size || 0) < 102400 ? 'Moderate load' :
-                           'Heavy response!'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {responseTab === 'tests' && (
-                  <div className="space-y-4">
-                    {currentTab?.testResults?.map((testResult, index) => (
-                      <div key={index} className={`p-4 rounded-lg border-2 ${
-                        testResult.passed ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'
-                      }`}>
-                        <div className="flex items-start gap-3">
-                          <div className={`text-3xl font-bold ${
-                            testResult.passed ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            {testResult.passed ? '✓' : '✗'}
-                          </div>
-                          <div className="flex-1">
-                            <div className={`text-sm font-semibold mb-1 ${
-                              testResult.passed ? 'text-green-300' : 'text-red-300'
-                            }`}>
-                              {testResult.name}
-                            </div>
-                            <div className="text-xs italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
-                              {testResult.error}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {responseTab === 'console' && (
-                  <div className="space-y-4">
-                    {currentTab?.consoleLogs?.map((log, index) => (
-                      <div key={index} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
-                        <pre className="text-sm text-slate-300 font-mono whitespace-pre-wrap">
-                          {log}
-                        </pre>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {responseTab === 'payload' && (
-                  <div className="space-y-6">
-                    {/* Request Payload Section */}
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                      <h3 className="text-sm font-semibold text-yellow-400 mb-3 flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                        Request Payload
-                      </h3>
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap gap-4">
-                          <div>
-                            <div className="text-xs text-slate-400 mb-1">Method</div>
-                            <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
-                              {currentTab?.request.method}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-slate-400 mb-1">URL</div>
-                            <div className="text-sm font-mono text-white break-all max-w-md px-2 py-1 bg-slate-700 rounded">
-                              {currentTab?.request.url}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {currentTab?.request.headers && currentTab.request.headers.filter(h => h.enabled).length > 0 && (
-                          <div>
-                            <div className="text-xs text-slate-400 mb-1">Headers</div>
-                            <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto">
-                              {currentTab.request.headers.filter(h => h.enabled).map((header, idx) => (
-                                <div key={idx} className="flex gap-2 mb-1 last:mb-0">
-                                  <span className="text-indigo-300">{header.key}:</span>
-                                  <span className="text-slate-300 break-all">{maskSensitiveData(header.value)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {currentTab?.request.params && currentTab.request.params.filter(p => p.enabled).length > 0 && (
-                          <div>
-                            <div className="text-xs text-slate-400 mb-1">Query Parameters</div>
-                            <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto">
-                              {currentTab.request.params.filter(p => p.enabled).map((param, idx) => (
-                                <div key={idx} className="flex gap-2 mb-1 last:mb-0">
-                                  <span className="text-indigo-300">{param.key}:</span>
-                                  <span className="text-slate-300 break-all">{maskSensitiveData(param.value)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {currentTab?.request.body && currentTab.request.body.type !== 'none' && (
-                          <div>
-                            <div className="text-xs text-slate-400 mb-1">Body ({currentTab.request.body.type})</div>
-                            <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto font-mono">
-                              <pre className="text-slate-300 whitespace-pre-wrap break-all">
-                                {currentTab.request.body.type === 'json' && currentTab.request.body.json 
-                                  ? maskSensitiveData(currentTab.request.body.json)
-                                  : currentTab.request.body.type === 'raw' && currentTab.request.body.raw
-                                  ? maskSensitiveData(currentTab.request.body.raw)
-                                  : 'No body content'}
-                              </pre>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Response Data Section */}
-                    {currentTab?.response && (
+                      {/* Response Payload Section */}
                       <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                        <h3 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-yellow-400 mb-3 flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          Response Data
+                          Response Payload
                         </h3>
-                        <div className="space-y-3">
-                          <div className="flex flex-wrap gap-4">
-                            <div>
-                              <div className="text-xs text-slate-400 mb-1">Status</div>
-                              <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
-                                {currentTab.response.status} {currentTab.response.statusText}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-slate-400 mb-1">Time</div>
-                              <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
-                                {currentTab.response.time}ms
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-slate-400 mb-1">Size</div>
-                              <div className="text-sm font-mono text-white px-2 py-1 bg-slate-700 rounded">
-                                {((currentTab.response.size || 0) / 1024).toFixed(2)} KB
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {currentTab.response.headers && Object.keys(currentTab.response.headers).length > 0 && (
-                            <div>
-                              <div className="text-xs text-slate-400 mb-1">Response Headers</div>
-                              <div className="text-sm bg-slate-700 rounded p-2 max-h-32 overflow-y-auto">
-                                {Object.entries(currentTab.response.headers).map(([key, value]) => (
-                                  <div key={key} className="flex gap-2 mb-1 last:mb-0">
-                                    <span className="text-indigo-300">{key}:</span>
-                                    <span className="text-slate-300 break-all">{maskSensitiveData(value as string)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {currentTab.response.body && (
-                            <div>
-                              <div className="text-xs text-slate-400 mb-1">Response Body</div>
-                              <div className="text-sm bg-slate-700 rounded p-2 max-h-40 overflow-y-auto font-mono">
-                                <pre className="text-slate-300 whitespace-pre-wrap break-all">
-                                  {typeof currentTab.response.body === 'string' 
-                                    ? maskSensitiveData(currentTab.response.body)
-                                    : maskSensitiveData(JSON.stringify(currentTab.response.body, null, 2))}
-                                </pre>
-                              </div>
-                            </div>
-                          )}
+                        <div className="w-full" style={{ height: '200px' }}>
+                          <CodeEditor
+                            value={typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                              ? (currentTab?.response?.body || currentTab?.response)
+                              : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
+                            onChange={() => {}}
+                            language="json"
+                            readOnly={true}
+                          />
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
