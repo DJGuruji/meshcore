@@ -1,7 +1,8 @@
 import RegisterClient from '@/components/RegisterClient';
 import { Suspense } from 'react';
 
-export default function Register({ searchParams }: { searchParams: any }) {
+export default async function Register({ searchParams }: { searchParams: Promise<any> }) {
+  const params = await searchParams;
   return (
     <Suspense fallback={
       <div className="flex min-h-screen items-center justify-center bg-[#030712]">
@@ -10,7 +11,7 @@ export default function Register({ searchParams }: { searchParams: any }) {
         </div>
       </div>
     }>
-      <RegisterClient registered={searchParams.registered === 'true'} />
+      <RegisterClient registered={params?.registered === 'true'} />
     </Suspense>
   );
 }

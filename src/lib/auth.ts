@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import connectDB from "./db";
 import { User } from "./models";
 import { validateTurnstileToken } from "./turnstile";
@@ -66,6 +67,17 @@ export const authOptions: NextAuthOptions = {
           throw error; // Re-throw to be handled by NextAuth
         }
       }
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     })
   ],
   session: {
@@ -73,13 +85,43 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      // Handle Google OAuth login
+      if (account && account.type === "oauth" && user) {
+        // Check if user already exists in our database
+        await connectDB();
+        let existingUser = await User.findOne({ email: user.email });
+        
+        if (!existingUser) {
+          // Create new user if they don't exist
+          // Generate a random password for OAuth users
+          const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+          
+          existingUser = await User.create({
+            name: user.name,
+            email: user.email,
+            emailVerified: true, // Google accounts are considered verified
+            password: randomPassword, // Generate a random password for OAuth users
+            accountType: "free",
+            role: "user"
+          });
+        }
+        
+        // Update token with user info
+        token.id = existingUser._id.toString();
+        token.role = existingUser.role;
+        token.accountType = existingUser.accountType;
+        token.blocked = (existingUser as any).blocked;
+      }
+      
+      // Handle regular credentials login
       if (user) {
         token.id = user.id;
         token.role = user.role; // Include user role in token
         token.accountType = user.accountType; // Include account type in token
         token.blocked = user.blocked; // Include blocked status in token
       }
+      
       return token;
     },
     async session({ session, token }) {
