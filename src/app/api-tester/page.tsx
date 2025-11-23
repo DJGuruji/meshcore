@@ -2249,15 +2249,53 @@ pm.test("Response has data", function() {
             ) : (
               <>
                 {responseTab === 'body' && (
-                  <div className="w-full" style={{ height: '400px' }}>
-                    <CodeEditor
-                      value={typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
-                        ? (currentTab?.response?.body || currentTab?.response)
-                        : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
-                      onChange={() => {}} // Read-only, no-op
-                      language="json"
-                      readOnly={true}
-                    />
+                  <div className="space-y-4">
+                    {/* Status Info */}
+                    {currentTab?.response?.status && (() => {
+                      const statusInfo = getStatusMessage(currentTab.response.status);
+                      const statusCode = currentTab.response.status;
+                      
+                      return (
+                        <div className={`p-4 rounded-lg border-2 ${
+                          statusInfo.category === 'success' ? 'bg-green-900/20 border-green-500/50' :
+                          statusInfo.category === 'redirect' ? 'bg-blue-900/20 border-blue-500/50' :
+                          statusInfo.category === 'client-error' ? 'bg-orange-900/20 border-orange-500/50' :
+                          statusInfo.category === 'server-error' ? 'bg-red-900/20 border-red-500/50' :
+                          'bg-slate-800/50 border-slate-600'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-start gap-3">
+                              <div className={`text-2xl font-bold ${
+                                statusInfo.category === 'success' ? 'text-green-400' :
+                                statusInfo.category === 'redirect' ? 'text-blue-400' :
+                                statusInfo.category === 'client-error' ? 'text-orange-400' :
+                                statusInfo.category === 'server-error' ? 'text-red-400' :
+                                'text-slate-400'
+                              }`}>
+                                Status: {statusCode} {currentTab.response.statusText}
+                              </div>
+                            </div>
+                            <div className="text-xs text-white/60">
+                              Size: {currentTab?.response?.size || 0} Bytes • Time: {currentTab?.response?.time || 0} ms
+                            </div>
+                          </div>
+                          <div className="mt-2 text-sm italic text-slate-400 border-l-2 border-slate-600 pl-3 py-1">
+                            "{statusInfo.message}"
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    <div className="w-full" style={{ height: '400px' }}>
+                      <CodeEditor
+                        value={typeof (currentTab?.response?.body || currentTab?.response) === 'string' 
+                          ? (currentTab?.response?.body || currentTab?.response)
+                          : JSON.stringify(currentTab?.response?.body || currentTab?.response, null, 2)}
+                        onChange={() => {}} // Read-only, no-op
+                        language="json"
+                        readOnly={true}
+                      />
+                    </div>
                   </div>
                 )}
 

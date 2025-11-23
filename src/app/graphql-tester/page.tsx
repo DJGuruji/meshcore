@@ -1368,7 +1368,33 @@ export default function GraphQLTesterPage() {
               ) : (
                 <>
                   {responseTab === 'body' && (
-                    <div className="h-full">
+                    <div className="h-full space-y-4">
+                      {/* Status Info */}
+                      {response.status && (() => {
+                        const statusInfo = getStatusMessage(response.status);
+                        return (
+                          <div
+                            className={`rounded-3xl border px-4 py-3 text-sm shadow-inner ${
+                              statusInfo.category === 'success'
+                                ? 'border-green-500/40 bg-green-500/10 text-green-200'
+                                : statusInfo.category === 'redirect'
+                                ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
+                                : statusInfo.category === 'client-error'
+                                ? 'border-orange-500/40 bg-orange-500/10 text-orange-200'
+                                : 'border-red-500/40 bg-red-500/10 text-red-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="text-2xl font-bold">Status: {response.status} {response.statusText}</div>
+                              <div className="text-xs text-white/60">
+                                Size: {response.size} Bytes • Time: {response.time} ms
+                              </div>
+                            </div>
+                            <div className="mt-1 text-sm text-white">{statusInfo.message}</div>
+                          </div>
+                        );
+                      })()}
+                      
                       <CodeEditor
                         value={typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
                         onChange={() => {}} // Read-only
