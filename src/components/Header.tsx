@@ -29,6 +29,7 @@ const navigation = [
   { name: 'Mockserver', href: '/' },
   { name: 'Rest API Tester', href: '/api-tester' },
   { name: 'CodeQL', href: '/graphql-tester' },
+  { name: 'Docs', href: '/docs' },
 ];
 
 const utilityLinks = [
@@ -39,7 +40,7 @@ const utilityLinks = [
 
 const BrandMark = ({ priority = false }: { priority?: boolean }) => (
   <div className="flex items-center gap-3">
-    <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-1 shadow-[0_12px_35px_rgba(8,8,20,0.65)]">
+    <div className="relative  flex h-11 w-11 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-1 shadow-[0_12px_35px_rgba(8,8,20,0.65)]">
       <div
         className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-orange-400 opacity-70 blur-2xl"
         aria-hidden
@@ -186,7 +187,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="relative isolate border-b border-white/10 bg-[#040714]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 isolate border-b border-white/10 bg-[#040714]/80 backdrop-blur-xl">
         <div className="absolute inset-0">
           <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-indigo-500/15 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-4 h-32 w-32 rounded-full bg-purple-500/10 blur-3xl" />
