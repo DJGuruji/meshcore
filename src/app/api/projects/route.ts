@@ -176,6 +176,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
+    // Check project limit based on account type
+    const userProjects = await ApiProject.find({ user: session.user.id });
+    const projectCount = userProjects.length;
+    
+    let maxProjects = 2; // Default to free tier
+    switch (user.accountType) {
+      case 'free':
+        maxProjects = 2;
+        break;
+      case 'freemium':
+        maxProjects = 5;
+        break;
+      case 'pro':
+        maxProjects = 10;
+        break;
+      case 'ultra-pro':
+        // Unlimited projects for ultra-pro
+        break;
+    }
+    
+    // Check if user has reached their project limit (except for ultra-pro)
+    if (user.accountType !== 'ultra-pro' && projectCount >= maxProjects) {
+      return NextResponse.json({ 
+        error: 'Project limit reached', 
+        message: `You have reached your maximum project limit of ${maxProjects} for your ${user.accountType} account. Please upgrade your account to create more projects.`
+      }, { status: 400 });
+    }
+    
+    // Check storage limit - even if storage is full, allow project creation (read-only mode)
+    let maxStorage = 10 * 1024 * 1024; // Default to 10 MB for free tier
+    switch (user.accountType) {
+      case 'free':
+        maxStorage = 10 * 1024 * 1024; // 10 MB
+        break;
+      case 'freemium':
+        maxStorage = 200 * 1024 * 1024; // 200 MB
+        break;
+      case 'pro':
+        maxStorage = 1024 * 1024 * 1024; // 1 GB
+        break;
+      case 'ultra-pro':
+        maxStorage = 5 * 1024 * 1024 * 1024; // 5 GB
+        break;
+    }
+    
+    const currentUsage = user.storageUsage || 0;
+    if (currentUsage > maxStorage) {
+      // Add a note that the user is in read-only mode
+      console.log(`User ${user._id} is in read-only mode due to storage limit exceeded`);
+    }
+    
+    // Calculate the size of the project definition to check against storage limits
+    const projectDefinitionSize = Buffer.byteLength(JSON.stringify(data), 'utf8');
+    const newTotalUsage = currentUsage + projectDefinitionSize;
+    
+    if (newTotalUsage > maxStorage) {
+      return NextResponse.json({ 
+        error: 'Storage limit exceeded', 
+        message: `Adding this project would exceed your storage limit of ${Math.round(maxStorage / (1024 * 1024))} MB for your ${user.accountType} account.`
+      }, { status: 400 });
+    }
+    
     // Calculate expiration date based on account type
     let expiresAt = null;
     const createdAt = new Date();
@@ -210,6 +272,15 @@ export async function POST(request: NextRequest) {
     };
     
     const project = await ApiProject.create(projectData);
+    
+    // Update user's storage usage to include the project definition size
+    try {
+      await User.findByIdAndUpdate(session.user.id, { 
+        storageUsage: newTotalUsage 
+      });
+    } catch (storageError) {
+      console.error('Error updating storage usage:', storageError);
+    }
     
     // Invalidate cache for this user's projects
     try {

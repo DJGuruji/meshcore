@@ -47,6 +47,13 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingProject, setIsCreatingProject] = useState(false); // New state for project creation
   const [showCookieConsent, setShowCookieConsent] = useState(false);
+  const [usageData, setUsageData] = useState({
+    storageUsed: 0,
+    storageLimit: 10 * 1024 * 1024,
+    requestsUsed: 0,
+    requestsLimit: 300,
+    accountType: 'free'
+  });
 
   // Redirect to sign in if not authenticated
   useEffect(() => {
@@ -84,6 +91,29 @@ export default function Home() {
         setShowCookieConsent(true);
       }
     }
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const fetchUsage = async () => {
+      try {
+        const response = await fetch('/api/usage');
+        if (response.ok) {
+          const data = await response.json();
+          setUsageData({
+            storageUsed: data.storageUsed,
+            storageLimit: data.storageLimit,
+            requestsUsed: data.requestsUsed,
+            requestsLimit: data.requestsLimit,
+            accountType: data.accountType
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch usage data', error);
+      }
+    };
+
+    fetchUsage();
   }, [status]);
 
   // Notify header about sidebar state changes
@@ -370,6 +400,7 @@ export default function Home() {
           setIsOpen={setIsSidePanelOpen}
           isLoading={isLoading}
           isCreatingProject={isCreatingProject} // Pass the new prop
+          usageData={usageData}
         />
       </div>
       <div 

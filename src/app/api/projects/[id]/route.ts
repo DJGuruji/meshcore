@@ -104,9 +104,9 @@ export async function PUT(
     await connectDB();
     const data = await request.json();
     
-    // Check if user is blocked
-    const user = await User.findById(session.user.id);
-    if (user && user.blocked) {
+    // Check if user is blocked (user will be fetched later for storage limit check)
+    const userCheck = await User.findById(session.user.id);
+    if (userCheck && userCheck.blocked) {
       return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
@@ -148,6 +148,56 @@ export async function PUT(
     
     console.log('Data being saved to database:', JSON.stringify(data, null, 2));
     
+    // Get the existing project to calculate size difference
+    const existingProject = await ApiProject.findById(id);
+    if (!existingProject) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    
+    // Calculate the size difference between old and new project definitions
+    const oldProjectSize = Buffer.byteLength(JSON.stringify(existingProject), 'utf8');
+    const newProjectSize = Buffer.byteLength(JSON.stringify(data), 'utf8');
+    const sizeDifference = newProjectSize - oldProjectSize;
+    
+    // Get user for storage limit check
+    const user = await User.findById(session.user.id);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    // Check if user is blocked
+    if (user.blocked) {
+      return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
+    }
+    
+    // Check storage limit if the project is getting larger
+    if (sizeDifference > 0) {
+      const currentUsage = user.storageUsage || 0;
+      let maxStorage = 10 * 1024 * 1024; // Default to 10 MB for free tier
+      switch (user.accountType) {
+        case 'free':
+          maxStorage = 10 * 1024 * 1024; // 10 MB
+          break;
+        case 'freemium':
+          maxStorage = 200 * 1024 * 1024; // 200 MB
+          break;
+        case 'pro':
+          maxStorage = 1024 * 1024 * 1024; // 1 GB
+          break;
+        case 'ultra-pro':
+          maxStorage = 5 * 1024 * 1024 * 1024; // 5 GB
+          break;
+      }
+      
+      const newTotalUsage = currentUsage + sizeDifference;
+      if (newTotalUsage > maxStorage) {
+        return NextResponse.json({ 
+          error: 'Storage limit exceeded', 
+          message: `Updating this project would exceed your storage limit of ${Math.round(maxStorage / (1024 * 1024))} MB for your ${user.accountType} account.`
+        }, { status: 400 });
+      }
+    }
+    
     // Build update object explicitly to ensure authentication is saved
     const updateData: any = {
       updatedAt: new Date()
@@ -176,6 +226,19 @@ export async function PUT(
     
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    
+    // Update user's storage usage if project size changed
+    if (sizeDifference !== 0) {
+      try {
+        const currentUsage = user.storageUsage || 0;
+        const newUsage = Math.max(0, currentUsage + sizeDifference);
+        await User.findByIdAndUpdate(session.user.id, { 
+          storageUsage: newUsage 
+        });
+      } catch (storageError) {
+        console.error('Error updating storage usage:', storageError);
+      }
     }
     
     // Invalidate cache for this project and user's projects list
@@ -223,9 +286,13 @@ export async function DELETE(
     
     await connectDB();
     
+    const userDoc = await User.findById(session.user.id);
+    if (!userDoc) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
     // Check if user is blocked
-    const user = await User.findById(session.user.id);
-    if (user && user.blocked) {
+    if (userDoc.blocked) {
       return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
@@ -236,6 +303,18 @@ export async function DELETE(
     
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    
+    // Update user's storage usage to subtract the project definition size
+    try {
+      const projectSize = Buffer.byteLength(JSON.stringify(project), 'utf8');
+      const currentUsage = userDoc.storageUsage || 0;
+      const newUsage = Math.max(0, currentUsage - projectSize);
+      await User.findByIdAndUpdate(session.user.id, { 
+        storageUsage: newUsage 
+      });
+    } catch (storageError) {
+      console.error('Error updating storage usage:', storageError);
     }
     
     // Invalidate cache for this project and user's projects list

@@ -39,6 +39,24 @@ const UserSchema = new mongoose.Schema({
     default: false,
     required: true
   },
+  // Storage usage in bytes
+  storageUsage: {
+    type: Number,
+    default: 0,
+    required: true
+  },
+  // Daily request count with timestamp
+  dailyRequests: {
+    type: Map,
+    of: Number,
+    default: () => ({}),
+    required: true
+  },
+  // Rate limiting - timestamp of last request
+  lastRequestAt: {
+    type: Date,
+    default: null
+  },
   resetToken: {
     type: String,
     select: false, // Don't include in query results by default
@@ -81,6 +99,50 @@ UserSchema.pre('save', async function(next) {
 // Method to check if password matches
 UserSchema.methods.matchPassword = async function(enteredPassword: string) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Method to calculate approximate size of stored data in bytes
+UserSchema.methods.calculateDataSize = function(data: any): number {
+  return Buffer.byteLength(JSON.stringify(data), 'utf8');
+};
+
+// Method to update user's storage usage
+UserSchema.methods.updateStorageUsage = async function(projectId: string, dataSize: number, operation: 'add' | 'subtract' = 'add') {
+  try {
+    const project = await ApiProject.findById(projectId);
+  if (!project) return;
+  
+  const user = await User.findById(project.user);
+  if (!user) return;
+  
+  const currentUsage = user.storageUsage || 0;
+  const newUsage = operation === 'add' 
+    ? currentUsage + dataSize 
+    : Math.max(0, currentUsage - dataSize);
+  
+  await User.findByIdAndUpdate(user._id, { storageUsage: newUsage });
+  } catch (error) {
+    console.error('Error updating storage usage:', error);
+  }
+};
+
+// Method to clean up old daily request data
+UserSchema.methods.cleanupOldRequestData = function() {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const thirtyDaysAgoString = thirtyDaysAgo.toISOString().split('T')[0];
+    
+    // Remove entries older than 30 days
+    for (const [dateKey, count] of this.dailyRequests.entries()) {
+      if (dateKey < thirtyDaysAgoString) {
+        this.dailyRequests.delete(dateKey);
+      }
+    }
+  } catch (error) {
+    console.error('Error cleaning up old request data:', error);
+  }
 };
 
 // API Project Schema
