@@ -86,8 +86,10 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, account }) {
+      console.log('JWT callback - account:', account, 'user:', user);
       // Handle Google OAuth login
       if (account && account.type === "oauth" && user) {
+        console.log('Processing OAuth user');
         // Check if user already exists in our database
         await connectDB();
         let existingUser = await User.findOne({ email: user.email });
@@ -97,39 +99,45 @@ export const authOptions: NextAuthOptions = {
           // Generate a random password for OAuth users
           const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
           
+          // For Google OAuth, we need to ensure the user gets a proper MongoDB ObjectId
+          // The Google ID is not a valid ObjectId, so we create the user with MongoDB's auto-generated _id
           existingUser = await User.create({
             name: user.name,
             email: user.email,
             emailVerified: true, // Google accounts are considered verified
             password: randomPassword, // Generate a random password for OAuth users
             accountType: "free",
-            role: "user"
+            role: "user",
+            blocked: false // Explicitly set blocked status
           });
         }
         
         // Update token with user info
+        console.log('Setting token ID to MongoDB ObjectId:', existingUser._id.toString());
         token.id = existingUser._id.toString();
-        token.role = existingUser.role;
-        token.accountType = existingUser.accountType;
-        token.blocked = (existingUser as any).blocked;
+        token.role = existingUser.role || 'user'; // Default to 'user' role if not set
+        token.accountType = existingUser.accountType || 'free'; // Default to 'free' account type if not set
+        token.blocked = (existingUser as any).blocked || false; // Default to not blocked if not set
       }
       
-      // Handle regular credentials login
-      if (user) {
+      console.log('Processing regular credentials login');
+      // Handle regular credentials login (exclude OAuth users who were already handled above)
+      if (user && (!account || account.type !== "oauth")) {
         token.id = user.id;
-        token.role = user.role; // Include user role in token
-        token.accountType = user.accountType; // Include account type in token
-        token.blocked = user.blocked; // Include blocked status in token
+        token.role = user.role || 'user'; // Include user role in token, default to 'user'
+        token.accountType = user.accountType || 'free'; // Include account type in token, default to 'free'
+        token.blocked = user.blocked || false; // Include blocked status in token, default to false
       }
       
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
+        console.log('Setting session user ID to:', token.id);
         session.user.id = token.id as string;
-        session.user.role = token.role as string; // Include user role in session
-        session.user.accountType = token.accountType as string; // Include account type in session
-        session.user.blocked = token.blocked as boolean; // Include blocked status in session
+        session.user.role = (token.role as string) || 'user'; // Include user role in session, default to 'user'
+        session.user.accountType = (token.accountType as string) || 'free'; // Include account type in session, default to 'free'
+        session.user.blocked = (token.blocked as boolean) || false; // Include blocked status in session, default to false
       }
       return session;
     }
