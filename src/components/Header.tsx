@@ -29,6 +29,7 @@ const navigation = [
   { name: 'Mockserver', href: '/' },
   { name: 'Rest API Tester', href: '/api-tester' },
   { name: 'CodeQL', href: '/graphql-tester' },
+  { name: 'Pricing', href: '/pricing' },
   { name: 'Docs', href: '/docs' },
 ];
 
@@ -187,7 +188,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 isolate border-b border-white/10 bg-[#040714]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 isolate border-b border-white/10 bg-[#040714]/90 backdrop-blur-3xl shadow-xl">
         <div className="absolute inset-0">
           <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-indigo-500/15 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-4 h-32 w-32 rounded-full bg-purple-500/10 blur-3xl" />
@@ -322,6 +323,21 @@ export default function Header() {
                       </div>
                     </div>
                   </div>
+                
+                  {/* Upgrade Account Button */}
+                  <div className="flex justify-center">
+                    <Link
+                      href="/pricing"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-orange-400/20 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:scale-[1.02] hover:shadow-indigo-500/40 w-full max-w-[200px]"
+                    >
+                      <div className="absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-r from-indigo-500/40 via-purple-500/40 to-orange-400/40 opacity-0 transition-opacity duration-1000 hover:opacity-100" />
+                      <div className="relative z-10 flex items-center justify-center gap-2">
+                        <SparklesIcon className="h-5 w-5 animate-pulse" />
+                        <span>Upgrade Account</span>
+                      </div>
+                    </Link>
+                  </div>
 
                   <button
                     onClick={() => {
@@ -414,6 +430,21 @@ export default function Header() {
                     Upgrade to unlock premium features
                   </p>
                 )}
+              </div>
+
+              {/* Upgrade Account Button */}
+              <div className="flex justify-center mt-4">
+                <Link
+                  href="/pricing"
+                  onClick={() => setIsUtilityPanelOpen(false)}
+                  className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-orange-400/20 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:scale-[1.02] hover:shadow-indigo-500/40 w-full max-w-[200px]"
+                >
+                  <div className="absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-r from-indigo-500/40 via-purple-500/40 to-orange-400/40 opacity-0 transition-opacity duration-1000 hover:opacity-100" />
+                  <div className="relative z-10 flex items-center justify-center gap-2">
+                    <SparklesIcon className="h-5 w-5 animate-pulse" />
+                    <span>Upgrade Account</span>
+                  </div>
+                </Link>
               </div>
             </div>
 

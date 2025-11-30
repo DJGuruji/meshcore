@@ -286,10 +286,23 @@ export default function Home() {
             </Link>
           </div>
 
+          {/* Add Pricing button here */}
+          <div className="mt-6">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/30 transition hover:scale-[1.02]"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              View Pricing
+            </Link>
+          </div>
+
           <div className="mt-12 grid gap-4 text-left text-sm text-slate-400 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Unlimited workspaces</div>
             <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Collaboration ready</div>
-            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">No credit card required</div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Free API Tester</div>
           </div>
         </div>
       </div>
