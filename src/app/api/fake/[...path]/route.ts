@@ -3,6 +3,7 @@ import connectDB from '@/lib/db';
 import { ApiProject, MockServerData, User } from '@/lib/models';
 import { extractTokenFromHeader } from '@/lib/tokenUtils';
 import cache from '@/lib/cache';
+import { sendRequestLimitNotification, sendStorageLimitNotification } from '@/lib/email';
 
 // Helper function to match endpoint path with project name
 function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string): boolean {
@@ -192,8 +193,23 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
       return { allowed: false, message: 'User not found' };
     }
     
-    // Get today's date key
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    // Initialize lastRequestReset if it doesn't exist
+    if (!user.lastRequestReset) {
+      user.lastRequestReset = new Date();
+      await user.save();
+    }
+    
+    // Check if 24 hours have passed since last reset
+    const now = new Date();
+    const lastReset = new Date(user.lastRequestReset);
+    const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
+    
+    // If 24 hours have passed, reset the counter
+    if (hoursSinceReset >= 24) {
+      user.dailyRequests.clear(); // Clear all daily request counts
+      user.lastRequestReset = now;
+      await user.save();
+    }
     
     // Calculate request limits based on account type
     let maxRequests = 300; // Default to 300 for free tier
@@ -212,19 +228,45 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
         break;
     }
     
-    // Get current request count for today
-    const currentRequests = user.dailyRequests.get(today) || 0;
+    // Get current request count for the current 24-hour window
+    const currentWindowKey = lastReset.toISOString();
+    const currentRequests = user.dailyRequests.get(currentWindowKey) || 0;
     
     // Check if limit is exceeded
     if (currentRequests >= maxRequests) {
+      // Calculate when the limit will renew
+      const renewalTime = new Date(lastReset.getTime() + (24 * 60 * 60 * 1000));
+      
+      // Send email notification (only once per limit exceeded period)
+      const shouldSendEmail = !user.lastRequestLimitEmailSent || 
+        (now.getTime() - new Date(user.lastRequestLimitEmailSent).getTime()) > (24 * 60 * 60 * 1000);
+      
+      if (shouldSendEmail) {
+        try {
+          await sendRequestLimitNotification(
+            user.email,
+            user.accountType,
+            currentRequests,
+            maxRequests,
+            renewalTime
+          );
+          
+          // Update the last email sent time
+          user.lastRequestLimitEmailSent = now;
+          await user.save();
+        } catch (emailError) {
+          console.error('Failed to send request limit email:', emailError);
+        }
+      }
+      
       return { 
         allowed: false, 
-        message: `Daily request limit exceeded. You have used all ${maxRequests} requests for your ${user.accountType} account today.`
+        message: `Daily request limit exceeded. You have used all ${maxRequests} requests for your ${user.accountType} account. Limit will renew at ${renewalTime.toLocaleString()}.`
       };
     }
     
     // Update request count
-    user.dailyRequests.set(today, currentRequests + 1);
+    user.dailyRequests.set(currentWindowKey, currentRequests + 1);
     await user.save();
     
     return { allowed: true };
@@ -268,6 +310,28 @@ async function checkStorageLimit(project: any, dataSize: number, isWriteOperatio
     if (newUsage > maxStorage) {
       // For write operations, block when storage is full
       if (isWriteOperation) {
+        // Send email notification (only once per limit exceeded period)
+        const now = new Date();
+        const shouldSendEmail = !user.lastStorageLimitEmailSent || 
+          (now.getTime() - new Date(user.lastStorageLimitEmailSent).getTime()) > (24 * 60 * 60 * 1000);
+        
+        if (shouldSendEmail) {
+          try {
+            await sendStorageLimitNotification(
+              user.email,
+              user.accountType,
+              currentUsage,
+              maxStorage
+            );
+            
+            // Update the last email sent time
+            user.lastStorageLimitEmailSent = now;
+            await user.save();
+          } catch (emailError) {
+            console.error('Failed to send storage limit email:', emailError);
+          }
+        }
+        
         return { 
           allowed: false, 
           message: `Storage limit exceeded. You have used ${Math.round(currentUsage / (1024 * 1024))} MB of your ${Math.round(maxStorage / (1024 * 1024))} MB limit for your ${user.accountType} account. Only read operations are allowed until storage is freed by deleting some data.`

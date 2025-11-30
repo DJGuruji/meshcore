@@ -57,6 +57,21 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Last request reset time for rolling 24-hour window
+  lastRequestReset: {
+    type: Date,
+    default: null
+  },
+  // Timestamp of last request limit exceeded email sent
+  lastRequestLimitEmailSent: {
+    type: Date,
+    default: null
+  },
+  // Timestamp of last storage limit exceeded email sent
+  lastStorageLimitEmailSent: {
+    type: Date,
+    default: null
+  },
   resetToken: {
     type: String,
     select: false, // Don't include in query results by default
