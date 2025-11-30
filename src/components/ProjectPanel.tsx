@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { PlusIcon, TrashIcon, DocumentDuplicateIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { generateEndpointUrl } from '@/lib/urlUtils';
+import UsageIndicators from '@/components/UsageIndicators';
 
 interface ApiProject {
   _id: string;
@@ -29,6 +30,14 @@ interface Endpoint {
   requiresAuth?: boolean | null;
 }
 
+interface UsageData {
+  storageUsed: number;
+  storageLimit: number;
+  requestsUsed: number;
+  requestsLimit: number;
+  accountType: string;
+}
+
 interface ProjectPanelProps {
   projects: ApiProject[];
   onProjectClick: (project: ApiProject) => void;
@@ -39,6 +48,7 @@ interface ProjectPanelProps {
   isMobile: boolean;
   isLoading: boolean;
   isCreatingProject?: boolean; // Add the new prop
+  usageData?: UsageData | null;
 }
 
 export default function ProjectPanel({
@@ -50,7 +60,8 @@ export default function ProjectPanel({
   setIsOpen,
   isMobile,
   isLoading,
-  isCreatingProject = false // Default to false
+  isCreatingProject = false, // Default to false
+  usageData
 }: ProjectPanelProps) {
   const PAGE_SIZE = 5;
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -229,6 +240,18 @@ export default function ProjectPanel({
                   Cancel
                 </button>
               </div>
+            </div>
+          )}
+
+          {usageData && (
+            <div className="">
+              <UsageIndicators
+                storageUsed={usageData.storageUsed}
+                storageLimit={usageData.storageLimit}
+                requestsUsed={usageData.requestsUsed}
+                requestsLimit={usageData.requestsLimit}
+                accountType={usageData.accountType}
+              />
             </div>
           )}
         </div>

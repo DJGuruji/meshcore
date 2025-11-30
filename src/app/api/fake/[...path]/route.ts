@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import { ApiProject, MockServerData } from '@/lib/models';
+import { ApiProject, MockServerData, User } from '@/lib/models';
 import { extractTokenFromHeader } from '@/lib/tokenUtils';
 import cache from '@/lib/cache';
+import { sendRequestLimitNotification, sendStorageLimitNotification } from '@/lib/email';
 
 // Helper function to match endpoint path with project name
 function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string): boolean {
@@ -129,6 +130,226 @@ function filterDataByConditions(data: any, conditions: any[]): any {
   return matches ? data : null;
 }
 
+// Helper function to check rate limits
+async function checkRateLimit(project: any): Promise<{ allowed: boolean; message?: string }> {
+  try {
+    // Get the user associated with the project
+    const user = await User.findById(project.user);
+    if (!user) {
+      return { allowed: false, message: 'User not found' };
+    }
+    
+    // Calculate rate limits based on account type
+    let maxRequestsPerSecond = 5; // Default to 5 r/s for free tier
+    switch (user.accountType) {
+      case 'free':
+        maxRequestsPerSecond = 5;
+        break;
+      case 'freemium':
+        maxRequestsPerSecond = 20;
+        break;
+      case 'pro':
+        maxRequestsPerSecond = 100;
+        break;
+      case 'ultra-pro':
+        maxRequestsPerSecond = 500;
+        break;
+    }
+    
+    // Check if enough time has passed since last request
+    const now = Date.now();
+    const lastRequestTime = user.lastRequestAt ? user.lastRequestAt.getTime() : 0;
+    const timeSinceLastRequest = now - lastRequestTime;
+    
+    // Calculate minimum time between requests (in milliseconds)
+    const minTimeBetweenRequests = 1000 / maxRequestsPerSecond;
+    
+    if (timeSinceLastRequest < minTimeBetweenRequests) {
+      const waitTime = Math.ceil(minTimeBetweenRequests - timeSinceLastRequest);
+      return { 
+        allowed: false, 
+        message: `Rate limit exceeded. Please wait ${waitTime}ms before making another request.`
+      };
+    }
+    
+    // Update last request time
+    user.lastRequestAt = new Date(now);
+    await user.save();
+    
+    return { allowed: true };
+  } catch (error) {
+    console.error('Error checking rate limit:', error);
+    // Allow the operation if there's an error checking limits
+    return { allowed: true };
+  }
+}
+
+// Helper function to check daily request limits
+async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean; message?: string }> {
+  try {
+    // Get the user associated with the project
+    const user = await User.findById(project.user);
+    if (!user) {
+      return { allowed: false, message: 'User not found' };
+    }
+    
+    // Initialize lastRequestReset if it doesn't exist
+    if (!user.lastRequestReset) {
+      user.lastRequestReset = new Date();
+      await user.save();
+    }
+    
+    // Check if 24 hours have passed since last reset
+    const now = new Date();
+    const lastReset = new Date(user.lastRequestReset);
+    const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
+    
+    // If 24 hours have passed, reset the counter
+    if (hoursSinceReset >= 24) {
+      user.dailyRequests.clear(); // Clear all daily request counts
+      user.lastRequestReset = now;
+      await user.save();
+    }
+    
+    // Calculate request limits based on account type
+    let maxRequests = 300; // Default to 300 for free tier
+    switch (user.accountType) {
+      case 'free':
+        maxRequests = 300;
+        break;
+      case 'freemium':
+        maxRequests = 3000;
+        break;
+      case 'pro':
+        maxRequests = 20000;
+        break;
+      case 'ultra-pro':
+        maxRequests = 200000;
+        break;
+    }
+    
+    // Get current request count for the current 24-hour window
+    const currentWindowKey = lastReset.toISOString();
+    const currentRequests = user.dailyRequests.get(currentWindowKey) || 0;
+    
+    // Check if limit is exceeded
+    if (currentRequests >= maxRequests) {
+      // Calculate when the limit will renew
+      const renewalTime = new Date(lastReset.getTime() + (24 * 60 * 60 * 1000));
+      
+      // Send email notification (only once per limit exceeded period)
+      const shouldSendEmail = !user.lastRequestLimitEmailSent || 
+        (now.getTime() - new Date(user.lastRequestLimitEmailSent).getTime()) > (24 * 60 * 60 * 1000);
+      
+      if (shouldSendEmail) {
+        try {
+          await sendRequestLimitNotification(
+            user.email,
+            user.accountType,
+            currentRequests,
+            maxRequests,
+            renewalTime
+          );
+          
+          // Update the last email sent time
+          user.lastRequestLimitEmailSent = now;
+          await user.save();
+        } catch (emailError) {
+          console.error('Failed to send request limit email:', emailError);
+        }
+      }
+      
+      return { 
+        allowed: false, 
+        message: `Daily request limit exceeded. You have used all ${maxRequests} requests for your ${user.accountType} account. Limit will renew at ${renewalTime.toLocaleString()}.`
+      };
+    }
+    
+    // Update request count
+    user.dailyRequests.set(currentWindowKey, currentRequests + 1);
+    await user.save();
+    
+    return { allowed: true };
+  } catch (error) {
+    console.error('Error checking daily request limit:', error);
+    // Allow the operation if there's an error checking limits
+    return { allowed: true };
+  }
+}
+
+// Helper function to check storage limits
+async function checkStorageLimit(project: any, dataSize: number, isWriteOperation: boolean = true): Promise<{ allowed: boolean; message?: string }> {
+  try {
+    // Get the user associated with the project
+    const user = await User.findById(project.user);
+    if (!user) {
+      return { allowed: false, message: 'User not found' };
+    }
+    
+    // Calculate storage limits based on account type
+    let maxStorage = 10 * 1024 * 1024; // Default to 10 MB for free tier
+    switch (user.accountType) {
+      case 'free':
+        maxStorage = 10 * 1024 * 1024; // 10 MB
+        break;
+      case 'freemium':
+        maxStorage = 200 * 1024 * 1024; // 200 MB
+        break;
+      case 'pro':
+        maxStorage = 1024 * 1024 * 1024; // 1 GB
+        break;
+      case 'ultra-pro':
+        maxStorage = 5 * 1024 * 1024 * 1024; // 5 GB
+        break;
+    }
+    
+    // Check if adding this data would exceed the limit
+    const currentUsage = user.storageUsage || 0;
+    const newUsage = currentUsage + dataSize;
+    
+    if (newUsage > maxStorage) {
+      // For write operations, block when storage is full
+      if (isWriteOperation) {
+        // Send email notification (only once per limit exceeded period)
+        const now = new Date();
+        const shouldSendEmail = !user.lastStorageLimitEmailSent || 
+          (now.getTime() - new Date(user.lastStorageLimitEmailSent).getTime()) > (24 * 60 * 60 * 1000);
+        
+        if (shouldSendEmail) {
+          try {
+            await sendStorageLimitNotification(
+              user.email,
+              user.accountType,
+              currentUsage,
+              maxStorage
+            );
+            
+            // Update the last email sent time
+            user.lastStorageLimitEmailSent = now;
+            await user.save();
+          } catch (emailError) {
+            console.error('Failed to send storage limit email:', emailError);
+          }
+        }
+        
+        return { 
+          allowed: false, 
+          message: `Storage limit exceeded. You have used ${Math.round(currentUsage / (1024 * 1024))} MB of your ${Math.round(maxStorage / (1024 * 1024))} MB limit for your ${user.accountType} account. Only read operations are allowed until storage is freed by deleting some data.`
+        };
+      }
+      // For read operations, allow even when storage is full
+      // This enables read-only mode when storage is full
+      return { allowed: true };
+    }
+    
+    return { allowed: true };
+  } catch (error) {
+    console.error('Error checking storage limit:', error);
+    // Allow the operation if there's an error checking limits
+    return { allowed: true };
+  }
+}
+
 // Helper function to add CORS headers to response
 function addCorsHeaders(response: NextResponse) {
   response.headers.set('Access-Control-Allow-Origin', '*');
@@ -147,6 +368,20 @@ async function handleRequest(request: NextRequest, method: string) {
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/api/fake/');
     
+    // Periodically clean up old request data (roughly 1 in 100 requests)
+    if (Math.random() < 0.01) {
+      try {
+        // Find a few users and clean up their old request data
+        const users = await User.find().limit(10);
+        for (const user of users) {
+          user.cleanupOldRequestData();
+          await user.save();
+        }
+      } catch (cleanupError) {
+        console.error('Error during cleanup:', cleanupError);
+      }
+    }
+    
     if (pathSegments.length < 2) {
       const response = NextResponse.json({ error: 'Invalid API path' }, { status: 404 });
       return addCorsHeaders(response);
@@ -160,7 +395,27 @@ async function handleRequest(request: NextRequest, method: string) {
     for (const project of projects) {
       for (const endpoint of project.endpoints) {
         if (matchEndpoint(fullPath, project.name, project.baseUrl, endpoint.path, method) && endpoint.method === method) {
+                    
+          // Check daily request limit
+          const requestLimitCheck = await checkDailyRequestLimit(project);
+          if (!requestLimitCheck.allowed) {
+            const response = NextResponse.json({ 
+              error: 'Daily request limit exceeded',
+              message: requestLimitCheck.message
+            }, { status: 429 });
+            return addCorsHeaders(response);
+          }
           
+          // Check rate limit
+          const rateLimitCheck = await checkRateLimit(project);
+          if (!rateLimitCheck.allowed) {
+            const response = NextResponse.json({ 
+              error: 'Rate limit exceeded',
+              message: rateLimitCheck.message
+            }, { status: 429 });
+            return addCorsHeaders(response);
+          }
+                    
           // Check authentication requirements
           const projectAuthEnabled = project.authentication?.enabled || false;
           const endpointRequiresAuth = endpoint.requiresAuth !== null ? endpoint.requiresAuth : projectAuthEnabled;
@@ -195,6 +450,18 @@ async function handleRequest(request: NextRequest, method: string) {
                 return addCorsHeaders(response);
               }
               
+              // Check storage limit before storing data (write operation)
+              const dataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8');
+              const storageCheck = await checkStorageLimit(project, dataSize, true);
+              if (!storageCheck.allowed) {
+                const response = NextResponse.json({ 
+                  error: 'Storage limit exceeded',
+                  message: storageCheck.message,
+                  readOnlyMode: true
+                }, { status: 400 });
+                return addCorsHeaders(response);
+              }
+              
               // Store the data in the database
               try {
                 const mockData = new MockServerData({
@@ -204,6 +471,20 @@ async function handleRequest(request: NextRequest, method: string) {
                 });
                 await mockData.save();
                 console.log('Stored POST data:', requestBody);
+                
+                // Update user's storage usage
+                try {
+                  const user = await User.findById(project.user);
+                  if (user) {
+                    const dataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8');
+                    const currentUsage = user.storageUsage || 0;
+                    await User.findByIdAndUpdate(project.user, { 
+                      storageUsage: currentUsage + dataSize 
+                    });
+                  }
+                } catch (storageError) {
+                  console.error('Error updating storage usage:', storageError);
+                }
                 
                 // Invalidate cache for this endpoint (fire-and-forget)
                 const cacheKeyPattern = `mock:${project._id}:${endpoint._id}:*`;
@@ -288,9 +569,31 @@ async function handleRequest(request: NextRequest, method: string) {
                   
                   // For DELETE requests, remove the data
                   if (method === 'DELETE') {
+                    // Get the data size before deleting to update storage usage
+                    let dataSize = 0;
+                    if (isValidId) {
+                      const dataToDelete = await MockServerData.findById(id);
+                      if (dataToDelete) {
+                        dataSize = Buffer.byteLength(JSON.stringify(dataToDelete.data), 'utf8');
+                      }
+                    }
+                    
                     // Delete the filtered data
                     if (isValidId) {
                       await MockServerData.deleteOne({ _id: id });
+                      
+                      // Update user's storage usage
+                      try {
+                        const user = await User.findById(project.user);
+                        if (user && dataSize > 0) {
+                          const currentUsage = user.storageUsage || 0;
+                          await User.findByIdAndUpdate(project.user, { 
+                            storageUsage: Math.max(0, currentUsage - dataSize) 
+                          });
+                        }
+                      } catch (storageError) {
+                        console.error('Error updating storage usage:', storageError);
+                      }
                     }
                     
                     // Invalidate cache for this endpoint (fire-and-forget)
@@ -315,6 +618,32 @@ async function handleRequest(request: NextRequest, method: string) {
                       requestBody = {};
                     }
                     
+                    // Check storage limit before updating data
+                    const newDataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8');
+                    let oldDataSize = 0;
+                    
+                    // Get the old data size for storage calculation
+                    if (isValidId) {
+                      const oldData = await MockServerData.findById(id);
+                      if (oldData) {
+                        oldDataSize = Buffer.byteLength(JSON.stringify(oldData.data), 'utf8');
+                      }
+                    }
+                    
+                    // Check if the update would exceed storage limits (write operation)
+                    const storageDiff = newDataSize - oldDataSize;
+                    if (storageDiff > 0) {
+                      const storageCheck = await checkStorageLimit(project, storageDiff, true);
+                      if (!storageCheck.allowed) {
+                        const response = NextResponse.json({ 
+                          error: 'Storage limit exceeded',
+                          message: storageCheck.message,
+                          readOnlyMode: true
+                        }, { status: 400 });
+                        return addCorsHeaders(response);
+                      }
+                    }
+                    
                     // Update the data
                     if (isValidId) {
                       await MockServerData.updateOne(
@@ -329,6 +658,20 @@ async function handleRequest(request: NextRequest, method: string) {
                           }
                         }
                       );
+                      
+                      // Update user's storage usage
+                      try {
+                        const user = await User.findById(project.user);
+                        if (user) {
+                          const currentUsage = user.storageUsage || 0;
+                          const newUsage = Math.max(0, currentUsage + storageDiff);
+                          await User.findByIdAndUpdate(project.user, { 
+                            storageUsage: newUsage 
+                          });
+                        }
+                      } catch (storageError) {
+                        console.error('Error updating storage usage:', storageError);
+                      }
                     }
                     
                     // Invalidate cache for this endpoint (fire-and-forget)
@@ -370,6 +713,13 @@ async function handleRequest(request: NextRequest, method: string) {
           
           // Handle GET endpoints with data source
           if (method === 'GET' && endpoint.dataSource) {
+            // Check storage limit for read operations (to inform user about read-only mode)
+            const storageCheck = await checkStorageLimit(project, 0, false);
+            if (!storageCheck.allowed) {
+              // Add a header to indicate read-only mode
+              // We still allow the GET request to proceed
+              console.log(`User ${project.user} is in read-only mode due to storage limit`);
+            }
             // Generate cache key
             const cacheKey = `mock:${project._id}:${endpoint._id}:${fullPath}`;
             
@@ -501,9 +851,16 @@ async function handleRequest(request: NextRequest, method: string) {
             }
           }
           
+          // Check storage limit for read operations (to inform user about read-only mode)
+          const storageCheck = await checkStorageLimit(project, 0, false);
+          
           try {
             const responseBody = JSON.parse(endpoint.responseBody);
             const response = NextResponse.json(responseBody, { status: endpoint.statusCode });
+            // Add read-only mode indicator if needed
+            if (!storageCheck.allowed) {
+              response.headers.set('X-Read-Only-Mode', 'true');
+            }
             return addCorsHeaders(response);
           } catch (error) {
             // If JSON parsing fails, return as plain text
@@ -511,6 +868,10 @@ async function handleRequest(request: NextRequest, method: string) {
               status: endpoint.statusCode,
               headers: { 'Content-Type': 'text/plain' }
             });
+            // Add read-only mode indicator if needed
+            if (!storageCheck.allowed) {
+              response.headers.set('X-Read-Only-Mode', 'true');
+            }
             return addCorsHeaders(response);
           }
         }
