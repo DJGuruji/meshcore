@@ -29,7 +29,7 @@ const UserSchema = new mongoose.Schema({
   // Account type field with default value
   accountType: {
     type: String,
-    enum: ['free', 'freemium', 'pro', 'ultra-pro'],
+    enum: ['free', 'freemium', 'pro', 'ultra-pro','custom'],
     default: 'free',
     required: true
   },

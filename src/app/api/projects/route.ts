@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth';
 import { sendProjectCreationConfirmation } from '@/lib/email';
 import axios from 'axios';
 import cacheService from '@/lib/cacheService';
+import mongoose from 'mongoose';
 
 // GET all API projects for authenticated user
 export async function GET(request: NextRequest) {
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    console.log('GET Session user ID:', session.user.id);
     
     // Try to get cached response first
     const cacheKey = `user_projects_${session.user.id}`;
@@ -131,8 +134,20 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json(processedProjects);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Project fetch error:', error);
+    
+    if (error instanceof Error) {
+      return NextResponse.json({ 
+        error: 'Failed to fetch projects', 
+        message: error.message
+      }, { status: 500 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to fetch projects', 
+      message: 'Unknown error occurred'
+    }, { status: 500 });
   }
 }
 
@@ -144,6 +159,8 @@ export async function POST(request: NextRequest) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    console.log('POST Session user ID:', session.user.id);
     
     await connectDB();
     const data = await request.json();
@@ -218,7 +235,41 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(project);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Project creation error:', error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      // Check if it's a Mongoose validation error
+      if ('errors' in error && error.name === 'ValidationError') {
+        const errors: string[] = [];
+        Object.keys((error as any).errors).forEach(key => {
+          errors.push((error as any).errors[key].message);
+        });
+        return NextResponse.json({ 
+          error: 'Validation failed', 
+          details: errors,
+          message: 'Please check the project data and try again'
+        }, { status: 400 });
+      }
+      
+      // Check if it's a Mongoose cast error
+      if (error.name === 'CastError') {
+        return NextResponse.json({ 
+          error: 'Invalid data format', 
+          message: 'Please check the project data and try again'
+        }, { status: 400 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to create project', 
+        message: error.message
+      }, { status: 500 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to create project', 
+      message: 'Unknown error occurred'
+    }, { status: 500 });
   }
 }
