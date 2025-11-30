@@ -6,209 +6,95 @@ export interface JsonTemplate {
   template: any;
 }
 
+// Helper function to generate user data
+const generateUsers = (count: number) => {
+  const firstNames = ['John', 'Jane', 'Bob', 'Alice', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Peter', 'Quinn', 'Rose', 'Sam', 'Tina', 'Uma', 'Victor', 'Wendy', 'Xavier', 'Yara', 'Zack', 'Amy', 'Ben', 'Chloe', 'David', 'Emma', 'Felix', 'Gina', 'Hugo', 'Iris', 'James', 'Kelly', 'Liam', 'Maya', 'Nick', 'Oscar', 'Paula', 'Rachel', 'Steve', 'Tara', 'Ursula', 'Vince', 'Zoe'];
+  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts'];
+  
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    name: `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}`,
+    email: `${firstNames[i % firstNames.length].toLowerCase()}.${lastNames[i % lastNames.length].toLowerCase()}@example.com`,
+    avatar: `https://picsum.photos/seed/user${i + 1}/150/150`
+  }));
+};
+
+// Helper function to generate product data
+const generateProducts = (count: number) => {
+  const products = ['Laptop', 'Smartphone', 'Headphones', 'Tablet', 'Smartwatch', 'Camera', 'Speaker', 'Monitor', 'Keyboard', 'Mouse', 'Printer', 'Router', 'Hard Drive', 'SSD', 'RAM', 'Graphics Card', 'Motherboard', 'CPU', 'Power Supply', 'Case', 'Webcam', 'Microphone', 'Charger', 'Cable', 'Adapter', 'Hub', 'Dock', 'Stand', 'Bag', 'Sleeve', 'Screen Protector', 'Case Cover', 'Stylus', 'Earbuds', 'Gaming Console', 'Controller', 'VR Headset', 'Drone', 'Action Camera', 'Tripod', 'Gimbal', 'Light Ring', 'Projector', 'TV', 'Soundbar', 'Receiver', 'Turntable', 'Vinyl', 'CD Player', 'Radio'];
+  const categories = ['Electronics', 'Audio', 'Computing', 'Gaming', 'Photography', 'Accessories', 'Home Entertainment', 'Networking', 'Storage', 'Components'];
+  
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    name: products[i % products.length],
+    price: parseFloat((Math.random() * 1000 + 50).toFixed(2)),
+    category: categories[i % categories.length],
+    inStock: i % 3 !== 0
+  }));
+};
+
+// Helper function to generate blog posts
+const generateBlogPosts = (count: number) => {
+  const titles = ['Getting Started with APIs', 'Advanced JavaScript Techniques', 'Building Scalable Applications', 'Understanding Database Design', 'Modern Web Development', 'Cloud Computing Essentials', 'Cybersecurity Best Practices', 'Machine Learning Basics', 'DevOps Fundamentals', 'Mobile App Development', 'UI/UX Design Principles', 'Agile Methodology', 'Microservices Architecture', 'Containerization with Docker', 'Kubernetes for Beginners', 'GraphQL vs REST', 'Serverless Computing', 'Progressive Web Apps', 'React Performance Optimization', 'Vue.js Deep Dive', 'Angular Best Practices', 'Node.js Scalability', 'Python for Data Science', 'Go Programming Guide', 'Rust Language Tutorial', 'TypeScript Mastery', 'Testing Strategies', 'CI/CD Pipelines', 'Git Workflow', 'Code Review Tips', 'Debugging Techniques', 'Performance Monitoring', 'API Security', 'OAuth Implementation', 'JWT Authentication', 'WebSockets Real-time', 'GraphQL Subscriptions', 'Redis Caching', 'MongoDB Optimization', 'PostgreSQL Advanced', 'MySQL Performance', 'SQL vs NoSQL', 'Blockchain Basics', 'Smart Contracts', 'Web3 Development', 'NFT Creation', 'DeFi Explained', 'Crypto Trading Bots', 'AI Ethics', 'Quantum Computing'];
+  const authors = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Williams', 'Charlie Brown'];
+  const tags = [['API', 'Development', 'Tutorial'], ['JavaScript', 'Programming'], ['Architecture', 'Scalability'], ['Database', 'Design'], ['Web', 'Frontend'], ['Cloud', 'AWS'], ['Security', 'Best Practices'], ['AI', 'ML'], ['DevOps', 'Automation'], ['Mobile', 'iOS', 'Android']];
+  
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    title: titles[i % titles.length],
+    slug: titles[i % titles.length].toLowerCase().replace(/\s+/g, '-'),
+    excerpt: `Learn about ${titles[i % titles.length].toLowerCase()} in this comprehensive guide.`,
+    author: {
+      id: (i % authors.length) + 1,
+      name: authors[i % authors.length],
+      avatar: `https://picsum.photos/seed/author${(i % authors.length) + 1}/100/100`
+    },
+    tags: tags[i % tags.length],
+    publishedAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+    viewCount: Math.floor(Math.random() * 10000)
+  }));
+};
+
+// Helper function to generate products with images
+const generateProductsWithImages = (count: number) => {
+  const products = ['Laptop', 'Smartphone', 'Headphones', 'Tablet', 'Smartwatch', 'Camera', 'Speaker', 'Monitor', 'Keyboard', 'Mouse', 'Printer', 'Router', 'Hard Drive', 'SSD', 'RAM', 'Graphics Card', 'Motherboard', 'CPU', 'Power Supply', 'Case', 'Webcam', 'Microphone', 'Charger', 'Cable', 'Adapter', 'Hub', 'Dock', 'Stand', 'Bag', 'Sleeve', 'Screen Protector', 'Case Cover', 'Stylus', 'Earbuds', 'Gaming Console', 'Controller', 'VR Headset', 'Drone', 'Action Camera', 'Tripod', 'Gimbal', 'Light Ring', 'Projector', 'TV', 'Soundbar', 'Receiver', 'Turntable', 'Vinyl', 'CD Player', 'Radio'];
+  const categories = ['Electronics', 'Audio', 'Computing', 'Gaming', 'Photography', 'Accessories', 'Home Entertainment', 'Networking', 'Storage', 'Components'];
+  
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    name: products[i % products.length],
+    description: `High-quality ${products[i % products.length].toLowerCase()} with advanced features and excellent performance.`,
+    price: parseFloat((Math.random() * 1000 + 50).toFixed(2)),
+    currency: 'USD',
+    category: categories[i % categories.length],
+    inStock: i % 3 !== 0,
+    rating: parseFloat((Math.random() * 2 + 3).toFixed(1)),
+    reviews: Math.floor(Math.random() * 500),
+    image: `https://picsum.photos/seed/product${i + 1}/400/300`,
+    createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString()
+  }));
+};
+
 export const defaultJsonTemplates: JsonTemplate[] = [
   {
-    name: 'Simple Message',
-    description: 'Basic success message',
-    template: {
-      message: 'Success',
-      status: 'ok',
-      timestamp: new Date().toISOString()
-    }
-  },
-  {
-    name: 'User Object',
-    description: 'Sample user data',
-    template: {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      avatar: 'https://via.placeholder.com/150',
-      createdAt: new Date().toISOString(),
-      isActive: true
-    }
-  },
-  {
     name: 'User List',
-    description: 'Array of users',
-    template: [
-      {
-        id: 1,
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        avatar: 'https://via.placeholder.com/150'
-      },
-      {
-        id: 2,
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        avatar: 'https://via.placeholder.com/150'
-      },
-      {
-        id: 3,
-        name: 'Bob Johnson',
-        email: 'bob.johnson@example.com',
-        avatar: 'https://via.placeholder.com/150'
-      }
-    ]
-  },
-  {
-    name: 'Product Object',
-    description: 'Sample product data',
-    template: {
-      id: 1,
-      name: 'Awesome Product',
-      description: 'This is an awesome product that you will love',
-      price: 99.99,
-      currency: 'USD',
-      category: 'Electronics',
-      inStock: true,
-      rating: 4.5,
-      reviews: 127,
-      images: [
-        'https://via.placeholder.com/400x300',
-        'https://via.placeholder.com/400x300'
-      ],
-      createdAt: new Date().toISOString()
-    }
+    description: 'Array of 50 users',
+    template: generateUsers(50)
   },
   {
     name: 'Product List',
-    description: 'Array of products',
-    template: [
-      {
-        id: 1,
-        name: 'Laptop',
-        price: 999.99,
-        category: 'Electronics',
-        inStock: true
-      },
-      {
-        id: 2,
-        name: 'Smartphone',
-        price: 699.99,
-        category: 'Electronics',
-        inStock: false
-      },
-      {
-        id: 3,
-        name: 'Headphones',
-        price: 199.99,
-        category: 'Audio',
-        inStock: true
-      }
-    ]
+    description: 'Array of 50 products',
+    template: generateProducts(50)
   },
   {
-    name: 'Paginated Response',
-    description: 'Paginated data with metadata',
-    template: {
-      data: [
-        { id: 1, title: 'Item 1' },
-        { id: 2, title: 'Item 2' },
-        { id: 3, title: 'Item 3' }
-      ],
-      pagination: {
-        page: 1,
-        limit: 10,
-        total: 100,
-        totalPages: 10,
-        hasNext: true,
-        hasPrev: false
-      }
-    }
+    name: 'Blog List',
+    description: 'Array of 50 blog posts',
+    template: generateBlogPosts(50)
   },
   {
-    name: 'Error Response',
-    description: 'Standard error format',
-    template: {
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid input provided',
-        details: [
-          {
-            field: 'email',
-            message: 'Email is required'
-          },
-          {
-            field: 'password',
-            message: 'Password must be at least 8 characters'
-          }
-        ]
-      },
-      timestamp: new Date().toISOString()
-    }
-  },
-  {
-    name: 'Auth Token',
-    description: 'Authentication response',
-    template: {
-      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      refreshToken: 'refresh_token_here',
-      expiresIn: 3600,
-      user: {
-        id: 1,
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        role: 'user'
-      }
-    }
-  },
-  {
-    name: 'Blog Post',
-    description: 'Sample blog post data',
-    template: {
-      id: 1,
-      title: 'Getting Started with APIs',
-      slug: 'getting-started-with-apis',
-      content: 'This is a comprehensive guide to understanding APIs...',
-      excerpt: 'Learn the basics of API development and integration.',
-      author: {
-        id: 1,
-        name: 'John Doe',
-        avatar: 'https://via.placeholder.com/100'
-      },
-      tags: ['API', 'Development', 'Tutorial'],
-      publishedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isPublished: true,
-      viewCount: 1250
-    }
-  },
-  {
-    name: 'Order Object',
-    description: 'E-commerce order data',
-    template: {
-      id: 'ORD-001',
-      customerId: 123,
-      status: 'pending',
-      items: [
-        {
-          productId: 1,
-          name: 'Laptop',
-          quantity: 1,
-          price: 999.99
-        },
-        {
-          productId: 2,
-          name: 'Mouse',
-          quantity: 2,
-          price: 29.99
-        }
-      ],
-      subtotal: 1059.97,
-      tax: 84.80,
-      shipping: 15.00,
-      total: 1159.77,
-      shippingAddress: {
-        street: '123 Main St',
-        city: 'Anytown',
-        state: 'CA',
-        zipCode: '12345',
-        country: 'USA'
-      },
-      createdAt: new Date().toISOString()
-    }
+    name: 'Product List with Image',
+    description: 'Array of 50 products with detailed images',
+    template: generateProductsWithImages(50)
   }
 ];
 
