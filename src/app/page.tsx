@@ -244,7 +244,7 @@ export default function Home() {
             Build. Test. Iterate.
           </div>
           <h1 className="mt-6 text-4xl font-semibold text-white sm:text-5xl md:text-6xl">
-            Ship APIs faster with <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-orange-300 bg-clip-text text-transparent">EchoStorm</span>
+            Ship APIs faster with <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-orange-300 bg-clip-text text-transparent">AnyTimeRequest</span>
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-300 sm:text-xl">
             Spin up mock servers, validate payloads, explore GraphQL, and stress test your workflows—everything you need to

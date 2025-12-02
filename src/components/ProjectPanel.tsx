@@ -153,7 +153,7 @@ export default function ProjectPanel({
         <div className="border-b border-white/5 p-4">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">EchoStorm</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">AnyTimeRequest</p>
               <h2 className="mt-1 text-lg font-semibold text-white">Mock Servers</h2>
             </div>
 

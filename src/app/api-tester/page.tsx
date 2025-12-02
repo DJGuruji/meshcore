@@ -1564,7 +1564,7 @@ export default function ApiTesterPage() {
           <div className="border-b border-white/5 px-5 py-4">
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.5em] text-indigo-200">EchoStorm</p>
+                <p className="text-[10px] uppercase tracking-[0.5em] text-indigo-200">AnyTimeRequest</p>
                 <h2 className="text-lg font-semibold text-white">API Tester</h2>
               </div>
               <button
