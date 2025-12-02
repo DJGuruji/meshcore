@@ -13,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "EchoStorm API Tester and Mock Server",
-  description: "Create Mock server and use api tester with EchoStorm",
+  title: "AnyTimeRequest API Tester and Mock Server",
+  description: "Create Mock server and use api tester with AnyTimeRequest",
 };
 
 export default function RootLayout({

@@ -29,6 +29,7 @@ const navigation = [
   { name: 'Mockserver', href: '/' },
   { name: 'Rest API Tester', href: '/api-tester' },
   { name: 'CodeQL', href: '/graphql-tester' },
+  { name: 'Pricing', href: '/pricing' },
   { name: 'Docs', href: '/docs' },
 ];
 
@@ -47,8 +48,8 @@ const BrandMark = ({ priority = false }: { priority?: boolean }) => (
       />
       <div className="absolute inset-0 rounded-3xl border border-white/20 opacity-60" aria-hidden />
       <Image
-        src="/EchoStorm.svg"
-        alt="EchoStorm logo"
+        src="/AnyTimeRequest.svg"
+        alt="AnyTimeRequest logo"
         width={42}
         height={42}
         priority={priority}
@@ -56,7 +57,7 @@ const BrandMark = ({ priority = false }: { priority?: boolean }) => (
       />
     </div>
     <div className="leading-tight">
-      <p className="text-lg font-semibold tracking-wide text-white">EchoStorm</p>
+      <p className="text-lg font-semibold tracking-wide text-white">AnyTimeRequest</p>
       <p className="text-[10px] uppercase tracking-[0.55em] text-indigo-200/90">Collective</p>
     </div>
   </div>
@@ -187,7 +188,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 isolate border-b border-white/10 bg-[#040714]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 isolate border-b border-white/10 bg-[#040714]/90 backdrop-blur-3xl shadow-xl">
         <div className="absolute inset-0">
           <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-indigo-500/15 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-4 h-32 w-32 rounded-full bg-purple-500/10 blur-3xl" />
@@ -205,7 +206,7 @@ export default function Header() {
               </button>
             )}
 
-            <Link href="/" className="group" aria-label="Go to EchoStorm home">
+            <Link href="/" className="group" aria-label="Go to AnyTimeRequest home">
               <BrandMark priority />
             </Link>
 
@@ -267,7 +268,7 @@ export default function Header() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" aria-hidden="true" />
         <div className="relative ml-auto flex h-full w-full max-w-xs flex-col overflow-hidden border-l border-white/10 bg-[#050915]/95 text-white shadow-2xl shadow-black/70">
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-4">
-            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} aria-label="Go to EchoStorm home">
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} aria-label="Go to AnyTimeRequest home">
               <BrandMark />
             </Link>
             <button
@@ -321,6 +322,21 @@ export default function Header() {
                         </p>
                       </div>
                     </div>
+                  </div>
+                
+                  {/* Upgrade Account Button */}
+                  <div className="flex justify-center">
+                    <Link
+                      href="/pricing"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-orange-400/20 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:scale-[1.02] hover:shadow-indigo-500/40 w-full max-w-[200px]"
+                    >
+                      <div className="absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-r from-indigo-500/40 via-purple-500/40 to-orange-400/40 opacity-0 transition-opacity duration-1000 hover:opacity-100" />
+                      <div className="relative z-10 flex items-center justify-center gap-2">
+                        <SparklesIcon className="h-5 w-5 animate-pulse" />
+                        <span>Upgrade Account</span>
+                      </div>
+                    </Link>
                   </div>
 
                   <button
@@ -415,6 +431,21 @@ export default function Header() {
                   </p>
                 )}
               </div>
+
+              {/* Upgrade Account Button */}
+              <div className="flex justify-center mt-4">
+                <Link
+                  href="/pricing"
+                  onClick={() => setIsUtilityPanelOpen(false)}
+                  className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-orange-400/20 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:scale-[1.02] hover:shadow-indigo-500/40 w-full max-w-[200px]"
+                >
+                  <div className="absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-r from-indigo-500/40 via-purple-500/40 to-orange-400/40 opacity-0 transition-opacity duration-1000 hover:opacity-100" />
+                  <div className="relative z-10 flex items-center justify-center gap-2">
+                    <SparklesIcon className="h-5 w-5 animate-pulse" />
+                    <span>Upgrade Account</span>
+                  </div>
+                </Link>
+              </div>
             </div>
 
             <nav className="space-y-3">
@@ -471,7 +502,7 @@ export default function Header() {
               </a>
 
               <a
-                href="mailto:nath93266@gmail.com?subject=Bug%20Report%20-%20EchoStorm"
+                href="mailto:nath93266@gmail.com?subject=Bug%20Report%20-%20AnyTimeRequest"
                 className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
                 onClick={() => setIsUtilityPanelOpen(false)}
               >
@@ -534,7 +565,7 @@ export default function Header() {
               >
                 <span className="flex items-center gap-3">
                   <SparklesIcon className="h-5 w-5 text-indigo-300" />
-                  Join EchoStorm community
+                  Join AnyTimeRequest community
                 </span>
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </a>
