@@ -15,6 +15,16 @@ interface SignInClientProps {
 export default function SignInClient({ verified, error: errorParam }: SignInClientProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  useEffect(() => {
+    // Add smooth scrolling behavior
+    document.documentElement.style.scrollBehavior = 'smooth';
+    
+    // Cleanup
+    return () => {
+      document.documentElement.style.scrollBehavior = 'auto';
+    };
+  }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -142,7 +152,7 @@ export default function SignInClient({ verified, error: errorParam }: SignInClie
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#030712] px-4 py-10 sm:px-6 lg:px-8">
+    <div className="relative flex items-center justify-center overflow-hidden bg-[#030712] px-4 py-10 sm:px-6 lg:px-8 pt-20">
       <div className="absolute inset-0">
         <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
         <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-fuchsia-500/20 blur-3xl" />
