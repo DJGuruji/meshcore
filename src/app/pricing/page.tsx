@@ -137,6 +137,15 @@ const PricingPage = () => {
               <span className="font-semibold text-white">Note:</span> Pricing below applies to Mock Server features only. API Tester and GraphQL Tester tools are free for all users.
             </p>
           </div>
+          <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm">
+            <Link href="/cancellation-refund" className="text-indigo-300 hover:text-white transition">
+              Cancellation & Refund Policy
+            </Link>
+            <span className="text-slate-500">•</span>
+            <Link href="/shipping" className="text-indigo-300 hover:text-white transition">
+              Shipping & Delivery Policy
+            </Link>
+          </div>
         </div>
 
         {/* Toggle for annual billing */}

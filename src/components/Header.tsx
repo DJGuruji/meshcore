@@ -20,6 +20,7 @@ import BugAntIcon from '@heroicons/react/24/outline/BugAntIcon';
 import Squares2X2Icon from '@heroicons/react/24/outline/Squares2X2Icon';
 import ArrowTopRightOnSquareIcon from '@heroicons/react/24/outline/ArrowTopRightOnSquareIcon';
 import SparklesIcon from '@heroicons/react/24/outline/SparklesIcon';
+import EnvelopeIcon from '@heroicons/react/24/outline/EnvelopeIcon';
 import { Dialog } from '@headlessui/react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'CodeQL', href: '/graphql-tester' },
   { name: 'Pricing', href: '/pricing' },
   { name: 'Docs', href: '/docs' },
+  { name: 'Contact', href: '/contact' },
 ];
 
 const utilityLinks = [
@@ -483,6 +485,42 @@ export default function Header() {
                 <span className="flex items-center gap-3">
                   <DocumentTextIcon className="h-5 w-5 text-indigo-300" />
                   Privacy Policy
+                </span>
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </Link>
+
+              <Link
+                href="/cancellation-refund"
+                className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+                onClick={() => setIsUtilityPanelOpen(false)}
+              >
+                <span className="flex items-center gap-3">
+                  <DocumentTextIcon className="h-5 w-5 text-indigo-300" />
+                  Cancellation & Refund
+                </span>
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </Link>
+
+              <Link
+                href="/shipping"
+                className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+                onClick={() => setIsUtilityPanelOpen(false)}
+              >
+                <span className="flex items-center gap-3">
+                  <DocumentTextIcon className="h-5 w-5 text-indigo-300" />
+                  Shipping Policy
+                </span>
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </Link>
+
+              <Link
+                href="/contact"
+                className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+                onClick={() => setIsUtilityPanelOpen(false)}
+              >
+                <span className="flex items-center gap-3">
+                  <EnvelopeIcon className="h-5 w-5 text-indigo-300" />
+                  Contact Us
                 </span>
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </Link>
