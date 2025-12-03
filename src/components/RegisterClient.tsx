@@ -15,6 +15,16 @@ interface RegisterClientProps {
 export default function RegisterClient({ registered }: RegisterClientProps) {
   const { status } = useSession();
   const router = useRouter();
+
+  useEffect(() => {
+    // Add smooth scrolling behavior
+    document.documentElement.style.scrollBehavior = 'smooth';
+    
+    // Cleanup
+    return () => {
+      document.documentElement.style.scrollBehavior = 'auto';
+    };
+  }, []);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -147,7 +157,7 @@ export default function RegisterClient({ registered }: RegisterClientProps) {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#030712] px-4 py-10 sm:px-6 lg:px-8">
+    <div className="relative flex items-center justify-center overflow-hidden bg-[#030712] px-4 py-10 sm:px-6 lg:px-8 pt-20">
       <div className="absolute inset-0">
         <div className="absolute -left-24 top-20 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
         <div className="absolute bottom-10 right-0 h-96 w-96 rounded-full bg-purple-500/20 blur-3xl" />
