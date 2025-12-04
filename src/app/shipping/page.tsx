@@ -37,7 +37,7 @@ const ShippingPage = () => {
               </p>
               
               <p>
-                If access is not enabled after payment, contact <a href="mailto:nath93266@gmail.com" className="text-indigo-300 hover:text-white">nath93266@gmail.com</a> with your payment ID/order ID.
+                If access is not enabled after payment, contact <a href="mailto:anytimerequest@gmail.com" className="text-indigo-300 hover:text-white">anytimerequest@gmail.com</a> with your payment ID/order ID.
               </p>
               
               <p>

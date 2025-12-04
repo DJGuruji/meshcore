@@ -191,7 +191,7 @@ export default function PrivacyPolicyPage() {
               If you have any questions about this Privacy Policy, please contact us:
             </p>
             <ul className="text-slate-300 space-y-2">
-              <li><strong>Email:</strong> <a href="mailto:nath93266@gmail.com" className="text-indigo-300 hover:text-white transition-colors">nath93266@gmail.com</a></li>
+              <li><strong>Email:</strong> <a href="mailto:anytimerequest@gmail.com" className="text-indigo-300 hover:text-white transition-colors">anytimerequest@gmail.com</a></li>
             </ul>
           </section>
         </div>

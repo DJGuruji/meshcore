@@ -167,8 +167,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold text-white mb-4">13. Contact Information</h2>
             <p className="text-slate-300">
               If you have any questions about these Terms, please contact us at:{' '}
-              <a href="mailto:nath93266@gmail.com" className="text-indigo-300 hover:text-white transition-colors">
-                nath93266@gmail.com
+              <a href="mailto:anytimerequest@gmail.com" className="text-indigo-300 hover:text-white transition-colors">
+                anytimerequest@gmail.com
               </a>
             </p>
           </section>
