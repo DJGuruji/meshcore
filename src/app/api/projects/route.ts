@@ -48,68 +48,8 @@ export async function GET(request: NextRequest) {
     // Find all projects for the user
     const projects = await ApiProject.find({ user: session.user.id }).sort({ createdAt: -1 });
     
-    // Filter out expired projects
-    const now = new Date();
-    const validProjects = projects.filter(project => {
-      // If expiresAt is null, project never expires (ultra-pro)
-      if (!project.expiresAt) return true;
-      // If expiresAt is in the future, project is still valid
-      return project.expiresAt > now;
-    });
-    
-    // Update expiration dates for existing projects if user upgraded their account
-    const updatePromises = validProjects.map(async (project) => {
-      // Only update if the project doesn't have an expiration date (ultra-pro) or if it's about to expire
-      if (project.expiresAt && project.expiresAt > now) {
-        let newExpiresAt = project.expiresAt;
-        
-        switch (user.accountType) {
-          case 'free':
-            // If project was created under a higher tier but user downgraded, set to 2 weeks
-            if (project.expiresAt > new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) {
-              newExpiresAt = new Date(project.createdAt.getTime() + 14 * 24 * 60 * 60 * 1000);
-            }
-            break;
-          case 'freemium':
-            // If project was created under a higher tier but user downgraded, set to 2 months
-            if (project.expiresAt > new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)) {
-              newExpiresAt = new Date(project.createdAt.getTime() + 60 * 24 * 60 * 60 * 1000);
-            }
-            break;
-          case 'pro':
-            // If project was created under a higher tier but user downgraded, set to 1 year
-            if (project.expiresAt > new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)) {
-              newExpiresAt = new Date(project.createdAt.getTime() + 365 * 24 * 60 * 60 * 1000);
-            }
-            break;
-          case 'ultra-pro':
-            // Ultra-pro projects never expire
-            newExpiresAt = null;
-            break;
-        }
-        
-        // Only update if the expiration date has changed
-        if (newExpiresAt !== project.expiresAt) {
-          await ApiProject.findByIdAndUpdate(project._id, { expiresAt: newExpiresAt });
-        }
-      }
-      
-      return project;
-    });
-    
-    // Wait for all updates to complete
-    await Promise.all(updatePromises);
-    
-    // Re-fetch projects with updated expiration dates
-    const updatedProjects = await ApiProject.find({ user: session.user.id }).sort({ createdAt: -1 });
-    
-    // Filter out expired projects again after updates
-    const finalProjects = updatedProjects.filter(project => {
-      // If expiresAt is null, project never expires (ultra-pro)
-      if (!project.expiresAt) return true;
-      // If expiresAt is in the future, project is still valid
-      return project.expiresAt > now;
-    });
+    // Use all projects without expiration filtering
+    const finalProjects = projects;
     
     // Ensure all projects have authentication objects for backward compatibility
     const processedProjects = finalProjects.map(project => {
@@ -238,37 +178,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    // Calculate expiration date based on account type
-    let expiresAt = null;
-    const createdAt = new Date();
-    
-    switch (user.accountType) {
-      case 'free':
-        // Expires in 2 weeks
-        expiresAt = new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000);
-        break;
-      case 'freemium':
-        // Expires in 2 months
-        expiresAt = new Date(createdAt.getTime() + 60 * 24 * 60 * 60 * 1000);
-        break;
-      case 'pro':
-        // Expires in 1 year
-        expiresAt = new Date(createdAt.getTime() + 365 * 24 * 60 * 60 * 1000);
-        break;
-      case 'ultra-pro':
-        // Never expires
-        expiresAt = null;
-        break;
-      default:
-        // Default to free account expiration
-        expiresAt = new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000);
-    }
-    
-    // Add user ID and expiration date to the project
+    // Add user ID to the project (no expiration date)
     const projectData = {
       ...data,
-      user: session.user.id,
-      expiresAt
+      user: session.user.id
     };
     
     const project = await ApiProject.create(projectData);
@@ -297,8 +210,7 @@ export async function POST(request: NextRequest) {
         await sendProjectCreationConfirmation(
           user.email,
           project.name,
-          user.accountType,
-          project.expiresAt
+          user.accountType
         );
       } catch (emailError) {
         console.error('Failed to send project creation email:', emailError);
