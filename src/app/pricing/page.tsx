@@ -25,8 +25,6 @@ const PricingPage = () => {
       description: 'Perfect for getting started',
       features: [
         '10 MB Storage',
-        '300 Requests/Day',
-        '5 Requests/Second',
         'Basic Mock Servers',
         'Community Support',
       ],
@@ -41,8 +39,6 @@ const PricingPage = () => {
       description: 'Great for small projects',
       features: [
         '200 MB Storage',
-        '3,000 Requests/Day',
-        '20 Requests/Second',
         'Advanced Mock Servers',
         'API Tester',
         'Email Support',
@@ -58,8 +54,6 @@ const PricingPage = () => {
       description: 'Ideal for professionals',
       features: [
         '1 GB Storage',
-        '20,000 Requests/Day',
-        '100 Requests/Second',
         'All Features',
         'GraphQL Tester',
         'Priority Support',
@@ -76,8 +70,6 @@ const PricingPage = () => {
       description: 'For teams and enterprises',
       features: [
         '5 GB Storage',
-        '200,000 Requests/Day',
-        '500 Requests/Second',
         'All Features',
         'Team Collaboration',
         '24/7 Priority Support',

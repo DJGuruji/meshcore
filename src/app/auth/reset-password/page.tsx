@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense, ReactNode } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
@@ -17,10 +17,9 @@ const PageShell = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-function ResetPasswordForm() {
+function ResetPasswordForm({ token: initialToken }: { token: string | null }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState(initialToken || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -33,13 +32,10 @@ function ResetPasswordForm() {
   const labelStyles = 'text-xs font-semibold uppercase tracking-[0.2em] text-slate-300';
 
   useEffect(() => {
-    const tokenParam = searchParams.get('token');
-    if (tokenParam) {
-      setToken(tokenParam);
-    } else {
+    if (!initialToken) {
       setError('Invalid reset link. Please request a new password reset.');
     }
-  }, [searchParams]);
+  }, [initialToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,7 +212,10 @@ function ResetPasswordForm() {
   );
 }
 
-export default function ResetPassword() {
+export default async function ResetPassword({ searchParams }: { searchParams: Promise<any> }) {
+  const params = await searchParams;
+  const token = params?.token || null;
+  
   return (
     <Suspense fallback={
       <PageShell>
@@ -227,7 +226,7 @@ export default function ResetPassword() {
         </div>
       </PageShell>
     }>
-      <ResetPasswordForm />
+      <ResetPasswordForm token={token} />
     </Suspense>
   );
 }
