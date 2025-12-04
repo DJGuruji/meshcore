@@ -30,9 +30,7 @@ const navigation = [
   { name: 'Mockserver', href: '/' },
   { name: 'Rest API Tester', href: '/api-tester' },
   { name: 'CodeQL', href: '/graphql-tester' },
-  { name: 'Pricing', href: '/pricing' },
-  { name: 'Docs', href: '/docs' },
-  { name: 'Contact', href: '/contact' },
+
 ];
 
 const utilityLinks = [
@@ -43,7 +41,7 @@ const utilityLinks = [
 
 const BrandMark = ({ priority = false }: { priority?: boolean }) => (
   <div className="flex items-center gap-3">
-    <div className="relative  flex h-11 w-11 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-1 shadow-[0_12px_35px_rgba(8,8,20,0.65)]">
+    {/* <div className="relative  flex h-11 w-11 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-1 shadow-[0_12px_35px_rgba(8,8,20,0.65)]">
       <div
         className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-orange-400 opacity-70 blur-2xl"
         aria-hidden
@@ -57,7 +55,7 @@ const BrandMark = ({ priority = false }: { priority?: boolean }) => (
         priority={priority}
         className="relative z-10 h-9 w-9 object-contain"
       />
-    </div>
+    </div> */}
     <div className="leading-tight">
       <p className="text-lg font-semibold tracking-wide text-white">AnyTimeRequest</p>
       <p className="text-[10px] uppercase tracking-[0.55em] text-indigo-200/90">Collective</p>
@@ -190,7 +188,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 isolate border-b border-white/10 bg-[#040714]/90 backdrop-blur-3xl shadow-xl">
+      <header className="sticky top-0 z-50 isolate border-b border-white/10 bg-[#040714]/90 backdrop-blur-3xl shadow-xl">
         <div className="absolute inset-0">
           <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-indigo-500/15 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-4 h-32 w-32 rounded-full bg-purple-500/10 blur-3xl" />
@@ -220,6 +218,20 @@ export default function Header() {
           <div className="hidden items-center gap-3 md:flex">
             {status === 'authenticated' ? (
               <>
+                <nav className="flex items-center gap-2">
+                  <Link
+                    href="/pricing"
+                    className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                  >
+                    Pricing
+                  </Link>
+                  <Link
+                    href="/docs"
+                    className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                  >
+                    Docs
+                  </Link>
+                </nav>
                 <div className="relative">
                   <button
                     onClick={() => setIsUtilityPanelOpen(true)}
@@ -285,29 +297,59 @@ export default function Header() {
           <div className="flex-1 overflow-y-auto px-4 py-6">
             {status === 'authenticated' ? (
               <>
-                <nav className="space-y-2">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`group relative block overflow-hidden rounded-2xl border px-4 py-3 text-base font-medium transition-all duration-300 ${
-                        pathname === item.href
-                          ? 'border-transparent text-white shadow-lg shadow-indigo-500/30'
-                          : 'border-white/5 text-slate-300 hover:border-indigo-400/40 hover:text-white'
-                      }`}
-                    >
-                      <span
-                        className={`absolute inset-0 rounded-2xl transition-all duration-300 ${
-                          pathname === item.href
-                            ? 'bg-gradient-to-r from-indigo-500/70 via-purple-500/70 to-orange-400/70'
-                            : 'bg-white/5 opacity-0 group-hover:opacity-60'
-                        }`}
-                      />
-                      <span className="relative z-10">{item.name}</span>
-                    </Link>
-                  ))}
-                </nav>
+             <nav className="space-y-2">
+  {navigation.map((item: { name: string; href: string; icon?: React.ComponentType<{className?: string}> }) => {
+    const active = pathname === item.href;
+
+    return (
+      <Link
+        key={item.name}
+        href={item.href}
+        onClick={() => setIsMobileMenuOpen(false)}
+        className={`
+          group relative block rounded-2xl px-4 py-3 text-base font-medium
+          transition-all duration-300 overflow-hidden backdrop-blur-sm
+          ${active
+            ? `
+            text-white border-indigo-400/40 shadow-[0_0_20px_rgba(99,102,241,0.5)]
+            scale-[1.02]
+          `
+            : `
+            text-slate-300 border border-white/5 hover:text-white
+            hover:border-indigo-400/40 hover:scale-[1.015]
+          `}
+        `}
+      >
+        {/* Gradient background */}
+        <span
+          className={`
+            absolute inset-0 rounded-2xl transition-all duration-500
+            ${active
+              ? `bg-gradient-to-r from-indigo-600/70 via-purple-600/70 to-pink-500/70 opacity-100`
+              : `bg-white/5 opacity-0 group-hover:opacity-60`
+            }
+          `}
+        />
+
+        {/* Soft inner glowing border */}
+        <span
+          className={`
+            absolute inset-0 rounded-2xl pointer-events-none
+            transition-all duration-500
+            ${active ? "ring-2 ring-indigo-400/50" : "group-hover:ring-1 group-hover:ring-indigo-300/40"}
+          `}
+        />
+
+        {/* Content */}
+        <span className="relative z-10 flex items-center gap-2">
+          {'icon' in item && item.icon && <item.icon className="h-5 w-5 opacity-80 group-hover:opacity-100" />}
+          {item.name}
+        </span>
+      </Link>
+    );
+  })}
+</nav>
+
 
                 <div className="mt-8 space-y-4 border-t border-white/5 pt-6">
                   <div className="flex items-center gap-3">
@@ -540,7 +582,7 @@ export default function Header() {
               </a>
 
               <a
-                href="mailto:anytimerequest@gmail.com?subject=Bug%20Report%20-%20AnyTimeRequest"
+                href="mailto:nath93266@gmail.com?subject=Bug%20Report%20-%20AnyTimeRequest"
                 className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
                 onClick={() => setIsUtilityPanelOpen(false)}
               >
@@ -564,7 +606,7 @@ export default function Header() {
                 </span>
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
               </a>
-
+{/* 
               <div className="rounded-2xl border border-white/10 px-4 py-4 text-sm text-slate-200">
                 <div className="flex items-center gap-2 text-xs uppercase tracking-[0.4em] text-indigo-200">
                   <Squares2X2Icon className="h-4 w-4" />
@@ -606,7 +648,7 @@ export default function Header() {
                   Join AnyTimeRequest community
                 </span>
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-              </a>
+              </a> */}
 
               <button
                 onClick={() => {

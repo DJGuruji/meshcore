@@ -25,8 +25,6 @@ const PricingPage = () => {
       description: 'Perfect for getting started',
       features: [
         '10 MB Storage',
-        '300 Requests/Day',
-        '5 Requests/Second',
         'Basic Mock Servers',
         'Community Support',
       ],
@@ -41,8 +39,6 @@ const PricingPage = () => {
       description: 'Great for small projects',
       features: [
         '200 MB Storage',
-        '3,000 Requests/Day',
-        '20 Requests/Second',
         'Advanced Mock Servers',
         'API Tester',
         'Email Support',
@@ -58,8 +54,6 @@ const PricingPage = () => {
       description: 'Ideal for professionals',
       features: [
         '1 GB Storage',
-        '20,000 Requests/Day',
-        '100 Requests/Second',
         'All Features',
         'GraphQL Tester',
         'Priority Support',
@@ -76,8 +70,6 @@ const PricingPage = () => {
       description: 'For teams and enterprises',
       features: [
         '5 GB Storage',
-        '200,000 Requests/Day',
-        '500 Requests/Second',
         'All Features',
         'Team Collaboration',
         '24/7 Priority Support',
@@ -223,16 +215,27 @@ const PricingPage = () => {
 
               <div className="mt-8">
                 {session ? (
-                  <Link
-                    href={plan.name === 'Custom' ? '/contact' : `/upgrade?plan=${plan.name === 'Ultra Pro' ? 'ultra-pro' : plan.name.toLowerCase()}`}
-                    className={`block w-full rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 ${
-                      plan.buttonVariant === 'primary'
-                        ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30 hover:scale-[1.03] hover:shadow-xl hover:shadow-indigo-500/40'
-                        : 'border border-white/10 text-white hover:border-indigo-400/40 hover:text-white hover:bg-white/5 hover:scale-[1.02]'
-                    }`}
-                  >
-                    {plan.buttonText}
-                  </Link>
+                  plan.name === 'Free' ? (
+                    // User is viewing Free plan
+                    <button
+                      disabled
+                      className="block w-full rounded-2xl border border-white/10 bg-white/5 py-3 text-center text-sm font-semibold text-white opacity-70 cursor-not-allowed"
+                    >
+                      Current Plan
+                    </button>
+                  ) : (
+                    // User is viewing a paid plan
+                    <Link
+                      href={plan.name === 'Custom' ? '/contact' : `/upgrade?plan=${plan.name === 'Ultra Pro' ? 'ultra-pro' : plan.name.toLowerCase()}`}
+                      className={`block w-full rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 ${
+                        plan.buttonVariant === 'primary'
+                          ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30 hover:scale-[1.03] hover:shadow-xl hover:shadow-indigo-500/40'
+                          : 'border border-white/10 text-white hover:border-indigo-400/40 hover:text-white hover:bg-white/5 hover:scale-[1.02]'
+                      }`}
+                    >
+                      {plan.buttonText}
+                    </Link>
+                  )
                 ) : (
                   <Link
                     href="/auth/signin"

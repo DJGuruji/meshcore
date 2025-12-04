@@ -5,6 +5,7 @@ import "aos/dist/aos.css"; // AOS styles
 import AOSInitializer from "@/components/AOSInitializer";
 import AuthProvider from "@/components/AuthProvider";
 import Header from "@/components/Header";
+import PageLoader from "@/components/PageLoader";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 
 const inter = Inter({
@@ -30,6 +31,7 @@ export default function RootLayout({
         <AuthProvider>
           <NavigationStateProvider>
             <AOSInitializer>
+              <PageLoader />
               <div className="flex flex-col min-h-screen">
                 <Header />
                 <main className="flex-grow">

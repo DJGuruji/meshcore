@@ -513,6 +513,7 @@ export default function ApiTesterPage() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [responseSectionHeight, setResponseSectionHeight] = useState(400); // Default height
   const [isResizing, setIsResizing] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // WebSocket Localhost Relay
   const localhostRelay = useLocalhostRelay();
@@ -830,7 +831,10 @@ export default function ApiTesterPage() {
     } else {
       // Non-localhost URL  Use server-side proxy
       toast.loading('Routing request through secure proxy...', { duration: 2000 });
-      
+
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+
       const requestData = {
         method: currentRequest.method,
         url: finalUrl,
@@ -839,8 +843,10 @@ export default function ApiTesterPage() {
         body: currentRequest.body,
         auth: currentRequest.auth
       };
-      
-      res = await axios.post('/api/tools/api-tester/send', requestData);
+
+      res = await axios.post('/api/tools/api-tester/send', requestData, {
+        signal: abortControllerRef.current.signal
+      });
       toast.success(' Request executed via proxy!');
     }
 
@@ -922,34 +928,50 @@ export default function ApiTesterPage() {
 
   } catch (error: any) {
     console.error('[API Tester] Request failed:', error);
-    
-    // Show error in response area
-    const errorResponse = {
-      error: true,
-      message: error.response?.data?.message || error.message || 'Request failed',
-      timestamp: new Date().toISOString()
-    };
-    
-    setRequestTabs(tabs => tabs.map(tab => 
-      tab.id === activeTabId 
-        ? { ...tab, response: errorResponse }
-        : tab
-    ));
-    
-    setResponse(errorResponse);
-    
-    // Show user-friendly error message
-    if (error.response?.data?.message) {
-      toast.error(error.response.data.message);
-    } else if (error.message) {
-      toast.error(error.message);
+
+    // Check if the error is due to cancellation
+    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+      // Request was cancelled, don't show error
+      console.log('[API Tester] Request was cancelled');
     } else {
-      toast.error('Request failed - check console for details');
+      // Show error in response area
+      const errorResponse = {
+        error: true,
+        message: error.response?.data?.message || error.message || 'Request failed',
+        timestamp: new Date().toISOString()
+      };
+
+      setRequestTabs(tabs => tabs.map(tab =>
+        tab.id === activeTabId
+          ? { ...tab, response: errorResponse }
+          : tab
+      ));
+
+      setResponse(errorResponse);
+
+      // Show user-friendly error message
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error('Request failed - check console for details');
+      }
     }
   } finally {
     setIsLoading(false);
+    // Clean up the abort controller
+    abortControllerRef.current = null;
   }
 };
+
+  const cancelRequest = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+      toast('Request cancelled', { icon: '⚠️' });
+    }
+  };
 
   // Helper to check if URL is localhost
   const isLocalhostUrl = (url: string): boolean => {
@@ -1865,14 +1887,23 @@ export default function ApiTesterPage() {
                 Save
               </button>
               
-              <button
-                onClick={sendRequest}
-                disabled={isLoading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <PlayIcon className="w-4 h-4" />
-                {isLoading ? 'Sending...' : 'Send'}
-              </button>
+              {isLoading ? (
+                <button
+                  onClick={cancelRequest}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-red-600 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-red-500/30 transition hover:scale-[1.01]"
+                >
+                  <span className="w-4 h-4 flex items-center justify-center">×</span>
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  onClick={sendRequest}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
+                >
+                  <PlayIcon className="w-4 h-4" />
+                  Send
+                </button>
+              )}
             </div>
           </div>
 
@@ -2663,12 +2694,26 @@ pm.test("Response has data", function() {
           {/* Header */}
           <div className="p-4 border-b border-slate-700 flex justify-between items-center">
             <h2 className="text-lg font-bold text-yellow-400">Activity History</h2>
-            <button 
-              onClick={() => setIsHistorySidebarOpen(false)} 
-              className="text-slate-400 hover:text-white"
-            >
-                ✕
-            </button>
+            <div className="flex gap-2">
+              {history.length > 0 && (
+                <button
+                  onClick={async () => {
+                    if (confirm('Clear all history?')) {
+                      await clearHistory();
+                    }
+                  }}
+                  className="rounded-2xl border border-white/10 px-3 py-1 text-xs font-semibold text-rose-300 transition hover:border-rose-400/40 hover:text-white"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                onClick={() => setIsHistorySidebarOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                  ✕
+              </button>
+            </div>
           </div>
 
           {/* History List */}
@@ -2721,21 +2766,6 @@ pm.test("Response has data", function() {
             )}
           </div>
 
-          {/* Footer with Clear Button */}
-          {history.length > 0 && (
-            <div className="p-4 border-t border-slate-700">
-              <button
-                onClick={async () => {
-                  if (confirm('Clear all history?')) {
-                    await clearHistory();
-                  }
-                }}
-                className="w-full px-4 py-2 bg-red-900/20 text-red-400 rounded hover:bg-red-900/30 transition-colors text-sm"
-              >
-                Clear All History
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

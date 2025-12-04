@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
 import {
@@ -217,6 +217,7 @@ export default function GraphQLTesterPage() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [responseSectionHeight, setResponseSectionHeight] = useState(300); // Default height
   const [isResizing, setIsResizing] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Collections and Environments
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -436,9 +437,13 @@ export default function GraphQLTesterPage() {
         variables: parsedVariables
       };
 
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+
       // Send request
       const res = await axios.post(replaceVariables(url), requestBody, {
-        headers: requestHeaders
+        headers: requestHeaders,
+        signal: abortControllerRef.current.signal
       });
 
       // Calculate timing and size
@@ -535,9 +540,25 @@ export default function GraphQLTesterPage() {
         }
       });
       setResponseTab('body');
-      toast.error(errorMessage);
+      // Check if the error is due to cancellation
+      if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+        // Request was cancelled, don't show error
+        console.log('GraphQL request was cancelled');
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
+      // Clean up the abort controller
+      abortControllerRef.current = null;
+    }
+  };
+
+  const cancelRequest = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+      toast('Request cancelled', { icon: '⚠️' });
     }
   };
 
@@ -1139,14 +1160,23 @@ export default function GraphQLTesterPage() {
                 >
                   Save
                 </button>
-                <button
-                  onClick={sendRequest}
-                  disabled={isLoading}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
-                >
-                  <PlayIcon className="h-4 w-4" />
-                  {isLoading ? 'Sending…' : 'Send'}
-                </button>
+                {isLoading ? (
+                  <button
+                    onClick={cancelRequest}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-red-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-red-500/30 transition hover:scale-[1.01]"
+                  >
+                    <span className="w-4 h-4 flex items-center justify-center">×</span>
+                    Cancel
+                  </button>
+                ) : (
+                  <button
+                    onClick={sendRequest}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
+                  >
+                    <PlayIcon className="h-4 w-4" />
+                    Send
+                  </button>
+                )}
               </div>
             </div>
           </div>

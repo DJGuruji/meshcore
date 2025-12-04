@@ -394,6 +394,7 @@ export default function Home() {
       <div 
         data-aos="fade-right" 
         data-aos-duration="800"
+        className="relative z-40"
       >
         <ProjectPanel
           projects={projects}
@@ -417,7 +418,7 @@ export default function Home() {
         />
       </div>
       <div 
-        className="flex-1 overflow-auto transition-all duration-300 ease-in-out"
+        className="flex-1 overflow-auto transition-all duration-300 ease-in-out z-30"
         data-aos="fade-left"
         data-aos-delay="200"
       >

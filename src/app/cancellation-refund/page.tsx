@@ -55,14 +55,14 @@ const CancellationRefundPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#030712] py-16">
+    <div className="relative min-h-screen bg-[#030712]">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-indigo-500/20 blur-[140px]" />
         <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-purple-500/15 blur-[160px]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-40" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Cancellation & <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-orange-300 bg-clip-text text-transparent">Refund Policy</span>

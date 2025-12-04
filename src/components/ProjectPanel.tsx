@@ -144,7 +144,7 @@ export default function ProjectPanel({
         className={`
         ${isMobile ? 'fixed' : 'relative'} 
         ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-        ${isMobile ? 'z-50' : 'z-10'}
+        z-50
         transition-transform duration-300 ease-in-out
         w-80 h-full bg-[#050915]/95 border-r border-white/5 flex flex-col shadow-[20px_0_60px_rgba(3,7,18,0.65)] backdrop-blur-2xl
       `}

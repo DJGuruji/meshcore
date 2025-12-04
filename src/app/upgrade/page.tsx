@@ -2,19 +2,22 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-function UpgradePageContent() {
+function UpgradePageContent({ planParam }: { planParam: string | null }) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get plan from URL params
-  const planParam = typeof window !== 'undefined' ? searchParams.get('plan') : null;
+  // Set selected plan from URL param
+  useEffect(() => {
+    if (planParam) {
+      setSelectedPlan(planParam);
+    }
+  }, [planParam]);
 
   // Redirect to sign in if not authenticated
   useEffect(() => {
@@ -33,8 +36,6 @@ function UpgradePageContent() {
       description: 'Great for small projects',
       features: [
         '200 MB Storage',
-        '3,000 Requests/Day',
-        '20 Requests/Second',
         'Advanced Mock Servers',
         'API Tester',
         'Email Support',
@@ -48,8 +49,6 @@ function UpgradePageContent() {
       description: 'Ideal for professionals',
       features: [
         '1 GB Storage',
-        '20,000 Requests/Day',
-        '100 Requests/Second',
         'All Features',
         'GraphQL Tester',
         'Priority Support',
@@ -64,8 +63,6 @@ function UpgradePageContent() {
       description: 'For teams and enterprises',
       features: [
         '5 GB Storage',
-        '200,000 Requests/Day',
-        '500 Requests/Second',
         'All Features',
         'Team Collaboration',
         '24/7 Priority Support',
@@ -330,12 +327,13 @@ function UpgradePageContent() {
   );
 };
 
-function UpgradePage() {
+export default async function UpgradePage({ searchParams }: { searchParams: Promise<any> }) {
+  const params = await searchParams;
+  const planParam = params?.plan || null;
+  
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#030712] flex items-center justify-center text-white">Loading...</div>}>
-      <UpgradePageContent />
+      <UpgradePageContent planParam={planParam} />
     </Suspense>
   );
 }
-
-export default UpgradePage;
