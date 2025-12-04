@@ -25,8 +25,9 @@ const PricingPage = () => {
       description: 'Perfect for getting started',
       features: [
         '10 MB Storage',
-        'Basic Mock Servers',
-        'Community Support',
+        'Max 2 Projects',
+        '300 Requests/Day',
+   
       ],
       buttonText: 'Current Plan',
       buttonVariant: 'secondary',
@@ -39,9 +40,9 @@ const PricingPage = () => {
       description: 'Great for small projects',
       features: [
         '200 MB Storage',
-        'Advanced Mock Servers',
-        'API Tester',
-        'Email Support',
+        'Max 5 Projects',
+        '3,000 Requests/Day',
+      
       ],
       buttonText: 'Upgrade Now',
       buttonVariant: 'primary',
@@ -54,10 +55,9 @@ const PricingPage = () => {
       description: 'Ideal for professionals',
       features: [
         '1 GB Storage',
-        'All Features',
-        'GraphQL Tester',
-        'Priority Support',
-        'Custom Domains',
+        'Max 10 Projects',
+        '20,000 Requests/Day',
+      
       ],
       buttonText: 'Upgrade Now',
       buttonVariant: 'primary',
@@ -70,11 +70,9 @@ const PricingPage = () => {
       description: 'For teams and enterprises',
       features: [
         '5 GB Storage',
-        'All Features',
-        'Team Collaboration',
-        '24/7 Priority Support',
-        'Custom Domains',
-        'Analytics Dashboard',
+        'Unlimited Projects',
+        '200,000 Requests/Day',
+       
       ],
       buttonText: 'Upgrade Now',
       buttonVariant: 'primary',
@@ -87,13 +85,9 @@ const PricingPage = () => {
       description: 'Tailored for your business',
       features: [
         'Unlimited Storage',
+        'Unlimited Projects',
         'Custom Request Limits',
-        'Dedicated Infrastructure',
-        'All Features',
-        'White-label Solution',
-        '24/7 Dedicated Support',
-        'SLA Guarantee',
-        'Custom Integrations',
+      
       ],
       buttonText: 'Contact Sales',
       buttonVariant: 'secondary',
@@ -124,11 +118,7 @@ const PricingPage = () => {
           <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-300">
             Choose the perfect plan for your mock server needs. API Tester and GraphQL Tester are completely free to use!
           </p>
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 max-w-2xl mx-auto">
-            <p className="text-sm text-slate-300 text-center">
-              <span className="font-semibold text-white">Note:</span> Pricing below applies to Mock Server features only. API Tester and GraphQL Tester tools are free for all users.
-            </p>
-          </div>
+         
           <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm">
             <Link href="/cancellation-refund" className="text-indigo-300 hover:text-white transition">
               Cancellation & Refund Policy
