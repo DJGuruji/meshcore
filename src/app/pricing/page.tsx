@@ -223,16 +223,27 @@ const PricingPage = () => {
 
               <div className="mt-8">
                 {session ? (
-                  <Link
-                    href={plan.name === 'Custom' ? '/contact' : `/upgrade?plan=${plan.name === 'Ultra Pro' ? 'ultra-pro' : plan.name.toLowerCase()}`}
-                    className={`block w-full rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 ${
-                      plan.buttonVariant === 'primary'
-                        ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30 hover:scale-[1.03] hover:shadow-xl hover:shadow-indigo-500/40'
-                        : 'border border-white/10 text-white hover:border-indigo-400/40 hover:text-white hover:bg-white/5 hover:scale-[1.02]'
-                    }`}
-                  >
-                    {plan.buttonText}
-                  </Link>
+                  plan.name === 'Free' ? (
+                    // User is viewing Free plan
+                    <button
+                      disabled
+                      className="block w-full rounded-2xl border border-white/10 bg-white/5 py-3 text-center text-sm font-semibold text-white opacity-70 cursor-not-allowed"
+                    >
+                      Current Plan
+                    </button>
+                  ) : (
+                    // User is viewing a paid plan
+                    <Link
+                      href={plan.name === 'Custom' ? '/contact' : `/upgrade?plan=${plan.name === 'Ultra Pro' ? 'ultra-pro' : plan.name.toLowerCase()}`}
+                      className={`block w-full rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 ${
+                        plan.buttonVariant === 'primary'
+                          ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30 hover:scale-[1.03] hover:shadow-xl hover:shadow-indigo-500/40'
+                          : 'border border-white/10 text-white hover:border-indigo-400/40 hover:text-white hover:bg-white/5 hover:scale-[1.02]'
+                      }`}
+                    >
+                      {plan.buttonText}
+                    </Link>
+                  )
                 ) : (
                   <Link
                     href="/auth/signin"

@@ -204,7 +204,7 @@ export default function SettingsPage() {
                 <ChevronRightIcon className="h-5 w-5 text-slate-400" />
               </div>
             </button>
-
+{/* 
             <button
               onClick={() => setCurrentView('theme')}
               className="w-full rounded-[28px] border border-white/10 bg-white/5 p-6 shadow-[0_25px_80px_rgba(2,6,23,0.65)] backdrop-blur-2xl transition hover:border-indigo-400/40 hover:bg-white/10"
@@ -227,7 +227,7 @@ export default function SettingsPage() {
                 </div>
                 <ChevronRightIcon className="h-5 w-5 text-slate-400" />
               </div>
-            </button>
+            </button> */}
           </div>
         )}
 
