@@ -30,8 +30,6 @@ const navigation = [
   { name: 'Mockserver', href: '/' },
   { name: 'Rest API Tester', href: '/api-tester' },
   { name: 'CodeQL', href: '/graphql-tester' },
-  { name: 'Pricing', href: '/pricing' },
-  { name: 'Docs', href: '/docs' },
 
 ];
 
@@ -220,6 +218,20 @@ export default function Header() {
           <div className="hidden items-center gap-3 md:flex">
             {status === 'authenticated' ? (
               <>
+                <nav className="flex items-center gap-2">
+                  <Link
+                    href="/pricing"
+                    className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                  >
+                    Pricing
+                  </Link>
+                  <Link
+                    href="/docs"
+                    className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-indigo-400/40 hover:text-white"
+                  >
+                    Docs
+                  </Link>
+                </nav>
                 <div className="relative">
                   <button
                     onClick={() => setIsUtilityPanelOpen(true)}
@@ -286,7 +298,7 @@ export default function Header() {
             {status === 'authenticated' ? (
               <>
              <nav className="space-y-2">
-  {navigation.map((item) => {
+  {navigation.map((item: { name: string; href: string; icon?: React.ComponentType<{className?: string}> }) => {
     const active = pathname === item.href;
 
     return (
@@ -330,7 +342,7 @@ export default function Header() {
 
         {/* Content */}
         <span className="relative z-10 flex items-center gap-2">
-          {item.icon && <item.icon className="h-5 w-5 opacity-80 group-hover:opacity-100" />}
+          {'icon' in item && item.icon && <item.icon className="h-5 w-5 opacity-80 group-hover:opacity-100" />}
           {item.name}
         </span>
       </Link>
