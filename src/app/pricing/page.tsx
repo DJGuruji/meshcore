@@ -20,7 +20,7 @@ const PricingPage = () => {
   const plans = [
     {
       name: 'Free',
-      price: '$0',
+      price: '₹0',
       period: 'forever',
       description: 'Perfect for getting started',
       features: [
@@ -36,7 +36,7 @@ const PricingPage = () => {
     },
     {
       name: 'Freemium',
-      price: '$5',
+      price: '₹429',
       period: '/month',
       description: 'Great for small projects',
       features: [
@@ -53,7 +53,7 @@ const PricingPage = () => {
     },
     {
       name: 'Pro',
-      price: '$19',
+      price: '₹1499',
       period: '/month',
       description: 'Ideal for professionals',
       features: [
@@ -71,7 +71,7 @@ const PricingPage = () => {
     },
     {
       name: 'Ultra Pro',
-      price: '$49',
+      price: '₹4299',
       period: '/month',
       description: 'For teams and enterprises',
       features: [
@@ -224,7 +224,7 @@ const PricingPage = () => {
               <div className="mt-8">
                 {session ? (
                   <Link
-                    href={plan.name === 'Custom' ? '/contact' : '/upgrade'}
+                    href={plan.name === 'Custom' ? '/contact' : `/upgrade?plan=${plan.name === 'Ultra Pro' ? 'ultra-pro' : plan.name.toLowerCase()}`}
                     className={`block w-full rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 ${
                       plan.buttonVariant === 'primary'
                         ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30 hover:scale-[1.03] hover:shadow-xl hover:shadow-indigo-500/40'
