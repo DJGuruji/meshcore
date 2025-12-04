@@ -46,7 +46,7 @@ const CancellationRefundPage = () => {
     {
       title: "How to Request a Refund",
       content: [
-        "Contact our support team at nath93266@gmail.com with your request",
+        "Contact our support team at anytimerequest@gmail.com with your request",
         "Include your account details and reason for the refund request",
         "Our team will review your request and respond within 2-3 business days",
         "Approved refunds will be processed within 7-10 business days"
@@ -105,13 +105,13 @@ const CancellationRefundPage = () => {
               </p>
               <div className="flex flex-wrap gap-4">
                 <a 
-                  href="mailto:nath93266@gmail.com" 
+                  href="mailto:anytimerequest@gmail.com" 
                   className="inline-flex items-center gap-2 text-indigo-300 hover:text-white transition"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  nath93266@gmail.com
+                  anytimerequest@gmail.com
                 </a>
               </div>
             </div>

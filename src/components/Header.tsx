@@ -540,7 +540,7 @@ export default function Header() {
               </a>
 
               <a
-                href="mailto:nath93266@gmail.com?subject=Bug%20Report%20-%20AnyTimeRequest"
+                href="mailto:anytimerequest@gmail.com?subject=Bug%20Report%20-%20AnyTimeRequest"
                 className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
                 onClick={() => setIsUtilityPanelOpen(false)}
               >
