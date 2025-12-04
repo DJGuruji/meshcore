@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-const UpgradePage = () => {
+function UpgradePageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,7 +14,7 @@ const UpgradePage = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Get plan from URL params
-  const planParam = searchParams.get('plan');
+  const planParam = typeof window !== 'undefined' ? searchParams.get('plan') : null;
 
   // Redirect to sign in if not authenticated
   useEffect(() => {
@@ -29,7 +29,7 @@ const UpgradePage = () => {
       id: 'freemium',
       name: 'Freemium',
       price: 42900, // ₹429
-      dollarPrice: '₹429',
+      dollarPrice: '\u20B9429',
       description: 'Great for small projects',
       features: [
         '200 MB Storage',
@@ -44,7 +44,7 @@ const UpgradePage = () => {
       id: 'pro',
       name: 'Pro',
       price: 149900, // ₹1499
-      dollarPrice: '₹1499',
+      dollarPrice: '\u20B91499',
       description: 'Ideal for professionals',
       features: [
         '1 GB Storage',
@@ -60,7 +60,7 @@ const UpgradePage = () => {
       id: 'ultra-pro',
       name: 'Ultra Pro',
       price: 429900, // ₹4299
-      dollarPrice: '₹4299',
+      dollarPrice: '\u20B94299',
       description: 'For teams and enterprises',
       features: [
         '5 GB Storage',
@@ -329,5 +329,13 @@ const UpgradePage = () => {
     </div>
   );
 };
+
+function UpgradePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#030712] flex items-center justify-center text-white">Loading...</div>}>
+      <UpgradePageContent />
+    </Suspense>
+  );
+}
 
 export default UpgradePage;

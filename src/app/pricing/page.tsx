@@ -20,7 +20,7 @@ const PricingPage = () => {
   const plans = [
     {
       name: 'Free',
-      price: '₹0',
+      price: '\u20B90',
       period: 'forever',
       description: 'Perfect for getting started',
       features: [
@@ -36,7 +36,7 @@ const PricingPage = () => {
     },
     {
       name: 'Freemium',
-      price: '₹429',
+      price: '\u20B9429',
       period: '/month',
       description: 'Great for small projects',
       features: [
@@ -53,7 +53,7 @@ const PricingPage = () => {
     },
     {
       name: 'Pro',
-      price: '₹1499',
+      price: '\u20B91499',
       period: '/month',
       description: 'Ideal for professionals',
       features: [
@@ -71,7 +71,7 @@ const PricingPage = () => {
     },
     {
       name: 'Ultra Pro',
-      price: '₹4299',
+      price: '\u20B94299',
       period: '/month',
       description: 'For teams and enterprises',
       features: [
