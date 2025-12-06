@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import Razorpay from 'razorpay';
+import connectDB from '@/lib/db';
+import { Payment } from '@/lib/models';
 
 export async function POST(request: NextRequest) {
   // Initialize Razorpay instance
@@ -29,6 +31,21 @@ export async function POST(request: NextRequest) {
 
     // Create order with Razorpay
     const order = await razorpay.orders.create(options);
+    
+    // Connect to database
+    await connectDB();
+    
+    // Save payment record to database
+    const paymentRecord = new Payment({
+      razorpayOrderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      status: 'created',
+      user: notes.userId,
+      plan: notes.planId
+    });
+    
+    await paymentRecord.save();
     
     return Response.json({
       success: true,

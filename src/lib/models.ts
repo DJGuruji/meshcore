@@ -533,3 +533,48 @@ const GraphQLTesterHistorySchema = new mongoose.Schema({
 export const GraphQLTesterCollection = mongoose.models.GraphQLTesterCollection || mongoose.model('GraphQLTesterCollection', GraphQLTesterCollectionSchema);
 export const GraphQLTesterEnvironment = mongoose.models.GraphQLTesterEnvironment || mongoose.model('GraphQLTesterEnvironment', GraphQLTesterEnvironmentSchema);
 export const GraphQLTesterHistory = mongoose.models.GraphQLTesterHistory || mongoose.model('GraphQLTesterHistory', GraphQLTesterHistorySchema);
+
+// Payment Schema
+const PaymentSchema = new mongoose.Schema({
+  razorpayOrderId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  razorpayPaymentId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  razorpaySignature: {
+    type: String,
+    required: true
+  },
+  amount: {
+    type: Number,
+    required: true
+  },
+  currency: {
+    type: String,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['created', 'authorized', 'captured', 'refunded', 'failed'],
+    default: 'created'
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  plan: {
+    type: String,
+    enum: ['freemium', 'pro', 'ultra-pro', 'custom'],
+    required: true
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+export const Payment = mongoose.models.Payment || mongoose.model('Payment', PaymentSchema);

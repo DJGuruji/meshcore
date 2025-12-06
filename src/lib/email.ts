@@ -199,3 +199,52 @@ export const sendRequestLimitNotification = async (
     html,
   });
 };
+
+export const sendPaymentConfirmation = async (
+  email: string,
+  name: string,
+  planName: string,
+  amount: number,
+  paymentId: string,
+  orderId: string
+) => {
+  // Format amount in INR
+  const formattedAmount = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR'
+  }).format(amount / 100); // Convert paise to rupees
+  
+  const html = `
+    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+      <h2 style="color: #1f2937;">Payment Successful!</h2>
+      <p>Dear ${name},</p>
+      <p>Thank you for upgrading to the <strong>${planName}</strong> plan. Your payment has been successfully processed.</p>
+      
+      <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Payment Details:</strong></p>
+        <p style="margin: 8px 0 0 0;">Amount: ${formattedAmount}</p>
+        <p style="margin: 4px 0 0 0;">Payment ID: ${paymentId}</p>
+        <p style="margin: 4px 0 0 0;">Order ID: ${orderId}</p>
+        <p style="margin: 4px 0 0 0;">Plan: ${planName}</p>
+      </div>
+      
+      <p>Your account has been upgraded and you can now enjoy all the benefits of the ${planName} plan.</p>
+      
+      <div style="background-color: #dbeafe; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Next Steps:</strong></p>
+        <p style="margin: 8px 0 0 0;">• Explore your new features in the dashboard</p>
+        <p style="margin: 4px 0 0 0;">• Create more projects and endpoints</p>
+        <p style="margin: 4px 0 0 0;">• Enjoy increased storage and request limits</p>
+      </div>
+      
+      <p>If you have any questions or need assistance, please contact our support team.</p>
+      <p>Thank you for choosing our service!</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Payment Confirmation - ${planName} Plan`,
+    html,
+  });
+};
