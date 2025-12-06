@@ -59,10 +59,28 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
     
-    // Update user account type
-    user.accountType = paymentRecord.plan;
-    user.updatedAt = new Date();
-    await user.save();
+    // Define account hierarchy for determining upgrades/downgrades
+    const accountHierarchy: { [key: string]: number } = {
+      'free': 0,
+      'freemium': 1,
+      'pro': 2,
+      'ultra-pro': 3,
+      'custom': 4
+    };
+    
+    // Determine if this is an upgrade or downgrade
+    const userAccountType = (user.accountType as string);
+    const planType = (paymentRecord.plan as string);
+    const currentUserLevel = accountHierarchy[userAccountType] || 0;
+    const newPlanLevel = accountHierarchy[planType] || 0;
+    
+    // If this is an upgrade, apply immediately
+    // If this is a downgrade, queue it for later (handled by expiration script)
+    if (newPlanLevel >= currentUserLevel) {
+      user.accountType = paymentRecord.plan;
+      user.updatedAt = new Date();
+      await user.save();
+    }
     
     // Send payment confirmation email
     try {

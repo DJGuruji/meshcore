@@ -102,6 +102,36 @@ const PricingPage = () => {
     return 'border border-white/10 text-white hover:border-indigo-400/40 hover:text-white';
   };
 
+  // Define account hierarchy for determining upgrades/downgrades
+  const accountHierarchy: { [key: string]: number } = {
+    'free': 0,
+    'freemium': 1,
+    'pro': 2,
+    'ultra-pro': 3,
+    'custom': 4
+  };
+
+  // Convert plan name to account type
+  const planNameToAccountType = (planName: string) => {
+    switch (planName) {
+      case 'Free': return 'free';
+      case 'Freemium': return 'freemium';
+      case 'Pro': return 'pro';
+      case 'Ultra Pro': return 'ultra-pro';
+      case 'Custom': return 'custom';
+      default: return 'free';
+    }
+  };
+
+  // Determine if a plan is a downgrade from the user's current plan
+  const isDowngrade = (planName: string) => {
+    if (!session || !session.user) return false;
+    const userAccountType = (session.user as any).accountType as string;
+    const currentUserLevel = accountHierarchy[userAccountType] || 0;
+    const planLevel = accountHierarchy[planNameToAccountType(planName)] || 0;
+    return planLevel < currentUserLevel;
+  };
+
   return (
     <div className="min-h-screen bg-[#030712]" style={{ scrollPaddingTop: '5rem' }}>
       <div className="pointer-events-none absolute inset-0">
@@ -205,16 +235,32 @@ const PricingPage = () => {
 
               <div className="mt-8">
                 {session ? (
-                  plan.name === 'Free' ? (
-                    // User is viewing Free plan
+                  plan.name === 'Free' && (session.user as any).accountType === 'free' ? (
+                    // User is viewing Free plan and is on Free tier
                     <button
                       disabled
-                      className="block w-full rounded-2xl border border-white/10 bg-white/5 py-3 text-center text-sm font-semibold text-white opacity-70 cursor-not-allowed"
+                      className="block w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-center text-sm font-semibold text-emerald-400 cursor-not-allowed"
+                    >
+                      Current Plan
+                    </button>
+                  ) : isDowngrade(plan.name) ? (
+                    // Show downgrade button for plans below current account type
+                    <button
+                      disabled
+                      className="block w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 py-3 text-center text-sm font-semibold text-amber-400 cursor-not-allowed"
+                    >
+                      Downgrade (Expires Automatically)
+                    </button>
+                  ) : (session.user as any).accountType === planNameToAccountType(plan.name) ? (
+                    // User is on this exact plan
+                    <button
+                      disabled
+                      className="block w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-center text-sm font-semibold text-emerald-400 cursor-not-allowed"
                     >
                       Current Plan
                     </button>
                   ) : (
-                    // User is viewing a paid plan
+                    // User is viewing a different plan (upgrade)
                     <Link
                       href={plan.name === 'Custom' ? '/contact' : `/upgrade?plan=${plan.name === 'Ultra Pro' ? 'ultra-pro' : plan.name.toLowerCase()}`}
                       className={`block w-full rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 ${

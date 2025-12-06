@@ -573,6 +573,17 @@ const PaymentSchema = new mongoose.Schema({
     enum: ['freemium', 'pro', 'ultra-pro', 'custom'],
     required: true
   },
+  // Expiration date for the payment/subscription
+  expiresAt: {
+    type: Date,
+    required: true
+  },
+  // Queue for next plan (used for upgrades/downgrades)
+  nextPlan: {
+    type: String,
+    enum: ['free', 'freemium', 'pro', 'ultra-pro', 'custom'],
+    default: null
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
