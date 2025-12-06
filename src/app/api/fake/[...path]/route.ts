@@ -72,34 +72,77 @@ function validatePostRequestBody(fields: any[], requestBody: any): { isValid: bo
   for (const field of fields) {
     if (field.name in requestBody && requestBody[field.name] !== null && requestBody[field.name] !== undefined) {
       const value = requestBody[field.name];
-      switch (field.type) {
-        case 'string':
-          if (typeof value !== 'string') {
-            errors.push(`Field '${field.name}' should be a string`);
-          }
-          break;
-        case 'number':
-          if (typeof value !== 'number') {
-            errors.push(`Field '${field.name}' should be a number`);
-          }
-          break;
-        case 'boolean':
-          if (typeof value !== 'boolean') {
-            errors.push(`Field '${field.name}' should be a boolean`);
-          }
-          break;
-        case 'object':
-          if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-            errors.push(`Field '${field.name}' should be an object`);
-          }
-          break;
-        case 'array':
-          if (!Array.isArray(value)) {
-            errors.push(`Field '${field.name}' should be an array`);
-          }
-          break;
+      const fieldTypeResult = validateFieldType(field, value, `Field '${field.name}'`);
+      if (!fieldTypeResult.isValid) {
+        errors.push(...fieldTypeResult.errors);
       }
     }
+  }
+  
+  return { isValid: errors.length === 0, errors };
+}
+
+// Helper function to validate a field's type recursively
+function validateFieldType(field: any, value: any, fieldName: string): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  switch (field.type) {
+    case 'string':
+      if (typeof value !== 'string') {
+        errors.push(`${fieldName} should be a string`);
+      }
+      break;
+    case 'number':
+      if (typeof value !== 'number') {
+        errors.push(`${fieldName} should be a number`);
+      }
+      break;
+    case 'boolean':
+      if (typeof value !== 'boolean') {
+        errors.push(`${fieldName} should be a boolean`);
+      }
+      break;
+    case 'object':
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        errors.push(`${fieldName} should be an object`);
+      } else if (field.nestedFields && Array.isArray(field.nestedFields)) {
+        // Recursively validate nested fields
+        for (const nestedField of field.nestedFields) {
+          if (nestedField.name in value) {
+            const nestedValue = value[nestedField.name];
+            const nestedFieldName = `${fieldName}.${nestedField.name}`;
+            const nestedResult = validateFieldType(nestedField, nestedValue, nestedFieldName);
+            if (!nestedResult.isValid) {
+              errors.push(...nestedResult.errors);
+            }
+          } else if (nestedField.required) {
+            errors.push(`Required field ${fieldName}.${nestedField.name} is missing`);
+          }
+        }
+      }
+      break;
+    case 'array':
+      if (!Array.isArray(value)) {
+        errors.push(`${fieldName} should be an array`);
+      } else if (field.arrayItemType) {
+        // Validate each item in the array
+        for (let i = 0; i < value.length; i++) {
+          const item = value[i];
+          const itemFieldName = `${fieldName}[${i}]`;
+          
+          // Create a temporary field object for validation
+          const itemField = {
+            type: field.arrayItemType,
+            nestedFields: field.nestedFields // For object arrays
+          };
+          
+          const itemResult = validateFieldType(itemField, item, itemFieldName);
+          if (!itemResult.isValid) {
+            errors.push(...itemResult.errors);
+          }
+        }
+      }
+      break;
   }
   
   return { isValid: errors.length === 0, errors };
