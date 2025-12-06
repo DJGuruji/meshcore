@@ -760,7 +760,8 @@ export default function ApiTesterPage() {
           headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
         };
         
-        if (currentRequest.body && currentRequest.body.type !== 'none') {
+        const methodAllowsBody = currentRequest.method !== 'GET' && currentRequest.method !== 'HEAD';
+        if (methodAllowsBody && currentRequest.body && currentRequest.body.type !== 'none') {
           if (currentRequest.body.type === 'json') {
             (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
             fetchOptions.body = currentRequest.body.json;
@@ -803,7 +804,8 @@ export default function ApiTesterPage() {
           mode: 'no-cors' // This will limit what we can read from the response
         };
         
-        if (currentRequest.body && currentRequest.body.type !== 'none') {
+        const methodAllowsBody = currentRequest.method !== 'GET' && currentRequest.method !== 'HEAD';
+        if (methodAllowsBody && currentRequest.body && currentRequest.body.type !== 'none') {
           if (currentRequest.body.type === 'json') {
             (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
             fetchOptions.body = currentRequest.body.json;

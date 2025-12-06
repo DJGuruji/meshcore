@@ -160,6 +160,17 @@ UserSchema.methods.cleanupOldRequestData = function() {
   }
 };
 
+interface EndpointField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  required: boolean;
+  description?: string;
+  // For nested object validation
+  nestedFields?: EndpointField[];
+  // For array validation
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+}
+
 // API Project Schema
 const ApiProjectSchema = new mongoose.Schema({
   name: {
@@ -232,7 +243,42 @@ const ApiProjectSchema = new mongoose.Schema({
         type: Boolean,
         default: false
       },
-      description: String
+      description: String,
+      // For nested object validation
+      nestedFields: {
+        type: [{
+          name: {
+            type: String,
+            required: true
+          },
+          type: {
+            type: String,
+            enum: ['string', 'number', 'boolean', 'object', 'array'],
+            required: true
+          },
+          required: {
+            type: Boolean,
+            default: false
+          },
+          description: String,
+          // Recursive nested fields for deeper nesting
+          nestedFields: {
+            type: [mongoose.Schema.Types.Mixed],
+            default: []
+          },
+          // For array validation within nested objects
+          arrayItemType: {
+            type: String,
+            enum: ['string', 'number', 'boolean', 'object', 'array']
+          }
+        }],
+        default: []
+      },
+      // For array validation
+      arrayItemType: {
+        type: String,
+        enum: ['string', 'number', 'boolean', 'object', 'array']
+      }
     }],
     // Data source for GET endpoints
     dataSource: {

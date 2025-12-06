@@ -11,7 +11,7 @@ import {
   EyeIcon,
   EyeSlashIcon 
 } from '@heroicons/react/24/outline';
-import { defaultJsonTemplates, generateRandomJson, generateJsonFromFields } from '@/lib/jsonGenerator';
+import { defaultJsonTemplates, generateRandomJson, generateJsonFromFields, buildSampleObjectFromFields } from '@/lib/jsonGenerator';
 import { generateEndpointUrl } from '@/lib/urlUtils';
 import { generateReadableToken, formatAuthHeader } from '@/lib/tokenUtils';
 import { toast } from 'react-hot-toast';
@@ -36,8 +36,11 @@ interface EndpointField {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array';
   required: boolean;
   description?: string;
+  // For nested object validation
+  nestedFields?: EndpointField[];
+  // For array validation
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
 }
-
 interface Endpoint {
   _id: string;
   path: string;
@@ -66,6 +69,235 @@ interface ProjectDetailProps {
   project: ApiProject;
   onUpdateProject: (project: ApiProject) => void;
 }
+
+const createEmptyFieldDefinition = (): EndpointField => ({
+  name: '',
+  type: 'string',
+  required: false,
+  description: '',
+  nestedFields: [],
+  arrayItemType: undefined
+});
+
+interface NestedFieldsBuilderProps {
+  fields: EndpointField[];
+  onChange: (fields: EndpointField[]) => void;
+  depth?: number;
+  title?: string;
+  subtitle?: string;
+}
+
+const NestedFieldsBuilder = ({ fields, onChange, depth = 0, title, subtitle }: NestedFieldsBuilderProps) => {
+  const [draftField, setDraftField] = useState<EndpointField>(createEmptyFieldDefinition());
+  const optionClasses = 'text-slate-900';
+
+  const handleDraftTypeChange = (value: EndpointField['type']) => {
+    setDraftField((prev) => ({
+      ...prev,
+      type: value,
+      nestedFields: value === 'object' ? prev.nestedFields : [],
+      arrayItemType: value === 'array' ? prev.arrayItemType || 'object' : undefined
+    }));
+  };
+
+  const handleAddNestedField = () => {
+    if (!draftField.name.trim()) {
+      alert('Nested field name is required');
+      return;
+    }
+
+    if (fields.some((field) => field.name === draftField.name)) {
+      alert(`Field "${draftField.name}" already exists in this level`);
+      return;
+    }
+
+    if (draftField.type === 'array' && !draftField.arrayItemType) {
+      alert('Please select an item type for the array');
+      return;
+    }
+
+    const normalizedDraft: EndpointField = {
+      ...draftField,
+      nestedFields:
+        draftField.type === 'object' || (draftField.type === 'array' && draftField.arrayItemType === 'object')
+          ? draftField.nestedFields || []
+          : [],
+      arrayItemType: draftField.type === 'array' ? draftField.arrayItemType : undefined
+    };
+
+    onChange([...fields, normalizedDraft]);
+    setDraftField(createEmptyFieldDefinition());
+  };
+
+  const updateFieldAtIndex = (index: number, updatedField: EndpointField) => {
+    const updated = fields.map((field, idx) => (idx === index ? updatedField : field));
+    onChange(updated);
+  };
+
+  const handleRemoveNestedField = (index: number) => {
+    const updated = [...fields];
+    updated.splice(index, 1);
+    onChange(updated);
+  };
+
+  const handleNestedFieldsChange = (index: number, nested: EndpointField[]) => {
+    const target = fields[index];
+    updateFieldAtIndex(index, {
+      ...target,
+      nestedFields: nested
+    });
+  };
+
+  const handleArrayItemTypeChange = (index: number, value: EndpointField['type']) => {
+    const target = fields[index];
+    updateFieldAtIndex(index, {
+      ...target,
+      arrayItemType: value,
+      nestedFields: value === 'object' ? target.nestedFields || [] : []
+    });
+  };
+
+  return (
+    <div className={`${depth === 0 ? 'mt-2' : 'mt-3'} rounded-2xl border border-dashed border-white/10 bg-white/5 p-3`}>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300">
+          {title || (depth === 0 ? 'Nested Fields' : 'Child Fields')}
+        </p>
+        {subtitle && <span className="text-[10px] text-slate-400">{subtitle}</span>}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">Field Name</label>
+          <input
+            type="text"
+            placeholder="e.g., street"
+            value={draftField.name}
+            onChange={(e) => setDraftField({ ...draftField, name: e.target.value })}
+            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">Type</label>
+          <select
+            value={draftField.type}
+            onChange={(e) => handleDraftTypeChange(e.target.value as EndpointField['type'])}
+            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+          >
+            <option className={optionClasses} value="string">String</option>
+            <option className={optionClasses} value="number">Number</option>
+            <option className={optionClasses} value="boolean">Boolean</option>
+            <option className={optionClasses} value="object">Object</option>
+            <option className={optionClasses} value="array">Array</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">Required</label>
+          <select
+            value={draftField.required ? 'required' : 'optional'}
+            onChange={(e) => setDraftField({ ...draftField, required: e.target.value === 'required' })}
+            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+          >
+            <option className={optionClasses} value="optional">Optional</option>
+            <option className={optionClasses} value="required">Required</option>
+          </select>
+        </div>
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={handleAddNestedField}
+            className="w-full px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-sm font-medium"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <label className="block text-xs font-medium text-slate-400 mb-1">Description (optional)</label>
+        <input
+          type="text"
+          placeholder="Nested field description"
+          value={draftField.description}
+          onChange={(e) => setDraftField({ ...draftField, description: e.target.value })}
+          className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+        />
+      </div>
+
+      {fields.length > 0 && (
+        <div className="space-y-3">
+          {fields.map((field, index) => (
+            <div key={`${field.name}-${index}`} className="rounded-2xl border border-white/10 bg-slate-900/40 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-mono text-white">{field.name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                    <span className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200">{field.type}</span>
+                    {field.type === 'array' && field.arrayItemType && (
+                      <span className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200">
+                        items: {field.arrayItemType}
+                      </span>
+                    )}
+                    {field.required && (
+                      <span className="px-1.5 py-0.5 bg-red-900 text-red-300 rounded">required</span>
+                    )}
+                    {field.description && <span className="italic">{field.description}</span>}
+                    {field.nestedFields && field.nestedFields.length > 0 && (
+                      <span className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200">
+                        {field.nestedFields.length} nested
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveNestedField(index)}
+                  className="text-slate-400 hover:text-red-400"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+              </div>
+
+              {field.type === 'array' && (
+                <div className="mt-3 space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-400 mb-1">Array Item Type</label>
+                    <select
+                      value={field.arrayItemType || 'string'}
+                      onChange={(e) => handleArrayItemTypeChange(index, e.target.value as EndpointField['type'])}
+                      className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                    >
+                      <option className={optionClasses} value="string">String</option>
+                      <option className={optionClasses} value="number">Number</option>
+                      <option className={optionClasses} value="boolean">Boolean</option>
+                      <option className={optionClasses} value="object">Object</option>
+                      <option className={optionClasses} value="array">Array</option>
+                    </select>
+                  </div>
+                  {field.arrayItemType === 'object' && (
+                    <NestedFieldsBuilder
+                      fields={field.nestedFields || []}
+                      onChange={(nested) => handleNestedFieldsChange(index, nested)}
+                      depth={depth + 1}
+                    />
+                  )}
+                </div>
+              )}
+
+              {field.type === 'object' && (
+                <NestedFieldsBuilder
+                  fields={field.nestedFields || []}
+                  onChange={(nested) => handleNestedFieldsChange(index, nested)}
+                  depth={depth + 1}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function ProjectDetail({ project, onUpdateProject }: ProjectDetailProps) {
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>(null);
@@ -97,14 +329,7 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
 
   // Add state for new field in the form
-  const [newField, setNewField] = useState({
-    name: '',
-    type: 'string' as const,
-    required: false,
-    description: ''
-  });
-
-  // Add state for new condition
+  const [newField, setNewField] = useState<EndpointField>(() => createEmptyFieldDefinition());  // Add state for new condition
   const [newCondition, setNewCondition] = useState({
     field: '',
     operator: '=' as '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith',
@@ -236,12 +461,7 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     });
     
     // Reset field form
-    setNewField({
-      name: '',
-      type: 'string',
-      required: false,
-      description: ''
-    });
+    setNewField(createEmptyFieldDefinition());
     
     setShowAddEndpoint(false);
   };
@@ -325,28 +545,7 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
         if (userResponse !== null) {
           if (userResponse.trim() === '') {
             // Create sample data with all fields
-            const requestBody: any = {};
-            endpoint.fields.forEach(field => {
-              switch (field.type) {
-                case 'string':
-                  requestBody[field.name] = field.name === 'email' ? 'test@example.com' : `sample ${field.name}`;
-                  break;
-                case 'number':
-                  requestBody[field.name] = field.name === 'id' ? 1 : field.name === 'age' ? 25 : 0;
-                  break;
-                case 'boolean':
-                  requestBody[field.name] = true;
-                  break;
-                case 'object':
-                  requestBody[field.name] = {};
-                  break;
-                case 'array':
-                  requestBody[field.name] = [];
-                  break;
-                default:
-                  requestBody[field.name] = `sample ${field.name}`;
-              }
-            });
+            const requestBody = buildSampleObjectFromFields(endpoint.fields || [], { includeMeta: false });
             body = JSON.stringify(requestBody);
           } else {
             // Use user-provided data
@@ -469,13 +668,29 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       return;
     }
 
+    if (newField.type === 'array' && !newField.arrayItemType) {
+      alert('Please select an item type for the array field');
+      return;
+    }
+
     // Check for duplicate field name
     if (newEndpoint.fields.some(field => field.name === newField.name)) {
       alert(`Field "${newField.name}" already exists`);
       return;
     }
 
-    const updatedFields = [...newEndpoint.fields, { ...newField }];
+    const normalizedField: EndpointField = {
+      ...newField,
+      arrayItemType: newField.type === 'array' ? newField.arrayItemType : undefined,
+      nestedFields:
+        newField.type === 'object'
+          ? newField.nestedFields || []
+          : newField.type === 'array' && newField.arrayItemType === 'object'
+            ? newField.nestedFields || []
+            : []
+    };
+
+    const updatedFields = [...newEndpoint.fields, normalizedField];
     setNewEndpoint({ ...newEndpoint, fields: updatedFields });
     
     // Clear validation error for this field if it exists
@@ -487,12 +702,7 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     }
     
     // Reset field form
-    setNewField({
-      name: '',
-      type: 'string',
-      required: false,
-      description: ''
-    });
+    setNewField(createEmptyFieldDefinition());
   };
 
   const handleRemoveField = (index: number) => {
@@ -1002,7 +1212,15 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                     <label className="block text-xs font-medium text-slate-400 mb-1">Type</label>
                     <select
                       value={newField.type}
-                      onChange={(e) => setNewField({ ...newField, type: e.target.value as any })}
+                      onChange={(e) => {
+                        const selectedType = e.target.value as EndpointField['type'];
+                        setNewField((prev) => ({
+                          ...prev,
+                          type: selectedType,
+                          nestedFields: selectedType === 'object' || selectedType === 'array' ? prev.nestedFields || [] : [],
+                          arrayItemType: selectedType === 'array' ? 'object' : undefined
+                        }));
+                      }}
                       className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                     >
                       <option className={optionStyles} value="string">String</option>
@@ -1045,6 +1263,52 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                     className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                   />
                 </div>
+
+                {newField.type === 'object' && (
+                  <NestedFieldsBuilder
+                    title="JSON 1"
+                    subtitle="Define keys that live inside this object"
+                    fields={newField.nestedFields || []}
+                    onChange={(nested) => setNewField({ ...newField, nestedFields: nested })}
+                  />
+                )}
+
+                {newField.type === 'array' && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1">Array Item Type</label>
+                      <select
+                        value={newField.arrayItemType || 'object'}
+                        onChange={(e) => {
+                          const value = e.target.value as EndpointField['type'];
+                          setNewField((prev) => ({
+                            ...prev,
+                            arrayItemType: value,
+                            nestedFields: value === 'object' ? prev.nestedFields || [] : []
+                          }));
+                        }}
+                        className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                      >
+                        <option className={optionStyles} value="string">String</option>
+                        <option className={optionStyles} value="number">Number</option>
+                        <option className={optionStyles} value="boolean">Boolean</option>
+                        <option className={optionStyles} value="object">Object</option>
+                        <option className={optionStyles} value="array">Array</option>
+                      </select>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.
+                      </p>
+                    </div>
+                    {newField.arrayItemType === 'object' && (
+                      <NestedFieldsBuilder
+                        title="JSON 1"
+                        subtitle="Fields that belong to every array item"
+                        fields={newField.nestedFields || []}
+                        onChange={(nested) => setNewField({ ...newField, nestedFields: nested })}
+                      />
+                    )}
+                  </div>
+                )}
                 
                 {/* Fields list */}
                 {newEndpoint.fields.length > 0 && (
@@ -1058,6 +1322,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                             <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
                               {field.type}
                             </span>
+                            {field.type === 'array' && field.arrayItemType && (
+                              <span className="text-xs px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+                                items: {field.arrayItemType}
+                              </span>
+                            )}
                             {field.required && (
                               <span className="text-xs px-1.5 py-0.5 bg-red-900 text-red-300 rounded">
                                 required
@@ -1066,6 +1335,11 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                             {field.description && (
                               <span className="text-xs text-slate-400 italic">
                                 {field.description}
+                              </span>
+                            )}
+                            {field.nestedFields && field.nestedFields.length > 0 && (
+                              <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded">
+                                {field.nestedFields.length} nested
                               </span>
                             )}
                           </div>

@@ -6,6 +6,15 @@ export interface JsonTemplate {
   template: any;
 }
 
+export interface EndpointFieldDefinition {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  required: boolean;
+  description?: string;
+  nestedFields?: EndpointFieldDefinition[];
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+}
+
 // Helper function to generate user data
 const generateUsers = (count: number) => {
   const firstNames = ['John', 'Jane', 'Bob', 'Alice', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Peter', 'Quinn', 'Rose', 'Sam', 'Tina', 'Uma', 'Victor', 'Wendy', 'Xavier', 'Yara', 'Zack', 'Amy', 'Ben', 'Chloe', 'David', 'Emma', 'Felix', 'Gina', 'Hugo', 'Iris', 'James', 'Kelly', 'Liam', 'Maya', 'Nick', 'Oscar', 'Paula', 'Rachel', 'Steve', 'Tara', 'Ursula', 'Vince', 'Zoe'];
@@ -106,41 +115,116 @@ export function getTemplateByName(name: string): JsonTemplate | undefined {
   return defaultJsonTemplates.find(template => template.name === name);
 }
 
+const inferStringSample = (fieldName: string): string => {
+  const normalized = fieldName.toLowerCase();
+  if (normalized.includes('email')) {
+    return 'user@example.com';
+  }
+  if (normalized.includes('phone')) {
+    return '+1234567890';
+  }
+  if (normalized.includes('name')) {
+    return 'Sample Name';
+  }
+  if (normalized.includes('status')) {
+    return 'active';
+  }
+  return `sample ${fieldName}`;
+};
+
+const inferNumberSample = (fieldName: string): number => {
+  const normalized = fieldName.toLowerCase();
+  if (normalized.includes('age')) {
+    return 25;
+  }
+  if (normalized.includes('price')) {
+    return 9.99;
+  }
+  if (normalized.includes('count') || normalized.includes('total')) {
+    return 1;
+  }
+  if (normalized.includes('id')) {
+    return 1;
+  }
+  return 0;
+};
+
+const buildObjectFromFieldsInternal = (fields: EndpointFieldDefinition[] = []): Record<string, any> => {
+  const obj: Record<string, any> = {};
+
+  fields.forEach((field) => {
+    obj[field.name] = getSampleValueForField(field);
+  });
+
+  return obj;
+};
+
+const getSampleValueForField = (field: EndpointFieldDefinition): any => {
+  switch (field.type) {
+    case 'string':
+      return inferStringSample(field.name);
+    case 'number':
+      return inferNumberSample(field.name);
+    case 'boolean':
+      return true;
+    case 'object': {
+      const nested = field.nestedFields || [];
+      if (nested.length === 0) {
+        return {};
+      }
+      return buildObjectFromFieldsInternal(nested);
+    }
+    case 'array': {
+      const itemType = field.arrayItemType || 'string';
+
+      if (itemType === 'object') {
+        return [buildObjectFromFieldsInternal(field.nestedFields || [])];
+      }
+
+      if (itemType === 'number') {
+        return [inferNumberSample(field.name)];
+      }
+
+      if (itemType === 'boolean') {
+        return [true];
+      }
+
+      if (itemType === 'array') {
+        return [[]];
+      }
+
+      return [inferStringSample(field.name)];
+    }
+    default:
+      return `sample ${field.name}`;
+  }
+};
+
+export function buildSampleObjectFromFields(
+  fields: EndpointFieldDefinition[] = [],
+  options?: { includeMeta?: boolean }
+): Record<string, any> {
+  const objectFromFields = buildObjectFromFieldsInternal(fields);
+
+  if (options?.includeMeta) {
+    if (!('id' in objectFromFields)) {
+      objectFromFields.id = 1;
+    }
+    if (!('createdAt' in objectFromFields)) {
+      objectFromFields.createdAt = new Date().toISOString();
+    }
+  }
+
+  return objectFromFields;
+}
+
 // Function to generate JSON response based on endpoint fields
-export function generateJsonFromFields(fields: any[] | undefined): string {
+export function generateJsonFromFields(fields: EndpointFieldDefinition[] | undefined): string {
   if (!fields || fields.length === 0) {
     return '{"message": "Hello World"}';
   }
 
-  const responseObject: any = {
-    id: 1 // Common pattern for POST responses
-  };
-
-  // Add all defined fields with sample values
-  fields.forEach(field => {
-    switch (field.type) {
-      case 'string':
-        responseObject[field.name] = field.name === 'email' ? 'user@example.com' : `sample ${field.name}`;
-        break;
-      case 'number':
-        responseObject[field.name] = field.name === 'id' ? 1 : field.name === 'age' ? 25 : 0;
-        break;
-      case 'boolean':
-        responseObject[field.name] = true;
-        break;
-      case 'object':
-        responseObject[field.name] = {};
-        break;
-      case 'array':
-        responseObject[field.name] = [];
-        break;
-      default:
-        responseObject[field.name] = `sample ${field.name}`;
-    }
-  });
-
-  // Add timestamp for POST endpoints
-  responseObject.createdAt = new Date().toISOString();
+  const responseObject = buildSampleObjectFromFields(fields, { includeMeta: true });
 
   return JSON.stringify(responseObject, null, 2);
 }
