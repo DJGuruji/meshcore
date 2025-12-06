@@ -7,6 +7,8 @@ import AuthProvider from "@/components/AuthProvider";
 import Header from "@/components/Header";
 import PageLoader from "@/components/PageLoader";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
+import StructuredData from "@/components/StructuredData";
+import { siteConfig, ogImage } from "@/lib/seoConfig";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -14,8 +16,53 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AnyTimeRequest API Tester and Mock Server",
-  description: "Create Mock server and use api tester with AnyTimeRequest",
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: `${siteConfig.name} – Mock Server & API Tester`,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  keywords: siteConfig.keywords,
+  applicationName: siteConfig.name,
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  category: "technology",
+  alternates: {
+    canonical: siteConfig.url,
+  },
+  openGraph: {
+    type: "website",
+    url: siteConfig.url,
+    title: `${siteConfig.name} – Mock server online & API playground`,
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: ogImage,
+        width: 1200,
+        height: 630,
+        alt: "AnyTimeRequest mock server and API tester",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${siteConfig.name} – fake API generator & request tester`,
+    description: siteConfig.description,
+    creator: siteConfig.socials.twitter,
+    images: [ogImage],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -41,6 +88,7 @@ export default function RootLayout({
             </AOSInitializer>
           </NavigationStateProvider>
         </AuthProvider>
+        <StructuredData />
       </body>
     </html>
   );
