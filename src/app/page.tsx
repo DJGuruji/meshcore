@@ -10,6 +10,7 @@ import Link from 'next/link';
 import ProjectPanel from '@/components/ProjectPanel';
 import ProjectDetail from '@/components/ProjectDetail';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
+import SEOContent from '@/components/SEOContent';
 
 interface Endpoint {
   _id: string;
@@ -305,6 +306,8 @@ export default function Home() {
             <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Free API Tester</div>
           </div>
         </div>
+
+        <SEOContent />
       </div>
     );
   }
