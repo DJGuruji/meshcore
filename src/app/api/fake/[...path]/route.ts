@@ -173,6 +173,93 @@ function filterDataByConditions(data: any, conditions: any[]): any {
   return matches ? data : null;
 }
 
+function normalizeToArray(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') return [data];
+  return [];
+}
+
+function getFieldValue(entry: any, field: string) {
+  if (!entry || typeof entry !== 'object') return undefined;
+  return entry[field];
+}
+
+function projectEntryFields(entry: any, fields: string[]) {
+  if (!entry || typeof entry !== 'object' || fields.length === 0) {
+    return entry;
+  }
+
+  if (fields.length === 1) {
+    return getFieldValue(entry, fields[0]);
+  }
+
+  const projected: Record<string, any> = {};
+  fields.forEach((field) => {
+    const value = getFieldValue(entry, field);
+    if (value !== undefined) {
+      projected[field] = value;
+    }
+  });
+  return projected;
+}
+
+function applyFieldProjection(data: any, fields: string[]) {
+  if (!fields || fields.length === 0) return data;
+  if (Array.isArray(data)) {
+    return data.map(item => projectEntryFields(item, fields));
+  }
+  if (data && typeof data === 'object') {
+    return projectEntryFields(data, fields);
+  }
+  return data;
+}
+
+function calculateAggregatorResult(data: any, field: string, aggregator: string) {
+  const rows = normalizeToArray(data);
+  if (aggregator === 'count') {
+    return {
+      field,
+      aggregator,
+      value: rows.length,
+      totalRecords: rows.length
+    };
+  }
+
+  const numericValues = rows
+    .map(item => Number(getFieldValue(item, field)))
+    .filter(value => !Number.isNaN(value));
+  const safeValues = numericValues.length > 0 ? numericValues : [0];
+  const sum = safeValues.reduce((acc, value) => acc + value, 0);
+  const normalizedAggregator = aggregator === 'total' ? 'sum' : aggregator;
+
+  let value = 0;
+  switch (normalizedAggregator) {
+    case 'sum':
+      value = sum;
+      break;
+    case 'avg':
+      value = numericValues.length > 0 ? sum / numericValues.length : 0;
+      break;
+    case 'min':
+      value = Math.min(...safeValues);
+      break;
+    case 'max':
+      value = Math.max(...safeValues);
+      break;
+    default:
+      value = sum;
+      break;
+  }
+
+  return {
+    field,
+    aggregator,
+    value,
+    totalRecords: rows.length,
+    processedValues: numericValues.length
+  };
+}
+
 // Helper function to check rate limits
 async function checkRateLimit(project: any): Promise<{ allowed: boolean; message?: string }> {
   try {
@@ -764,7 +851,11 @@ async function handleRequest(request: NextRequest, method: string) {
               console.log(`User ${project.user} is in read-only mode due to storage limit`);
             }
             // Generate cache key
-            const cacheKey = `mock:${project._id}:${endpoint._id}:${fullPath}`;
+            const configuredFields = Array.isArray(endpoint.dataSourceFields) ? endpoint.dataSourceFields : [];
+            const fallbackField = endpoint.dataSourceField ? [endpoint.dataSourceField] : [];
+            const dataSourceFields = configuredFields.length > 0 ? configuredFields : fallbackField;
+            const fieldsKey = dataSourceFields.length > 0 ? dataSourceFields.slice().sort().join('|') : 'all';
+            const cacheKey = `mock:${project._id}:${endpoint._id}:${fullPath}:${endpoint.dataSourceMode || 'full'}:${fieldsKey}:${endpoint.aggregator || 'none'}`;
             
             // Try to get from cache first
             const cachedResponse = await cache.get(cacheKey);
@@ -842,6 +933,20 @@ async function handleRequest(request: NextRequest, method: string) {
                 
                 // Apply conditions if any
                 const filteredData = filterDataByConditions(sourceData, endpoint.conditions || []);
+                const dataSourceMode = endpoint.dataSourceMode || 'full';
+                const selectedAggregator = endpoint.aggregator || '';
+
+                if (dataSourceMode === 'aggregator' && dataSourceFields.length > 0 && selectedAggregator) {
+                  const aggregatorResults = dataSourceFields.map((fieldName) =>
+                    calculateAggregatorResult(filteredData, fieldName, selectedAggregator)
+                  );
+                  const aggregatorPayload = aggregatorResults.length === 1 ? aggregatorResults[0] : aggregatorResults;
+                  cache.set(cacheKey, aggregatorPayload, { ttl: 300 }).catch(err => {
+                    console.error('Failed to cache aggregated response:', err);
+                  });
+                  const response = NextResponse.json(aggregatorPayload, { status: endpoint.statusCode });
+                  return addCorsHeaders(response);
+                }
                 
                 // Handle pagination if enabled (only for general GET requests, not specific ID requests)
                 let paginatedData = filteredData;
@@ -873,6 +978,10 @@ async function handleRequest(request: NextRequest, method: string) {
                     hasNext: page < totalPages,
                     hasPrev: page > 1
                   };
+                }
+
+                if (dataSourceMode === 'field' && dataSourceFields.length > 0) {
+                  paginatedData = applyFieldProjection(paginatedData, dataSourceFields);
                 }
                 
                 // Prepare response data

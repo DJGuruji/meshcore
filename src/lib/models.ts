@@ -286,6 +286,24 @@ const ApiProjectSchema = new mongoose.Schema({
       ref: 'ApiProject.endpoints',
       default: null
     },
+    dataSourceMode: {
+      type: String,
+      enum: ['full', 'field', 'aggregator'],
+      default: 'full'
+    },
+    dataSourceField: {
+      type: String,
+      default: ''
+    },
+    dataSourceFields: {
+      type: [String],
+      default: []
+    },
+    aggregator: {
+      type: String,
+      enum: ['count', 'sum', 'avg', 'min', 'max', 'total'],
+      default: null
+    },
     // Conditions for filtering data
     conditions: [{
       field: {
