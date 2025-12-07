@@ -57,7 +57,6 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendPasswordResetEmail(email, resetToken);
     
     if (!emailResult.success) {
-      console.error('Failed to send password reset email:', emailResult.error);
       // Clear the token if email fails
       user.resetToken = undefined;
       user.resetTokenExpiry = undefined;
@@ -73,7 +72,6 @@ export async function POST(request: NextRequest) {
       message: 'If an account with that email exists, we have sent a password reset link.',
     });
   } catch (error: any) {
-    console.error('Forgot password error:', error);
     return NextResponse.json(
       { error: 'Failed to process password reset request' },
       { status: 500 }

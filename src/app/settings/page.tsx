@@ -103,7 +103,6 @@ export default function SettingsPage() {
       toast.success('Account deleted successfully');
       signOut({ callbackUrl: '/auth/signin' });
     } catch (error: any) {
-      console.error('Account deletion error:', error.response?.data || error);
       const errorMessage = error.response?.data?.error || 'Failed to delete account';
       toast.error(errorMessage);
       setDeletePassword('');

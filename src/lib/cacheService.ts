@@ -43,9 +43,7 @@ class CacheService {
       return data.value as T;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Cache GET error: Request timeout');
       } else {
-        console.error('Cache GET error:', error);
       }
       // Return null on error to allow fallback to direct data fetching
       return null;
@@ -84,9 +82,7 @@ class CacheService {
       return !!data.key;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Cache SET error: Request timeout');
       } else {
-        console.error('Cache SET error:', error);
       }
       // Return false on error to allow fallback to direct data fetching
       return false;
@@ -124,9 +120,7 @@ class CacheService {
       return !!data.key;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Cache DELETE error: Request timeout');
       } else {
-        console.error('Cache DELETE error:', error);
       }
       // Return false on error to allow fallback to direct data fetching
       return false;
@@ -163,9 +157,7 @@ class CacheService {
       return response.status === 200;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Cache EXISTS error: Request timeout');
       } else {
-        console.error('Cache EXISTS error:', error);
       }
       // Return false on error to allow fallback to direct data fetching
       return false;
@@ -199,9 +191,7 @@ class CacheService {
       return data.deletedCount || 0;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Cache DELETE pattern error: Request timeout');
       } else {
-        console.error('Cache DELETE pattern error:', error);
       }
       // Return 0 on error to allow fallback to direct data fetching
       return 0;

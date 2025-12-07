@@ -22,7 +22,6 @@ export const authOptions: NextAuthOptions = {
         // Validate Turnstile token
         const isTurnstileValid = await validateTurnstileToken(credentials.turnstileToken);
         if (!isTurnstileValid) {
-          console.error("Turnstile validation failed");
           return null;
         }
 
@@ -63,7 +62,6 @@ export const authOptions: NextAuthOptions = {
             blocked: (user as any).blocked // Include blocked status
           };
         } catch (error) {
-          console.error("Authentication error:", error);
           throw error; // Re-throw to be handled by NextAuth
         }
       }
@@ -86,10 +84,8 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, account }) {
-      console.log('JWT callback - account:', account, 'user:', user);
       // Handle Google OAuth login
       if (account && account.type === "oauth" && user) {
-        console.log('Processing OAuth user');
         // Check if user already exists in our database
         await connectDB();
         let existingUser = await User.findOne({ email: user.email });
@@ -113,14 +109,12 @@ export const authOptions: NextAuthOptions = {
         }
         
         // Update token with user info
-        console.log('Setting token ID to MongoDB ObjectId:', existingUser._id.toString());
         token.id = existingUser._id.toString();
         token.role = existingUser.role || 'user'; // Default to 'user' role if not set
         token.accountType = existingUser.accountType || 'free'; // Default to 'free' account type if not set
         token.blocked = (existingUser as any).blocked || false; // Default to not blocked if not set
       }
       
-      console.log('Processing regular credentials login');
       // Handle regular credentials login (exclude OAuth users who were already handled above)
       if (user && (!account || account.type !== "oauth")) {
         token.id = user.id;
@@ -133,7 +127,6 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token && session.user) {
-        console.log('Setting session user ID to:', token.id);
         session.user.id = token.id as string;
         session.user.role = (token.role as string) || 'user'; // Include user role in session, default to 'user'
         session.user.accountType = (token.accountType as string) || 'free'; // Include account type in session, default to 'free'
@@ -152,8 +145,7 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user, account, profile, isNewUser }) {
       // This event is triggered after successful sign in
-      // We can use it for audit logging or other side effects
-      console.log("User signed in:", user);
+      // Additional auditing can be handled by a server-side logger if needed
     }
   }
 };

@@ -100,7 +100,6 @@ export default function SignInClient({ verified, error: errorParam }: SignInClie
       router.refresh();
     } catch (error) {
       setError('An error occurred during sign in');
-      console.error('Sign in error:', error);
       // Reset the Turnstile token
       setTurnstileToken('');
     } finally {
@@ -125,7 +124,6 @@ export default function SignInClient({ verified, error: errorParam }: SignInClie
       }
     } catch (error) {
       setError('An error occurred during Google sign in');
-      console.error('Google sign in error:', error);
     } finally {
       setLoading(false);
     }

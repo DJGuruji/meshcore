@@ -30,7 +30,6 @@ class LocalhostWorkerManager {
         active: false,
         error: 'Service Workers not supported in this browser',
       };
-      console.log('[LocalhostWorker] Service Workers not supported in this browser');
       return this.status;
     }
 
@@ -39,7 +38,6 @@ class LocalhostWorkerManager {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[LocalhostWorker] Registration attempt ${attempt}/${maxRetries}...`);
         
         // Register the Service Worker with updateViaCache to force fresh registration
         this.registration = await navigator.serviceWorker.register(
@@ -50,11 +48,9 @@ class LocalhostWorkerManager {
           }
         );
 
-        console.log('[LocalhostWorker] Service Worker registered:', this.registration);
 
         // If there's a waiting worker, activate it immediately
         if (this.registration.waiting) {
-          console.log('[LocalhostWorker] Waiting worker found, activating...');
           this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
 
@@ -62,19 +58,15 @@ class LocalhostWorkerManager {
         if (this.registration.active) {
           this.worker = this.registration.active;
           this.status = { registered: true, active: true };
-          console.log('[LocalhostWorker] ✅ Service Worker already active');
         } else {
           await this.waitForActivation();
         }
 
-        console.log('[LocalhostWorker] ✅ Service Worker status:', this.status);
         return this.status;
         
       } catch (error: any) {
-        console.error(`[LocalhostWorker] Attempt ${attempt} failed:`, error.name, error.message);
         
         if (attempt < maxRetries) {
-          console.log(`[LocalhostWorker] Retrying in ${retryDelay * attempt}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
         } else {
           this.status = {
@@ -105,24 +97,19 @@ class LocalhostWorkerManager {
         // Already active
         this.worker = this.registration.active;
         this.status = { registered: true, active: true };
-        console.log('[LocalhostWorker] Service Worker activated');
         resolve();
         return;
       }
 
-      console.log('[LocalhostWorker] State changed:', worker.state);
 
       const handleStateChange = () => {
-        console.log('[LocalhostWorker] State changed:', worker.state);
         if (worker.state === 'activated') {
           this.worker = worker;
           this.status = { registered: true, active: true };
-          console.log('[LocalhostWorker] Service Worker activated');
           worker.removeEventListener('statechange', handleStateChange);
           resolve();
         } else if (worker.state === 'redundant') {
           this.status = { registered: false, active: false, error: 'Worker became redundant' };
-          console.error('[LocalhostWorker] Worker became redundant');
           worker.removeEventListener('statechange', handleStateChange);
           reject(new Error('Service Worker became redundant'));
         }
@@ -141,7 +128,6 @@ class LocalhostWorkerManager {
     headers?: Record<string, string>;
     body?: any;
   }): Promise<any> {
-    console.log('[LocalhostWorker] Sending fetch request:', request.url);
     
     if (!this.worker || !this.status.active) {
       throw new Error('Service Worker not active. Call register() first.');
@@ -155,7 +141,6 @@ class LocalhostWorkerManager {
 
       // Listen for response from Service Worker
       messageChannel.port1.onmessage = (event) => {
-        console.log('[LocalhostWorker] Received response:', event.data.requestId, event.data.success);
         if (event.data.success) {
           resolve(event.data);
         } else {

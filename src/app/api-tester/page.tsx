@@ -616,7 +616,6 @@ export default function ApiTesterPage() {
       const res = await axios.get('/api/tools/api-tester/history');
       setHistory(res.data.history || []);
     } catch (error) {
-      console.error('Failed to fetch history', error);
     }
   };
 
@@ -626,7 +625,6 @@ export default function ApiTesterPage() {
       setHistory([]);
       toast.success('History cleared');
     } catch (error) {
-      console.error('Failed to clear history', error);
       toast.error('Failed to clear history');
     }
   };
@@ -636,7 +634,6 @@ export default function ApiTesterPage() {
       const res = await axios.get('/api/tools/api-tester/collections');
       setCollections(res.data);
     } catch (error) {
-      console.error('Failed to fetch collections', error);
     }
   };
 
@@ -645,7 +642,6 @@ export default function ApiTesterPage() {
       const res = await axios.get('/api/tools/api-tester/environments');
       setEnvironments(res.data);
     } catch (error) {
-      console.error('Failed to fetch environments', error);
     }
   };
 
@@ -699,7 +695,6 @@ export default function ApiTesterPage() {
             currentLogs.push(...scriptRes.data.logs);
           }
         } catch (err) {
-          console.error('Pre-request script error:', err);
           toast.error('Pre-request script failed');
         }
     }
@@ -714,7 +709,6 @@ export default function ApiTesterPage() {
                           !window.location.hostname.includes('127.0.0.1');
     
     // Log decision logic for debugging
-    console.log('[API Tester] Decision logic:', {
       finalUrl,
       isLocalhost,
       isProductionUI,
@@ -754,7 +748,6 @@ export default function ApiTesterPage() {
       
       try {
         // Fallback 1: Try direct fetch with CORS mode
-        console.log('[API Tester] Using direct fetch for localhost request');
         const fetchOptions: RequestInit = {
           method: currentRequest.method,
           headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
@@ -794,10 +787,8 @@ export default function ApiTesterPage() {
         
         toast.success(' Localhost request executed directly!');
       } catch (fetchError) {
-        console.error('[API Tester] Direct fetch failed:', fetchError);
         
         // Final fallback: Try fetch with no-cors mode (limited functionality)
-        console.log('[API Tester] Using no-cors fetch as final fallback');
         const fetchOptions: RequestInit = {
           method: currentRequest.method,
           headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
@@ -881,7 +872,6 @@ export default function ApiTesterPage() {
       });
       fetchHistory(); // Refresh history
     } catch (historyError) {
-      console.error('Failed to save to history:', historyError);
     }
 
 
@@ -923,18 +913,15 @@ export default function ApiTesterPage() {
           toast.success(`Tests: ${passedTests}/${totalTests} passed`);
         }
       } catch (err) {
-        console.error('Test script error:', err);
         toast.error('Test script failed');
       }
     }
 
   } catch (error: any) {
-    console.error('[API Tester] Request failed:', error);
 
     // Check if the error is due to cancellation
     if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
       // Request was cancelled, don't show error
-      console.log('[API Tester] Request was cancelled');
     } else {
       // Show error in response area
       const errorResponse = {
@@ -1322,7 +1309,6 @@ export default function ApiTesterPage() {
       setShowCollectionModal(false);
       setEditingCollection(null);
     } catch (error: any) {
-      console.error('Save collection error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to save collection';
       toast.error(errorMessage);
     }
@@ -1346,7 +1332,6 @@ export default function ApiTesterPage() {
         setSelectedCollection(null);
       }
     } catch (error: any) {
-      console.error('Delete collection error:', error);
       toast.error(error.response?.data?.message || 'Failed to delete collection');
     }
   };
@@ -1381,7 +1366,6 @@ export default function ApiTesterPage() {
       fetchCollections();
       setShowSaveRequestModal(false);
     } catch (error: any) {
-      console.error('Save request error:', error);
       toast.error(error.response?.data?.message || 'Failed to save request');
     }
   };
@@ -1411,7 +1395,6 @@ export default function ApiTesterPage() {
         setSelectedEnvironment(null);
       }
     } catch (error: any) {
-      console.error('Delete environment error:', error);
       toast.error(error.response?.data?.message || 'Failed to delete environment');
     }
   };
@@ -1440,7 +1423,6 @@ export default function ApiTesterPage() {
       setShowEnvModal(false);
       setEditingEnvironment(null);
     } catch (error: any) {
-      console.error('Save environment error:', error);
       toast.error(error.response?.data?.message || 'Failed to save environment');
     }
   };

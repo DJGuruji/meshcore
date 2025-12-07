@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ code });
 
   } catch (error) {
-    console.error('Code generation error:', error);
     return NextResponse.json({ 
       error: 'Code generation failed',
       message: error instanceof Error ? error.message : 'Unknown error'

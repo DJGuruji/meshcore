@@ -184,7 +184,6 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(historyData)
       }).catch(err => {
         // Log error but don't fail the request
-        console.error('Failed to save history:', err);
       });
 
       return NextResponse.json({

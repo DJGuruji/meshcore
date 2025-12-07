@@ -49,7 +49,6 @@ function evaluateCondition(dataValue: any, operator: string, conditionValue: any
         return false;
     }
   } catch (error) {
-    console.error('Error evaluating condition:', error);
     return false;
   }
 }
@@ -308,7 +307,6 @@ async function checkRateLimit(project: any): Promise<{ allowed: boolean; message
     
     return { allowed: true };
   } catch (error) {
-    console.error('Error checking rate limit:', error);
     // Allow the operation if there's an error checking limits
     return { allowed: true };
   }
@@ -385,7 +383,6 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
           user.lastRequestLimitEmailSent = now;
           await user.save();
         } catch (emailError) {
-          console.error('Failed to send request limit email:', emailError);
         }
       }
       
@@ -401,7 +398,6 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
     
     return { allowed: true };
   } catch (error) {
-    console.error('Error checking daily request limit:', error);
     // Allow the operation if there's an error checking limits
     return { allowed: true };
   }
@@ -458,7 +454,6 @@ async function checkStorageLimit(project: any, dataSize: number, isWriteOperatio
             user.lastStorageLimitEmailSent = now;
             await user.save();
           } catch (emailError) {
-            console.error('Failed to send storage limit email:', emailError);
           }
         }
         
@@ -474,7 +469,6 @@ async function checkStorageLimit(project: any, dataSize: number, isWriteOperatio
     
     return { allowed: true };
   } catch (error) {
-    console.error('Error checking storage limit:', error);
     // Allow the operation if there's an error checking limits
     return { allowed: true };
   }
@@ -508,7 +502,6 @@ async function handleRequest(request: NextRequest, method: string) {
           await user.save();
         }
       } catch (cleanupError) {
-        console.error('Error during cleanup:', cleanupError);
       }
     }
     
@@ -600,7 +593,6 @@ async function handleRequest(request: NextRequest, method: string) {
                   data: requestBody
                 });
                 await mockData.save();
-                console.log('Stored POST data:', requestBody);
                 
                 // Update user's storage usage
                 try {
@@ -613,13 +605,11 @@ async function handleRequest(request: NextRequest, method: string) {
                     });
                   }
                 } catch (storageError) {
-                  console.error('Error updating storage usage:', storageError);
                 }
                 
                 // Invalidate cache for this endpoint (fire-and-forget)
                 const cacheKeyPattern = `mock:${project._id}:${endpoint._id}:*`;
                 cache.del(cacheKeyPattern).catch(err => {
-                  console.error('Failed to invalidate cache:', err);
                 });
                 
                 // Return success response with the stored data
@@ -630,7 +620,6 @@ async function handleRequest(request: NextRequest, method: string) {
                 }, { status: 201 });
                 return addCorsHeaders(successResponse);
               } catch (saveError) {
-                console.error('Error storing POST data:', saveError);
                 // Return error response
                 const errorResponse = NextResponse.json({ 
                   error: 'Failed to store data',
@@ -639,7 +628,6 @@ async function handleRequest(request: NextRequest, method: string) {
                 return addCorsHeaders(errorResponse);
               }
             } catch (error) {
-              console.error('Error parsing request body:', error);
               // Return error response for invalid JSON
               const errorResponse = NextResponse.json({ 
                 error: 'Invalid JSON',
@@ -722,14 +710,12 @@ async function handleRequest(request: NextRequest, method: string) {
                           });
                         }
                       } catch (storageError) {
-                        console.error('Error updating storage usage:', storageError);
                       }
                     }
                     
                     // Invalidate cache for this endpoint (fire-and-forget)
                     const cacheKeyPattern = `mock:${project._id}:${endpoint._id}:*`;
                     cache.del(cacheKeyPattern).catch(err => {
-                      console.error('Failed to invalidate cache:', err);
                     });
                     
                     const deleteResponse = NextResponse.json({ 
@@ -800,14 +786,12 @@ async function handleRequest(request: NextRequest, method: string) {
                           });
                         }
                       } catch (storageError) {
-                        console.error('Error updating storage usage:', storageError);
                       }
                     }
                     
                     // Invalidate cache for this endpoint (fire-and-forget)
                     const cacheKeyPattern = `mock:${project._id}:${endpoint._id}:*`;
                     cache.del(cacheKeyPattern).catch(err => {
-                      console.error('Failed to invalidate cache:', err);
                     });
                     
                     const updateResponse = NextResponse.json({ 
@@ -836,7 +820,6 @@ async function handleRequest(request: NextRequest, method: string) {
                 }
               }
             } catch (error) {
-              console.error('Error processing data source:', error);
               // Fall back to original response handling
             }
           }
@@ -848,7 +831,6 @@ async function handleRequest(request: NextRequest, method: string) {
             if (!storageCheck.allowed) {
               // Add a header to indicate read-only mode
               // We still allow the GET request to proceed
-              console.log(`User ${project.user} is in read-only mode due to storage limit`);
             }
             // Generate cache key
             const configuredFields = Array.isArray(endpoint.dataSourceFields) ? endpoint.dataSourceFields : [];
@@ -860,12 +842,10 @@ async function handleRequest(request: NextRequest, method: string) {
             // Try to get from cache first
             const cachedResponse = await cache.get(cacheKey);
             if (cachedResponse) {
-              console.log(`[Cache HIT] ${cacheKey}`);
               const response = NextResponse.json(cachedResponse, { status: endpoint.statusCode });
               return addCorsHeaders(response);
             }
             
-            console.log(`[Cache MISS] ${cacheKey}`);
             
             // Find the source endpoint
             const sourceEndpoint = project.endpoints.find((ep: typeof endpoint) => 
@@ -942,7 +922,6 @@ async function handleRequest(request: NextRequest, method: string) {
                   );
                   const aggregatorPayload = aggregatorResults.length === 1 ? aggregatorResults[0] : aggregatorResults;
                   cache.set(cacheKey, aggregatorPayload, { ttl: 300 }).catch(err => {
-                    console.error('Failed to cache aggregated response:', err);
                   });
                   const response = NextResponse.json(aggregatorPayload, { status: endpoint.statusCode });
                   return addCorsHeaders(response);
@@ -991,13 +970,11 @@ async function handleRequest(request: NextRequest, method: string) {
                 
                 // Cache the response (fire-and-forget, don't await)
                 cache.set(cacheKey, responseData, { ttl: 300 }).catch(err => {
-                  console.error('Failed to cache response:', err);
                 });
                 
                 const response = NextResponse.json(responseData, { status: endpoint.statusCode });
                 return addCorsHeaders(response);
               } catch (error) {
-                console.error('Error processing data source:', error);
                 // Fall back to original response body
               }
             }
@@ -1038,7 +1015,6 @@ async function handleRequest(request: NextRequest, method: string) {
     return addCorsHeaders(notFoundResponse);
     
   } catch (error) {
-    console.error('Fake API error:', error);
     const errorResponse = NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     return addCorsHeaders(errorResponse);
   }

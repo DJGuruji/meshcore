@@ -48,42 +48,31 @@ export async function GET(request: NextRequest) {
 // POST create new collection
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== Collection POST Request Started ===');
     const session = await getServerSession(authOptions);
-    console.log('Session:', session ? 'Found' : 'Not found');
     
     if (!session || !session.user) {
-      console.error('Unauthorized: No session or user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    console.log('Request body:', JSON.stringify(body, null, 2));
     const { name, description, requests = [], folders = [] } = body;
 
     if (!name) {
-      console.error('Collection name is required');
       return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
     }
 
-    console.log('Connecting to database...');
     await connectDB();
-    console.log('Database connected');
 
     // Ensure user.id exists
     const userId = (session.user as any).id || (session.user as any)._id;
-    console.log('User ID:', userId);
-    console.log('Session user object:', JSON.stringify(session.user, null, 2));
     
     if (!userId) {
-      console.error('User ID not found in session:', session.user);
       return NextResponse.json({ 
         error: 'User ID not found',
         session: session.user 
       }, { status: 400 });
     }
 
-    console.log('Creating collection with data:', { name, description, userId });
     const collection = await ApiTesterCollection.create({
       name,
       description: description || '',
@@ -92,15 +81,9 @@ export async function POST(request: NextRequest) {
       user: userId
     });
 
-    console.log('Collection created successfully:', collection._id);
     return NextResponse.json(collection, { status: 201 });
 
   } catch (error) {
-    console.error('=== Collection creation error ===');
-    console.error('Error type:', error?.constructor?.name);
-    console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'N/A');
-    console.error('Full error:', error);
     
     return NextResponse.json({ 
       error: 'Server error',

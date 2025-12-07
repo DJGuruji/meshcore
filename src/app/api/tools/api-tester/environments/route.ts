@@ -26,11 +26,9 @@ export async function GET(request: NextRequest) {
     try {
       const cachedData = await cacheService.get(cacheKey);
       if (cachedData) {
-        console.log(`Cache hit for API tester environments: ${cacheKey}`);
         return NextResponse.json(cachedData);
       }
     } catch (cacheError) {
-      console.error('Cache retrieval error:', cacheError);
     }
 
     await connectDB();
@@ -64,9 +62,7 @@ export async function GET(request: NextRequest) {
     // Cache the response for 5 minutes
     try {
       await cacheService.set(cacheKey, result, { ttl: 300 }); // 5 minutes
-      console.log(`Cached API tester environments: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache storage error:', cacheError);
     }
 
     return NextResponse.json(result);
@@ -107,7 +103,6 @@ export async function POST(request: NextRequest) {
     const userId = (session.user as any).id || (session.user as any)._id;
     
     if (!userId) {
-      console.error('User ID not found in session:', session.user);
       return NextResponse.json({ error: 'User ID not found' }, { status: 400 });
     }
 
@@ -122,15 +117,12 @@ export async function POST(request: NextRequest) {
     try {
       const cacheKey = `user_api_tester_envs_${userId}`;
       await cacheService.del(cacheKey);
-      console.log(`Invalidated cache for user API tester environments: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json(environment, { status: 201 });
 
   } catch (error) {
-    console.error('Environment creation error:', error);
     return NextResponse.json({ 
       error: 'Server error',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -181,10 +173,7 @@ export async function PUT(request: NextRequest) {
       await cacheService.del(envCacheKey);
       await cacheService.del(userEnvsCacheKey);
       
-      console.log(`Invalidated cache for API tester environment: ${envCacheKey}`);
-      console.log(`Invalidated cache for user API tester environments: ${userEnvsCacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json(environment);
@@ -238,10 +227,7 @@ export async function DELETE(request: NextRequest) {
       await cacheService.del(envCacheKey);
       await cacheService.del(userEnvsCacheKey);
       
-      console.log(`Invalidated cache for API tester environment: ${envCacheKey}`);
-      console.log(`Invalidated cache for user API tester environments: ${userEnvsCacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json({ message: 'Environment deleted successfully' });

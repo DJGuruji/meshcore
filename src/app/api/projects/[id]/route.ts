@@ -33,11 +33,9 @@ export async function GET(
     try {
       const cachedProject = await cacheService.get(cacheKey);
       if (cachedProject) {
-        console.log(`Cache hit for project: ${cacheKey}`);
         return NextResponse.json(cachedProject);
       }
     } catch (cacheError) {
-      console.error('Cache retrieval error:', cacheError);
     }
     
     await connectDB();
@@ -71,9 +69,7 @@ export async function GET(
     // Cache the response for 5 minutes
     try {
       await cacheService.set(cacheKey, projectData, { ttl: 300 }); // 5 minutes
-      console.log(`Cached project: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache storage error:', cacheError);
     }
     
     return NextResponse.json(projectData);
@@ -110,9 +106,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
-    console.log('Updating project ID:', id);
-    console.log('User ID:', session.user.id);
-    console.log('Updating project with data:', JSON.stringify(data, null, 2));
     
     // Validate for duplicate endpoints (same path + method combination)
     if (data.endpoints) {
@@ -146,7 +139,6 @@ export async function PUT(
       });
     }
     
-    console.log('Data being saved to database:', JSON.stringify(data, null, 2));
     
     // Get the existing project to calculate size difference
     const existingProject = await ApiProject.findById(id);
@@ -211,10 +203,8 @@ export async function PUT(
     // Handle authentication object explicitly
     if (data.authentication !== undefined) {
       updateData.authentication = data.authentication;
-      console.log('Explicitly setting authentication:', data.authentication);
     }
     
-    console.log('Final update data:', JSON.stringify(updateData, null, 2));
     
     const project = await ApiProject.findOneAndUpdate(
       { _id: id, user: session.user.id },
@@ -222,7 +212,6 @@ export async function PUT(
       { new: true, runValidators: true }
     );
     
-    console.log('Project after update:', JSON.stringify(project, null, 2));
     
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -237,7 +226,6 @@ export async function PUT(
           storageUsage: newUsage 
         });
       } catch (storageError) {
-        console.error('Error updating storage usage:', storageError);
       }
     }
     
@@ -249,15 +237,11 @@ export async function PUT(
       await cacheService.del(projectCacheKey);
       await cacheService.del(userProjectsCacheKey);
       
-      console.log(`Invalidated cache for project: ${projectCacheKey}`);
-      console.log(`Invalidated cache for user projects: ${userProjectsCacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
     
     return NextResponse.json(project);
   } catch (error) {
-    console.error('Error updating project:', error);
     return NextResponse.json({ 
       error: 'Failed to update project',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -314,7 +298,6 @@ export async function DELETE(
         storageUsage: newUsage 
       });
     } catch (storageError) {
-      console.error('Error updating storage usage:', storageError);
     }
     
     // Invalidate cache for this project and user's projects list
@@ -325,10 +308,7 @@ export async function DELETE(
       await cacheService.del(projectCacheKey);
       await cacheService.del(userProjectsCacheKey);
       
-      console.log(`Invalidated cache for project: ${projectCacheKey}`);
-      console.log(`Invalidated cache for user projects: ${userProjectsCacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
     
     return NextResponse.json({ message: 'Project deleted successfully' });

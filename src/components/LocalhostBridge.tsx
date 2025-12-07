@@ -37,15 +37,11 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
   useEffect(() => {
     const registerWorker = async () => {
       try {
-        console.log('[LocalhostBridge] Registering Service Worker...');
         const workerStatus = await localhostWorker.register();
-        console.log('[LocalhostBridge] Service Worker registration result:', workerStatus);
         
         if (workerStatus.active) {
-          console.log('[LocalhostBridge] ✅ Service Worker active - CORS bypass enabled!');
         }
       } catch (error) {
-        console.error('[LocalhostBridge] Failed to register worker:', error);
       }
     };
 
@@ -54,24 +50,19 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
 
   useEffect(() => {
     if (!socket || !isReady) {
-      console.log('[LocalhostBridge] Not registering listener - socket or not ready', { socket: !!socket, isReady });
       return;
     }
 
-    console.log('[LocalhostBridge] Registering listener for localhost:performFetch');
     
     // Listen for performFetch commands from relay server
     const handlePerformFetch = async (request: LocalhostRequest) => {
-      console.log('[LocalhostBridge] Received localhost:performFetch command', request);
       
       // Prevent duplicate processing
       if (processingRef.current.has(request.requestId)) {
-        console.warn(`[LocalhostBridge] Request ${request.requestId} already processing`);
         return;
       }
 
       processingRef.current.add(request.requestId);
-      console.log(`[LocalhostBridge] Executing local fetch: ${request.method} ${request.url}`);
 
       const startTime = Date.now();
 
@@ -139,10 +130,8 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
         // Check if Service Worker is active
         let workerStatus = localhostWorker.getStatus();
         
-        console.log('[LocalhostBridge] Worker status:', workerStatus);
         
         if (workerStatus.active) {
-          console.log('[LocalhostBridge] 🚀 Executing via Service Worker:', request.method, request.url);
           
           try {
             // Execute via Service Worker (bypasses CORS!)
@@ -154,7 +143,6 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
             });
 
             const endTime = Date.now();
-            console.log('[LocalhostBridge] 🔓 Using Service Worker - No CORS restrictions!');
 
             // Send successful response back to relay
             socket.emit('localhost:fetchComplete', {
@@ -168,13 +156,10 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
               timestamp: new Date().toISOString(),
             });
 
-            console.log(`[LocalhostBridge] ✅ Fetch completed: ${result.status} in ${result.time || (endTime - startTime)}ms`);
           } catch (workerError) {
-            console.error('[LocalhostBridge] Service Worker fetch failed:', workerError);
             throw workerError;
           }
         } else {
-          console.log('[LocalhostBridge] Executing localhost URL directly (bypassing Service Worker)');
           
           try {
             // Execute fetch directly with CORS mode
@@ -224,10 +209,8 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
               timestamp: new Date().toISOString(),
             });
 
-            console.log(`[LocalhostBridge] Fetch completed: ${response.status} in ${endTime - startTime}ms`);
           } catch (fetchError: any) {
             // Handle CORS and other fetch errors
-            console.error('[LocalhostBridge] Fetch error:', fetchError.name, fetchError.message);
             
             // Check if this is a CORS error
             const isCORSError = fetchError.name === 'TypeError' && 
@@ -259,7 +242,6 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
         }
       } catch (error: any) {
         const endTime = Date.now();
-        console.error('[LocalhostBridge] Fetch error:', error.name, error.message);
 
         // Check if this is a mixed content error (HTTPS -> HTTP)
         const isMixedContent = error.message?.includes('NetworkError') || 
@@ -291,7 +273,6 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
 
     // Cleanup
     return () => {
-      console.log('[LocalhostBridge] Cleaning up listener');
       socket.off('localhost:performFetch', handlePerformFetch);
     };
   }, [socket, isReady]);

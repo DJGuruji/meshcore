@@ -87,7 +87,6 @@ export async function POST(request: NextRequest) {
       message: 'Registration successful. Please check your email to verify your account.'
     });
   } catch (error: any) {
-    console.error('Registration error:', error);
     
     // Handle validation errors
     if (error.name === 'ValidationError') {

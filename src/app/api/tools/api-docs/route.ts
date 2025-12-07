@@ -59,11 +59,9 @@ export async function GET(request: NextRequest) {
     try {
       const cachedData = await cacheService.get(cacheKey);
       if (cachedData) {
-        console.log(`Cache hit for API docs: ${cacheKey}`);
         return NextResponse.json(cachedData);
       }
     } catch (cacheError) {
-      console.error('Cache retrieval error:', cacheError);
     }
 
     await connectDB();
@@ -91,9 +89,7 @@ export async function GET(request: NextRequest) {
     // Cache the response for 5 minutes
     try {
       await cacheService.set(cacheKey, result, { ttl: 300 }); // 5 minutes
-      console.log(`Cached API docs: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache storage error:', cacheError);
     }
 
     return NextResponse.json(result);
@@ -143,9 +139,7 @@ export async function POST(request: NextRequest) {
     try {
       const cacheKey = `user_api_docs_${session.user.id}`;
       await cacheService.del(cacheKey);
-      console.log(`Invalidated cache for user API docs: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json(doc, { status: 201 });
@@ -200,10 +194,7 @@ export async function PUT(request: NextRequest) {
       await cacheService.del(docCacheKey);
       await cacheService.del(userDocsCacheKey);
       
-      console.log(`Invalidated cache for API doc: ${docCacheKey}`);
-      console.log(`Invalidated cache for user API docs: ${userDocsCacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json(doc);
@@ -254,10 +245,7 @@ export async function DELETE(request: NextRequest) {
       await cacheService.del(docCacheKey);
       await cacheService.del(userDocsCacheKey);
       
-      console.log(`Invalidated cache for API doc: ${docCacheKey}`);
-      console.log(`Invalidated cache for user API docs: ${userDocsCacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json({ message: 'Documentation deleted successfully' });

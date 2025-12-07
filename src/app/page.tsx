@@ -128,7 +128,6 @@ export default function Home() {
           });
         }
       } catch (error) {
-        console.error('Failed to fetch usage data', error);
       }
     };
 
@@ -219,12 +218,7 @@ export default function Home() {
     setSelectedProject(updatedProject);
 
     try {
-      console.log('Updating project:', updatedProject);
-      console.log('Authentication state:', updatedProject.authentication);
-      
       const response = await axios.put(`/api/projects/${updatedProject._id}`, updatedProject);
-      
-      console.log('Server response:', response.data);
       
       if (response.data) {
         setProjects((prev) =>
@@ -237,7 +231,6 @@ export default function Home() {
         toast.success('Project updated successfully');
       }
     } catch (error: any) {
-      console.error('Error updating project:', error);
       const errorMessage = error.response?.data?.error || 'Failed to update project';
       toast.error(errorMessage);
       setProjects(previousProjects);
