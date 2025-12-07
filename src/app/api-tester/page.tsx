@@ -708,14 +708,6 @@ export default function ApiTesterPage() {
                           !window.location.hostname.includes('localhost') &&
                           !window.location.hostname.includes('127.0.0.1');
     
-    // Log decision logic for debugging
-      finalUrl,
-      isLocalhost,
-      isProductionUI,
-      relayReady: localhostRelay.isReady,
-      relayStatus: localhostRelay.status
-    });
-    
     // Decision logic:
     // 1. If localhost URL + production UI + relay ready  Use WebSocket relay
     // 2. If localhost URL + development UI  Use client-side fetch

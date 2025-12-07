@@ -1,6 +1,45 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+
+const navSections = [
+  { id: 'introduction', label: 'Introduction' },
+  { id: 'mock-server', label: 'Mock Server' },
+  { id: 'custom-api', label: 'Custom API Modes' },
+  { id: 'rest-api-tester', label: 'REST API Tester' },
+  { id: 'graphql-tester', label: 'GraphQL Tester' }
+];
 
 const DocsPage = () => {
+  const [activeSection, setActiveSection] = useState('introduction');
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      {
+        rootMargin: '-45% 0px -45% 0px',
+        threshold: 0
+      }
+    );
+
+    navSections.forEach((section) => {
+      const element = document.getElementById(section.id);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white" style={{ scrollPaddingTop: '5rem' }}>
       <div className="container mx-auto px-4 py-12">
@@ -19,26 +58,20 @@ const DocsPage = () => {
             <div className="sticky top-24 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-6">
               <h2 className="text-lg font-semibold mb-4 text-indigo-300">Documentation</h2>
               <ul className="space-y-2">
-                <li>
-                  <a href="#introduction" className="block py-2 px-4 rounded-lg hover:bg-white/5 transition">
-                    Introduction
-                  </a>
-                </li>
-                <li>
-                  <a href="#mock-server" className="block py-2 px-4 rounded-lg hover:bg-white/5 transition">
-                    Mock Server
-                  </a>
-                </li>
-                <li>
-                  <a href="#rest-api-tester" className="block py-2 px-4 rounded-lg hover:bg-white/5 transition">
-                    REST API Tester
-                  </a>
-                </li>
-                <li>
-                  <a href="#graphql-tester" className="block py-2 px-4 rounded-lg hover:bg-white/5 transition">
-                    GraphQL Tester
-                  </a>
-                </li>
+                {navSections.map((section) => (
+                  <li key={section.id}>
+                    <a
+                      href={`#${section.id}`}
+                      className={`block py-2 px-4 rounded-lg transition ${
+                        activeSection === section.id
+                          ? 'bg-white/10 text-white border border-white/20'
+                          : 'hover:bg-white/5 text-slate-300'
+                      }`}
+                    >
+                      {section.label}
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
           </nav>
@@ -93,6 +126,84 @@ const DocsPage = () => {
                 
                 <p>
                   Whether you're building a simple REST API or a complex GraphQL service, our platform provides all the tools you need to develop, test, and deploy with confidence. Dive into the specific sections below to learn how each tool can enhance your development workflow.
+                </p>
+              </div>
+            </section>
+
+            {/* Custom API & Aggregation Section */}
+            <section id="custom-api" className="mb-16 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-8 pt-20">
+              <h2 className="text-3xl font-bold mb-6 text-indigo-300">Custom API Modes & Aggregation</h2>
+              <div className="prose prose-invert max-w-none">
+                <p className="text-lg mb-6">
+                  GET endpoints can be linked to POST data sources, projected into lightweight payloads, or converted into real-time reports using aggregations. This lets you reuse the same data definition for multiple read scenarios without writing additional backend code.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                  <div className="bg-slate-700/40 p-6 rounded-xl border border-white/10">
+                    <h3 className="text-xl font-semibold mb-3 text-purple-300">Custom API Modes</h3>
+                    <ul className="space-y-3 text-sm">
+                      <li>
+                        <span className="font-semibold text-indigo-300">Full Dataset:</span> return every record captured by the linked POST endpoint. Perfect for admin tables and list views.
+                      </li>
+                      <li>
+                        <span className="font-semibold text-indigo-300">Select Columns:</span> choose one or more fields to expose. Multi-select support ensures consumers get exactly what they need without leaking sensitive data.
+                      </li>
+                      <li>
+                        <span className="font-semibold text-indigo-300">Aggregator:</span> transform the dataset into summary statistics such as <code>count</code>, <code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code>, or <code>total</code>.
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-slate-700/40 p-6 rounded-xl border border-white/10">
+                    <h3 className="text-xl font-semibold mb-3 text-purple-300">Data Source Controls</h3>
+                    <p className="mb-3">
+                      Each GET/PUT/PATCH/DELETE endpoint can reference a POST endpoint as its data source. Once linked, you can layer on:
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>Reusable filter conditions (equals, inequalities, contains, prefix/suffix, etc.).</li>
+                      <li>Server-enforced pagination with default/max limits for infinite-scroll experiences.</li>
+                      <li>Authentication inheritance to ensure sensitive data respects project-level access rules.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-semibold mb-4">Aggregation Workflows</h3>
+                <p className="mb-4">
+                  Aggregations help you build KPI tiles or analytics APIs without connecting a real database. Select any number of numeric columns and the platform will return one object per column with metadata about the calculation.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <div className="bg-slate-700/30 p-4 rounded-xl border border-white/10">
+                    <h4 className="text-lg font-semibold text-indigo-300 mb-2">Count & Total</h4>
+                    <p className="text-sm">Measure record volume or total revenue instantly—ideal for dashboard counters.</p>
+                  </div>
+                  <div className="bg-slate-700/30 p-4 rounded-xl border border-white/10">
+                    <h4 className="text-lg font-semibold text-indigo-300 mb-2">Sum / Avg / Min / Max</h4>
+                    <p className="text-sm">Generate descriptive stats directly in the mock server to mimic production aggregates.</p>
+                  </div>
+                  <div className="bg-slate-700/30 p-4 rounded-xl border border-white/10">
+                    <h4 className="text-lg font-semibold text-indigo-300 mb-2">Multi-Column Support</h4>
+                    <p className="text-sm">Select multiple fields, and the response returns an array so each column’s aggregate is easy to consume.</p>
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-semibold mb-4">Use Cases</h3>
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-start">
+                    <div className="mt-1 mr-3 text-indigo-400">✓</div>
+                    <span><strong>Reporting Dashboards:</strong> Build revenue, usage, or growth widgets straight from mock data.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="mt-1 mr-3 text-indigo-400">✓</div>
+                    <span><strong>Role-Based Payloads:</strong> Expose different slices of the same dataset to different clients by toggling modes.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="mt-1 mr-3 text-indigo-400">✓</div>
+                    <span><strong>Prototype Search & Filter:</strong> Combine column projections with conditions to simulate complex reporting APIs.</span>
+                  </li>
+                </ul>
+
+                <p>
+                  By combining data sources, column selection, and aggregations, AnyTimeRequest doubles as a lightweight data service. You can validate frontend contracts, iterate on API shapes, and demo analytics-heavy experiences without spinning up a bespoke backend.
                 </p>
               </div>
             </section>
