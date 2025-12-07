@@ -937,7 +937,7 @@ async function handleRequest(request: NextRequest, method: string) {
                 const selectedAggregator = endpoint.aggregator || '';
 
                 if (dataSourceMode === 'aggregator' && dataSourceFields.length > 0 && selectedAggregator) {
-                  const aggregatorResults = dataSourceFields.map((fieldName) =>
+                  const aggregatorResults = dataSourceFields.map((fieldName: string) =>
                     calculateAggregatorResult(filteredData, fieldName, selectedAggregator)
                   );
                   const aggregatorPayload = aggregatorResults.length === 1 ? aggregatorResults[0] : aggregatorResults;

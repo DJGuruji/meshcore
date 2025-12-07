@@ -12,6 +12,7 @@ import ProjectDetail from '@/components/ProjectDetail';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import SEOContent from '@/components/SEOContent';
 
+// Simplified type definitions for API data
 interface Endpoint {
   _id: string;
   path: string;
@@ -25,7 +26,7 @@ interface Endpoint {
   dataSourceMode?: 'full' | 'field' | 'aggregator';
   dataSourceField?: string;
   dataSourceFields?: string[];
-  aggregator?: string;
+  aggregator?: string | null;
 }
 
 interface ApiProject {
@@ -42,6 +43,17 @@ interface ApiProject {
   user: string;
   createdAt: string;
 }
+
+// Type conversion function to ensure compatibility with ProjectDetail component
+const convertApiProject = (project: any): any => {
+  return {
+    ...project,
+    endpoints: project.endpoints?.map((endpoint: any) => ({
+      ...endpoint,
+      aggregator: endpoint.aggregator || null,
+    })) || [],
+  };
+};
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -195,7 +207,7 @@ export default function Home() {
     }
   };
 
-  const handleUpdateProject = async (updatedProject: ApiProject) => {
+  const handleUpdateProject = async (updatedProject: any) => {
     const previousProjects = projects;
     const previousSelected = selectedProject;
 
@@ -414,9 +426,9 @@ export default function Home() {
         className="relative z-40"
       >
         <ProjectPanel
-          projects={projects}
-          onProjectClick={(project: ApiProject) => {
-            setSelectedProject(project);
+          projects={projects.map(convertApiProject)}
+          onProjectClick={(project: any) => {
+            setSelectedProject(convertApiProject(project));
             // Save selected project ID to navigation state
             updateState({ selectedProjectId: project._id });
             // Close sidebar in mobile view when a project is selected
@@ -440,7 +452,7 @@ export default function Home() {
         data-aos-delay="200"
       >
         {selectedProject ? (
-          <ProjectDetail project={selectedProject} onUpdateProject={handleUpdateProject} />
+          <ProjectDetail project={selectedProject ? convertApiProject(selectedProject) : null} onUpdateProject={handleUpdateProject} />
         ) : (
           <div className="flex h-full w-full items-center justify-center p-10 text-slate-300">
             <div
