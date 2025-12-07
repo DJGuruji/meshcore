@@ -12,6 +12,7 @@ import ProjectDetail from '@/components/ProjectDetail';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import SEOContent from '@/components/SEOContent';
 
+// Simplified type definitions for API data
 interface Endpoint {
   _id: string;
   path: string;
@@ -20,6 +21,12 @@ interface Endpoint {
   statusCode: number;
   description?: string;
   requiresAuth?: boolean | null;
+  fields?: any[];
+  dataSource?: string;
+  dataSourceMode?: 'full' | 'field' | 'aggregator';
+  dataSourceField?: string;
+  dataSourceFields?: string[];
+  aggregator?: string | null;
 }
 
 interface ApiProject {
@@ -36,6 +43,17 @@ interface ApiProject {
   user: string;
   createdAt: string;
 }
+
+// Type conversion function to ensure compatibility with ProjectDetail component
+const convertApiProject = (project: any): any => {
+  return {
+    ...project,
+    endpoints: project.endpoints?.map((endpoint: any) => ({
+      ...endpoint,
+      aggregator: endpoint.aggregator || null,
+    })) || [],
+  };
+};
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -189,7 +207,17 @@ export default function Home() {
     }
   };
 
-  const handleUpdateProject = async (updatedProject: ApiProject) => {
+  const handleUpdateProject = async (updatedProject: any) => {
+    const previousProjects = projects;
+    const previousSelected = selectedProject;
+
+    setProjects((prev) =>
+      prev.map((project) =>
+        project._id === updatedProject._id ? updatedProject : project
+      )
+    );
+    setSelectedProject(updatedProject);
+
     try {
       console.log('Updating project:', updatedProject);
       console.log('Authentication state:', updatedProject.authentication);
@@ -199,11 +227,12 @@ export default function Home() {
       console.log('Server response:', response.data);
       
       if (response.data) {
-        setProjects(projects.map((project) =>
-          project._id === updatedProject._id ? response.data : project
-        ));
+        setProjects((prev) =>
+          prev.map((project) =>
+            project._id === updatedProject._id ? response.data : project
+          )
+        );
         setSelectedProject(response.data);
-        // Save selected project ID to navigation state
         updateState({ selectedProjectId: response.data._id });
         toast.success('Project updated successfully');
       }
@@ -211,11 +240,8 @@ export default function Home() {
       console.error('Error updating project:', error);
       const errorMessage = error.response?.data?.error || 'Failed to update project';
       toast.error(errorMessage);
-      
-      // Revert changes in UI if the API call failed
-      if (selectedProject) {
-        setSelectedProject({ ...selectedProject });
-      }
+      setProjects(previousProjects);
+      setSelectedProject(previousSelected || null);
     }
   };
 
@@ -400,9 +426,9 @@ export default function Home() {
         className="relative z-40"
       >
         <ProjectPanel
-          projects={projects}
-          onProjectClick={(project: ApiProject) => {
-            setSelectedProject(project);
+          projects={projects.map(convertApiProject)}
+          onProjectClick={(project: any) => {
+            setSelectedProject(convertApiProject(project));
             // Save selected project ID to navigation state
             updateState({ selectedProjectId: project._id });
             // Close sidebar in mobile view when a project is selected
@@ -426,7 +452,7 @@ export default function Home() {
         data-aos-delay="200"
       >
         {selectedProject ? (
-          <ProjectDetail project={selectedProject} onUpdateProject={handleUpdateProject} />
+          <ProjectDetail project={selectedProject ? convertApiProject(selectedProject) : null} onUpdateProject={handleUpdateProject} />
         ) : (
           <div className="flex h-full w-full items-center justify-center p-10 text-slate-300">
             <div

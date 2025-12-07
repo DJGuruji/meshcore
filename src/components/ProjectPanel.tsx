@@ -28,6 +28,12 @@ interface Endpoint {
   statusCode: number;
   description?: string;
   requiresAuth?: boolean | null;
+  fields?: any[];
+  dataSource?: string;
+  dataSourceMode?: 'full' | 'field' | 'aggregator';
+  dataSourceField?: string;
+  dataSourceFields?: string[];
+  aggregator?: string;
 }
 
 interface UsageData {

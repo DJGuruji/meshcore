@@ -41,6 +41,9 @@ interface EndpointField {
   // For array validation
   arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
 }
+
+type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
+
 interface Endpoint {
   _id: string;
   path: string;
@@ -52,6 +55,10 @@ interface Endpoint {
   fields?: EndpointField[]; // Add this for POST endpoint field definitions
   // New properties for GET endpoints to reference POST data
   dataSource?: string; // ID of the POST endpoint to get data from
+  dataSourceMode?: 'full' | 'field' | 'aggregator';
+  dataSourceField?: string;
+  dataSourceFields?: string[];
+  aggregator?: AggregatorType;
   conditions?: {
     field: string;
     operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
@@ -312,6 +319,10 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     requiresAuth: null as boolean | null,
     fields: [] as EndpointField[],
     dataSource: '',
+    dataSourceMode: 'full' as 'full' | 'field' | 'aggregator',
+    dataSourceField: '',
+    dataSourceFields: [] as string[],
+    aggregator: '' as AggregatorType,
     conditions: [] as {
       field: string;
       operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
@@ -324,6 +335,167 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       maxLimit: 100
     }
   });
+
+  const aggregatorOptions = [
+    { value: 'count', label: 'Count' },
+    { value: 'sum', label: 'Sum' },
+    { value: 'avg', label: 'Average' },
+    { value: 'min', label: 'Minimum' },
+    { value: 'max', label: 'Maximum' },
+    { value: 'total', label: 'Total' }
+  ];
+
+  type CustomApiMode = 'full' | 'field' | 'aggregator';
+  type CustomApiOptionsProps = {
+    mode: CustomApiMode;
+    fields: string[];
+    aggregator: AggregatorType;
+    availableFields: EndpointField[];
+    onModeChange: (value: CustomApiMode) => void;
+    onFieldsChange: (value: string[]) => void;
+    onAggregatorChange: (value: AggregatorType) => void;
+  };
+
+  const CustomApiOptions = ({
+    mode,
+    fields,
+    aggregator,
+    availableFields,
+    onModeChange,
+    onFieldsChange,
+    onAggregatorChange
+  }: CustomApiOptionsProps) => {
+    const [selectedFields, setSelectedFields] = useState<string[]>(fields || []);
+
+    useEffect(() => {
+      setSelectedFields(fields || []);
+    }, [fields]);
+
+    useEffect(() => {
+      if (mode === 'full') {
+        setSelectedFields([]);
+      }
+    }, [mode]);
+
+    const handleToggleField = (fieldName: string, checked: boolean) => {
+      setSelectedFields((prev) => {
+        const updated = checked
+          ? Array.from(new Set([...prev, fieldName]))
+          : prev.filter((name) => name !== fieldName);
+        onFieldsChange(updated);
+        return updated;
+      });
+    };
+    const options: { value: CustomApiMode; label: string; description: string }[] = [
+      { value: 'full', label: 'Full dataset', description: 'Return the complete records from the linked POST endpoint.' },
+      { value: 'field', label: 'Select column', description: 'Return only specific fields/columns for each record.' },
+      { value: 'aggregator', label: 'Aggregator', description: 'Return the count, sum, average, min, or max for a column.' }
+    ];
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">Custom API Mode</label>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onModeChange(option.value)}
+                className={`rounded-2xl border px-3 py-2 text-left text-xs transition ${
+                  mode === option.value
+                    ? 'border-yellow-400/60 bg-yellow-400/10 text-white'
+                    : 'border-white/10 text-slate-300 hover:border-white/30'
+                }`}
+              >
+                <p className="font-semibold uppercase tracking-[0.3em] text-[10px]">{option.label}</p>
+                <p className="mt-2 text-[11px] text-slate-400">{option.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {mode !== 'full' && (
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Select Columns</label>
+            {availableFields.length > 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-white/5 p-3 space-y-2 max-h-56 overflow-y-auto">
+                {availableFields.map((endpointField, idx) => {
+                  const isChecked = selectedFields.includes(endpointField.name);
+                  return (
+                    <label
+                      key={`${endpointField.name}-${idx}`}
+                      className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => handleToggleField(endpointField.name, e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 bg-white text-yellow-500 focus:ring-yellow-400 dark:border-white/20 dark:bg-white/5 dark:text-yellow-400"
+                        />
+                        <span className="font-mono text-slate-900 dark:text-white">{endpointField.name}</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                        {endpointField.type}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">Define fields in the selected POST endpoint to enable column-level responses.</p>
+            )}
+            {selectedFields.length > 0 && (
+              <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-400">
+                Returning columns: {selectedFields.join(', ')}
+              </p>
+            )}
+          </div>
+        )}
+
+        {mode === 'aggregator' && (
+          <div className="grid gap-2 md:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Aggregator</label>
+              <select
+                value={aggregator || ''}
+                disabled={selectedFields.length === 0}
+                onChange={(e) => onAggregatorChange(e.target.value as AggregatorType)}
+                className={`w-full px-2 py-1 border border-slate-300 rounded text-sm bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-yellow-400 dark:border-white/10 dark:bg-white/5 dark:text-white ${
+                  selectedFields.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <option value="">Select aggregator</option>
+                {aggregatorOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-100 p-3 text-[11px] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              {selectedFields.length > 0
+                ? 'Returns the selected aggregate (count, sum, etc.) for each chosen column instead of the entire dataset.'
+                : 'Select at least one column to enable aggregations.'}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const getSourceEndpoint = (sourceId: string | undefined) => {
+    if (!sourceId) return undefined;
+    return project.endpoints.find(ep => ep._id === sourceId);
+  };
+
+  const getSourceFields = (sourceId: string | undefined) => {
+    const source = getSourceEndpoint(sourceId);
+    return source?.fields || [];
+  };
+
+  const selectedSourceFields = getSourceFields(newEndpoint.dataSource);
   
   // Validation state for highlighting required fields
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
@@ -413,6 +585,17 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       return;
     }
 
+    if (newEndpoint.method === 'GET' && newEndpoint.dataSource) {
+      if (newEndpoint.dataSourceMode !== 'full' && newEndpoint.dataSourceFields.length === 0) {
+        alert('Please select a column when using Custom API modes.');
+        return;
+      }
+      if (newEndpoint.dataSourceMode === 'aggregator' && !newEndpoint.aggregator) {
+        alert('Please select an aggregator function.');
+        return;
+      }
+    }
+
     // For POST endpoints, validate that required fields are defined if any fields exist
     if (newEndpoint.method === 'POST' && newEndpoint.fields && newEndpoint.fields.length > 0) {
       const requiredFields = newEndpoint.fields.filter(field => field.required);
@@ -432,6 +615,20 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     // Remove dataSource if it's empty
     if (endpoint.dataSource === '') {
       delete endpoint.dataSource;
+      delete endpoint.dataSourceField;
+      delete endpoint.dataSourceFields;
+      delete endpoint.aggregator;
+    }
+
+    if (endpoint.dataSourceField === '') {
+      delete endpoint.dataSourceField;
+    }
+    if (!endpoint.dataSourceFields || endpoint.dataSourceFields.length === 0) {
+      delete endpoint.dataSourceFields;
+    }
+
+    if (!endpoint.aggregator) {
+      delete endpoint.aggregator;
     }
 
     const updatedProject = {
@@ -451,6 +648,10 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       requiresAuth: null as boolean | null,
       fields: [] as EndpointField[],
       dataSource: '',
+      dataSourceMode: 'full',
+      dataSourceField: '',
+      dataSourceFields: [],
+      aggregator: '',
       conditions: [],
       // Pagination settings
       pagination: {
@@ -490,6 +691,24 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
     const cleanUpdates: any = { ...updates };
     if (cleanUpdates.dataSource === '') {
       delete cleanUpdates.dataSource;
+      cleanUpdates.dataSourceMode = 'full';
+      cleanUpdates.dataSourceField = '';
+      cleanUpdates.dataSourceFields = [];
+      cleanUpdates.aggregator = '';
+    }
+    if (cleanUpdates.dataSourceMode === 'full') {
+      cleanUpdates.dataSourceField = '';
+      cleanUpdates.dataSourceFields = [];
+      cleanUpdates.aggregator = '';
+    }
+    if (cleanUpdates.dataSourceField === '') {
+      delete cleanUpdates.dataSourceField;
+    }
+    if (Array.isArray(cleanUpdates.dataSourceFields) && cleanUpdates.dataSourceFields.length === 0) {
+      delete cleanUpdates.dataSourceFields;
+    }
+    if (cleanUpdates.aggregator === '') {
+      delete cleanUpdates.aggregator;
     }
 
     const updatedProject = {
@@ -1382,7 +1601,14 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint (optional)</label>
                   <select
                     value={newEndpoint.dataSource}
-                    onChange={(e) => setNewEndpoint({ ...newEndpoint, dataSource: e.target.value })}
+                    onChange={(e) => setNewEndpoint({
+                      ...newEndpoint,
+                      dataSource: e.target.value,
+                      dataSourceField: '',
+                      dataSourceFields: [],
+                      dataSourceMode: 'full',
+                      aggregator: ''
+                    })}
                     className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                   >
                     <option className={optionStyles} value="">Use custom response body</option>
@@ -1395,6 +1621,38 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       ))}
                   </select>
                 </div>
+
+                {newEndpoint.dataSource && (
+                  <CustomApiOptions
+                    mode={newEndpoint.dataSourceMode}
+                    fields={newEndpoint.dataSourceMode === 'full' ? [] : newEndpoint.dataSourceFields}
+                    aggregator={newEndpoint.aggregator}
+                    availableFields={selectedSourceFields}
+                    onModeChange={(value) =>
+                      setNewEndpoint({
+                        ...newEndpoint,
+                        dataSourceMode: value,
+                        dataSourceField: value === 'full' ? '' : newEndpoint.dataSourceField,
+                        dataSourceFields: value === 'full' ? [] : newEndpoint.dataSourceFields,
+                        aggregator: value === 'aggregator' ? newEndpoint.aggregator : ''
+                      })
+                    }
+                    onFieldsChange={(values) =>
+                      setNewEndpoint({
+                        ...newEndpoint,
+                        dataSourceFields: values,
+                        dataSourceField: values[0] || '',
+                        aggregator: values.length ? newEndpoint.aggregator : ''
+                      })
+                    }
+                    onAggregatorChange={(value) =>
+                      setNewEndpoint({
+                        ...newEndpoint,
+                        aggregator: value
+                      })
+                    }
+                  />
+                )}
                 
                 {/* Conditions section */}
                 {newEndpoint.dataSource && (
@@ -1596,7 +1854,18 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
           </div>
         ) : (
           <div className="space-y-4">
-            {project.endpoints.map((endpoint) => (
+            {project.endpoints.map((endpoint) => {
+              const endpointMode = endpoint.dataSourceMode || 'full';
+              const endpointAggregator = endpoint.aggregator || '';
+              const endpointFields = getSourceFields(endpoint.dataSource);
+              const endpointSelectedFields =
+                (endpoint.dataSourceFields && endpoint.dataSourceFields.length > 0)
+                  ? endpoint.dataSourceFields
+                  : endpoint.dataSourceField
+                    ? [endpoint.dataSourceField]
+                    : [];
+              const isEditingConditions = Boolean(editingConditions[endpoint._id]);
+              return (
               <div key={endpoint._id} className="rounded-[28px] border border-white/10 bg-white/5">
                 <div 
                   className="p-4 cursor-pointer hover:bg-white/10 transition-colors"
@@ -1626,6 +1895,13 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                         <div className="font-mono text-white">{project.baseUrl}{endpoint.path}{(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') ? '/:id' : ''}</div>
                         {endpoint.description && (
                           <div className="text-sm text-slate-400 mt-1">{endpoint.description}</div>
+                        )}
+                        {endpoint.dataSource && endpointMode !== 'full' && (
+                          <div className="text-[11px] text-slate-400 mt-1">
+                            {endpointMode === 'field'
+                              ? `Custom API · Columns: ${endpointSelectedFields.length ? endpointSelectedFields.join(', ') : 'not set'}`
+                              : `Custom API · ${endpointAggregator || 'Aggregator not set'} on ${endpointSelectedFields.length ? endpointSelectedFields.join(', ') : 'no columns selected'}`}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1866,7 +2142,16 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                           <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint</label>
                           <select
                             value={endpoint.dataSource || ''}
-                            onChange={(e) => handleUpdateEndpoint(endpoint._id, { dataSource: e.target.value || undefined })}
+                            onChange={(e) => {
+                              const value = e.target.value || undefined;
+                              handleUpdateEndpoint(endpoint._id, {
+                                dataSource: value,
+                                dataSourceField: '',
+                                dataSourceFields: [],
+                                dataSourceMode: 'full',
+                                aggregator: ''
+                              });
+                            }}
                             className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
                           >
                             <option className={optionStyles} value="">Use custom response body</option>
@@ -1879,126 +2164,187 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                               ))}
                           </select>
                         </div>
-                        
-                        {/* Conditions section */}
+
                         {endpoint.dataSource && (
-                          <div className="mt-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="text-xs font-medium text-slate-400">Filter Conditions</h5>
-                              <button
-                                onClick={() => {
-                                  // Initialize editing state with current conditions
-                                  const currentConditions = endpoint.conditions || [];
-                                  setEditingConditions({
-                                    ...editingConditions,
-                                    [endpoint._id]: [...currentConditions]
-                                  });
-                                }}
-                                className="text-xs text-yellow-400 hover:text-yellow-300"
-                              >
-                                Edit Conditions
-                              </button>
-                            </div>
-                            
-                            {editingConditions[endpoint._id] ? (
-                              // Editing mode
-                              <div className="space-y-2">
-                                {/* Add new condition form */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
-                                  <input
-                                    type="text"
-                                    placeholder="Field"
-                                    value={newEditCondition.field}
-                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, field: e.target.value })}
-                                    className="px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                                  />
-                                  <select
-                                    value={newEditCondition.operator}
-                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, operator: e.target.value as any })}
-                                    className="px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                                  >
-                                    <option className={optionStyles} value="=">=</option>
-                                    <option className={optionStyles} value="!=">!=</option>
-                                    <option className={optionStyles} value=">">&gt;</option>
-                                    <option className={optionStyles} value="<">&lt;</option>
-                                    <option className={optionStyles} value=">=">&gt;=</option>
-                                    <option className={optionStyles} value="<=">&lt;=</option>
-                                    <option className={optionStyles} value="contains">contains</option>
-                                    <option className={optionStyles} value="startsWith">starts with</option>
-                                    <option className={optionStyles} value="endsWith">ends with</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    placeholder="Value"
-                                    value={newEditCondition.value}
-                                    onChange={(e) => setNewEditCondition({ ...newEditCondition, value: e.target.value })}
-                                    className="px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                                  />
-                                  <button
-                                    onClick={() => handleAddEditCondition(endpoint._id)}
-                                    className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-xs font-medium"
-                                  >
-                                    Add
-                                  </button>
-                                </div>
-                                
-                                {/* Current conditions being edited */}
-                                <div className="space-y-1 max-h-32 overflow-y-auto">
-                                  {(editingConditions[endpoint._id] || []).map((condition, index) => (
-                                    <div key={index} className="flex items-center justify-between p-1 bg-slate-700 rounded">
-                                      <div className="flex items-center space-x-2 text-xs">
-                                        <span className="font-mono text-white">{condition.field}</span>
-                                        <span className="px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
-                                          {condition.operator}
-                                        </span>
-                                        <span className="font-mono text-white">{String(condition.value)}</span>
-                                      </div>
-                                      <button
-                                        onClick={() => handleRemoveEditCondition(endpoint._id, index)}
-                                        className="text-slate-400 hover:text-red-400"
+                          <div className="mb-4 space-y-4">
+                            <CustomApiOptions
+                              mode={endpointMode}
+                              fields={endpointMode === 'full' ? [] : endpointSelectedFields}
+                              aggregator={(endpointAggregator || '') as AggregatorType}
+                              availableFields={endpointFields}
+                              onModeChange={(value) =>
+                                handleUpdateEndpoint(endpoint._id, {
+                                  dataSourceMode: value,
+                                  dataSourceField: value === 'full' ? '' : endpointSelectedFields[0] || '',
+                                  dataSourceFields: value === 'full' ? [] : endpointSelectedFields,
+                                  aggregator: value === 'aggregator' ? endpoint.aggregator || '' : ''
+                                })
+                              }
+                              onFieldsChange={(values) =>
+                                handleUpdateEndpoint(endpoint._id, {
+                                  dataSourceField: values[0] || '',
+                                  dataSourceFields: values,
+                                  aggregator: values.length ? endpoint.aggregator || '' : ''
+                                })
+                              }
+                              onAggregatorChange={(value) =>
+                                handleUpdateEndpoint(endpoint._id, {
+                                  aggregator: value || ''
+                                })
+                              }
+                            />
+                            <div className="mt-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <h5 className="text-xs font-medium text-slate-400">Filter Conditions</h5>
+                                <button
+                                  onClick={() => {
+                                    if (isEditingConditions) {
+                                      handleCancelEditConditions(endpoint._id);
+                                      return;
+                                    }
+                                    const currentConditions = endpoint.conditions || [];
+                                    setEditingConditions({
+                                      ...editingConditions,
+                                      [endpoint._id]: [...currentConditions]
+                                    });
+                                    setNewEditCondition({
+                                      field: '',
+                                      operator: '=',
+                                      value: ''
+                                    });
+                                  }}
+                                  className="text-xs text-yellow-400 hover:text-yellow-300"
+                                >
+                                  {isEditingConditions ? 'Close Editor' : 'Edit Conditions'}
+                                </button>
+                              </div>
+                              {isEditingConditions ? (
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-400 mb-1">Field</label>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g., id"
+                                        value={newEditCondition.field}
+                                        onChange={(e) =>
+                                          setNewEditCondition({ ...newEditCondition, field: e.target.value })
+                                        }
+                                        className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-400 mb-1">Operator</label>
+                                      <select
+                                        value={newEditCondition.operator}
+                                        onChange={(e) =>
+                                          setNewEditCondition({
+                                            ...newEditCondition,
+                                            operator: e.target.value as any
+                                          })
+                                        }
+                                        className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
                                       >
-                                        <TrashIcon className="w-3 h-3" />
+                                        <option className={optionStyles} value="=">=</option>
+                                        <option className={optionStyles} value="!=">!=</option>
+                                        <option className={optionStyles} value=">">&gt;</option>
+                                        <option className={optionStyles} value="<">&lt;</option>
+                                        <option className={optionStyles} value=">=">&gt;=</option>
+                                        <option className={optionStyles} value="<=">&lt;=</option>
+                                        <option className={optionStyles} value="contains">contains</option>
+                                        <option className={optionStyles} value="startsWith">starts with</option>
+                                        <option className={optionStyles} value="endsWith">ends with</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-slate-400 mb-1">Value</label>
+                                      <input
+                                        type="text"
+                                        placeholder="Value"
+                                        value={newEditCondition.value}
+                                        onChange={(e) =>
+                                          setNewEditCondition({ ...newEditCondition, value: e.target.value })
+                                        }
+                                        className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                      />
+                                    </div>
+                                    <div className="flex items-end">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddEditCondition(endpoint._id)}
+                                        className="w-full px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-black rounded text-sm font-medium"
+                                      >
+                                        Add Condition
                                       </button>
                                     </div>
-                                  ))}
-                                </div>
-                                
-                                {/* Save/Cancel buttons */}
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => handleSaveConditions(endpoint._id)}
-                                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs"
-                                  >
-                                    Save Conditions
-                                  </button>
-                                  <button
-                                    onClick={() => handleCancelEditConditions(endpoint._id)}
-                                    className="px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              // View mode
-                              <div>
-                                {endpoint.conditions && endpoint.conditions.length > 0 ? (
-                                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                                    {endpoint.conditions.map((condition, index) => (
-                                      <div key={index} className="flex items-center space-x-2 text-xs">
-                                        <span className="font-mono text-white">{condition.field}</span>
-                                        <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded">
-                                          {condition.operator}
-                                        </span>
-                                        <span className="font-mono text-white">{String(condition.value)}</span>
-                                      </div>
-                                    ))}
                                   </div>
-                                ) : (
-                                  <p className="text-xs text-slate-500">No conditions defined</p>
-                                )}
-                              </div>
-                            )}
+                                  {editingConditions[endpoint._id]?.length ? (
+                                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                                      {editingConditions[endpoint._id].map((condition, index) => (
+                                        <div
+                                          key={`${condition.field}-${index}`}
+                                          className="flex items-center justify-between p-2 bg-slate-700 rounded"
+                                        >
+                                          <div className="flex items-center space-x-2 text-xs">
+                                            <span className="text-white font-mono">{condition.field}</span>
+                                            <span className="px-1.5 py-0.5 bg-slate-600 text-slate-300 rounded">
+                                              {condition.operator}
+                                            </span>
+                                            <span className="text-white font-mono">{String(condition.value)}</span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemoveEditCondition(endpoint._id, index)}
+                                            className="text-slate-400 hover:text-red-400"
+                                          >
+                                            <TrashIcon className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-slate-500">No conditions defined yet.</div>
+                                  )}
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveConditions(endpoint._id)}
+                                      className="px-3 py-1.5 bg-yellow-500 text-black rounded-full text-xs font-semibold"
+                                    >
+                                      Save Conditions
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelEditConditions(endpoint._id)}
+                                      className="px-3 py-1.5 border border-white/10 text-xs text-slate-300 rounded-full hover:border-white/30"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-slate-400">
+                                  {endpoint.conditions && endpoint.conditions.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {endpoint.conditions.map((condition, index) => (
+                                        <div
+                                          key={`${condition.field}-${index}`}
+                                          className="flex items-center space-x-2 text-xs"
+                                        >
+                                          <span className="text-white font-mono">{condition.field}</span>
+                                          <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded">
+                                            {condition.operator}
+                                          </span>
+                                          <span className="text-white font-mono">{String(condition.value)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span>No filter conditions configured.</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2071,7 +2417,8 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
