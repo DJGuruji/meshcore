@@ -24,10 +24,8 @@ class RedisCacheClient implements CacheClient {
     try {
       // In a frontend environment, we typically won't connect directly to Redis
       // Instead, we'll use a backend API endpoint for caching
-      console.warn('Direct Redis connection not available in frontend. Using no-op cache.');
       this.isConnected = true;
     } catch (error) {
-      console.error('Failed to initialize Redis cache:', error);
       this.isConnected = false;
     }
   }
@@ -85,7 +83,6 @@ class InMemoryCacheClient implements CacheClient {
       this.cache.set(key, { value, expiry });
       return true;
     } catch (error) {
-      console.error('In-memory cache set error:', error);
       return false;
     }
   }

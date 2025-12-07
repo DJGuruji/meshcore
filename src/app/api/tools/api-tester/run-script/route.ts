@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Script execution error:', error);
     return NextResponse.json({ 
       error: 'Script execution failed',
       message: error instanceof Error ? error.message : 'Unknown error'

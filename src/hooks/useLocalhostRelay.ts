@@ -105,20 +105,17 @@ export function useLocalhostRelay() {
 
     // Connection established
     socket.on('connect', () => {
-      console.log('[LocalhostRelay] Connected to WebSocket server');
       reconnectAttempts.current = 0;
       setStatus('connected');
     });
 
     // Relay ready
     socket.on('localhost:ready', (data) => {
-      console.log('[LocalhostRelay] Relay ready:', data.message);
       setStatus('ready');
     });
 
     // Handle disconnect
     socket.on('disconnect', (reason) => {
-      console.log('[LocalhostRelay] Disconnected:', reason);
       setStatus('disconnected');
       
       // Implement exponential backoff for reconnection
@@ -131,7 +128,6 @@ export function useLocalhostRelay() {
 
     // Handle errors
     socket.on('connect_error', (err) => {
-      console.error('[LocalhostRelay] Connection error:', err.message);
       reconnectAttempts.current++;
       
       if (reconnectAttempts.current >= maxReconnectAttempts) {
@@ -145,7 +141,6 @@ export function useLocalhostRelay() {
 
     // Handle general errors
     socket.on('error', (err) => {
-      console.error('[LocalhostRelay] Socket error:', err);
       setStatus('error');
       setError(err.message || 'WebSocket error');
     });

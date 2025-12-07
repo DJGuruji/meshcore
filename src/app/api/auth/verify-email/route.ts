@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     // Redirect to sign in page with success message
     return NextResponse.redirect(new URL('/auth/signin?verified=true', request.url));
   } catch (error) {
-    console.error('Email verification error:', error);
     return NextResponse.redirect(new URL('/auth/signin?error=verification-failed', request.url));
   }
 }

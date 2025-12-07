@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    console.log('GET Session user ID:', session.user.id);
     
     // Try to get cached response first
     const cacheKey = `user_projects_${session.user.id}`;
@@ -25,11 +24,9 @@ export async function GET(request: NextRequest) {
     try {
       const cachedProjects = await cacheService.get(cacheKey);
       if (cachedProjects) {
-        console.log(`Cache hit for user projects: ${cacheKey}`);
         return NextResponse.json(cachedProjects);
       }
     } catch (cacheError) {
-      console.error('Cache retrieval error:', cacheError);
     }
     
     await connectDB();
@@ -68,14 +65,11 @@ export async function GET(request: NextRequest) {
     // Cache the response for 5 minutes
     try {
       await cacheService.set(cacheKey, processedProjects, { ttl: 300 }); // 5 minutes
-      console.log(`Cached user projects: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache storage error:', cacheError);
     }
     
     return NextResponse.json(processedProjects);
   } catch (error: unknown) {
-    console.error('Project fetch error:', error);
     
     if (error instanceof Error) {
       return NextResponse.json({ 
@@ -100,7 +94,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    console.log('POST Session user ID:', session.user.id);
     
     await connectDB();
     const data = await request.json();
@@ -164,7 +157,6 @@ export async function POST(request: NextRequest) {
     const currentUsage = user.storageUsage || 0;
     if (currentUsage > maxStorage) {
       // Add a note that the user is in read-only mode
-      console.log(`User ${user._id} is in read-only mode due to storage limit exceeded`);
     }
     
     // Calculate the size of the project definition to check against storage limits
@@ -192,16 +184,13 @@ export async function POST(request: NextRequest) {
         storageUsage: newTotalUsage 
       });
     } catch (storageError) {
-      console.error('Error updating storage usage:', storageError);
     }
     
     // Invalidate cache for this user's projects
     try {
       const cacheKey = `user_projects_${session.user.id}`;
       await cacheService.del(cacheKey);
-      console.log(`Invalidated cache for user projects: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
     
     // Send project creation confirmation email
@@ -213,13 +202,11 @@ export async function POST(request: NextRequest) {
           user.accountType
         );
       } catch (emailError) {
-        console.error('Failed to send project creation email:', emailError);
       }
     }
     
     return NextResponse.json(project);
   } catch (error: unknown) {
-    console.error('Project creation error:', error);
     
     // Provide more specific error messages
     if (error instanceof Error) {

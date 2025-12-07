@@ -601,7 +601,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       const requiredFields = newEndpoint.fields.filter(field => field.required);
       if (requiredFields.length > 0) {
         // We'll validate request body when the endpoint is actually used
-        console.log('POST endpoint with required fields defined:', requiredFields);
       }
     }
 
@@ -804,14 +803,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       
       // Show alert with response details
       alert(message);
-      
-      // Also log to console for debugging
-      console.log('API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        data: responseData
-      });
     } catch (error) {
       alert(`Error: ${error}`);
     }
@@ -1095,7 +1086,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                         tokenPrefix: 'Bearer'
                       }
                     };
-                    console.log('Initializing authentication for project:', updatedProject);
                     onUpdateProject(updatedProject);
                   }}
                   className="rounded-2xl border border-white/10 px-3 py-1 text-xs text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
@@ -1115,11 +1105,9 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   };
                   
                   const newEnabled = !currentAuth.enabled;
-                  console.log('Toggling auth from', currentAuth.enabled, 'to', newEnabled);
                   
                   // Always generate a new token when enabling authentication
                   const newToken = newEnabled ? generateReadableToken() : (currentAuth.token || generateReadableToken());
-                  console.log('Generated token:', newToken);
                   
                   // Ensure all endpoints have requiresAuth property
                   const updatedEndpoints = project.endpoints.map(ensureEndpointAuth);
@@ -1134,7 +1122,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                       tokenPrefix: currentAuth.tokenPrefix || 'Bearer'
                     }
                   };
-                  console.log('Updated project:', updatedProject);
                   onUpdateProject(updatedProject);
                 }}
                 className={`relative inline-flex h-6 w-12 items-center rounded-full border border-white/10 transition focus:outline-none focus:ring-2 focus:ring-indigo-400/40 ${
@@ -1186,7 +1173,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                   <button
                     onClick={() => {
                       const newToken = generateReadableToken();
-                      console.log('Manually generating new token:', newToken);
                       const updatedProject = {
                         ...project,
                         authentication: {
@@ -1196,7 +1182,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                           tokenPrefix: project.authentication?.tokenPrefix || 'Bearer'
                         }
                       };
-                      console.log('Updating with new token:', updatedProject);
                       onUpdateProject(updatedProject);
                     }}
                     className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
@@ -1388,9 +1373,7 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
               <select
                 value={newEndpoint.requiresAuth === null ? 'inherit' : newEndpoint.requiresAuth ? 'required' : 'none'}
                 onChange={(e) => {
-                  console.log('Auth dropdown changed to:', e.target.value);
                   const value = e.target.value === 'inherit' ? null : e.target.value === 'required';
-                  console.log('Setting requiresAuth to:', value);
                   setNewEndpoint({ ...newEndpoint, requiresAuth: value });
                 }}
                 className={inputStyles}
@@ -1915,14 +1898,6 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
                         const authEnabled = project.authentication?.enabled || false;
                         const endpointAuth = safeEndpoint.requiresAuth;
                         const requiresAuth = endpointAuth !== null ? endpointAuth : authEnabled;
-                        
-                        console.log('Endpoint auth check:', {
-                          endpointId: endpoint._id,
-                          endpointRequiresAuth: safeEndpoint.requiresAuth,
-                          projectAuthEnabled: project.authentication?.enabled,
-                          projectAuthObject: project.authentication,
-                          finalRequiresAuth: requiresAuth
-                        });
                         
                         if (requiresAuth) {
                           return (

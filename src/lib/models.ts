@@ -137,7 +137,6 @@ UserSchema.methods.updateStorageUsage = async function(projectId: string, dataSi
   
   await User.findByIdAndUpdate(user._id, { storageUsage: newUsage });
   } catch (error) {
-    console.error('Error updating storage usage:', error);
   }
 };
 
@@ -156,7 +155,6 @@ UserSchema.methods.cleanupOldRequestData = function() {
       }
     }
   } catch (error) {
-    console.error('Error cleaning up old request data:', error);
   }
 };
 

@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
         razorpay_order_id
       );
     } catch (emailError) {
-      console.error('Failed to send payment confirmation email:', emailError);
       // Don't fail the whole operation if email fails
     }
 
@@ -102,7 +101,6 @@ export async function POST(request: NextRequest) {
       message: 'Payment verified successfully and account upgraded'
     });
   } catch (error: any) {
-    console.error('Error verifying payment:', error);
     return Response.json({
       success: false,
       message: 'Failed to verify payment',

@@ -41,7 +41,6 @@ export function NavigationStateProvider({ children }: { children: ReactNode }) {
       try {
         setState(JSON.parse(savedState));
       } catch (error) {
-        console.error('Failed to parse navigation state from localStorage:', error);
       }
     }
   }, []);

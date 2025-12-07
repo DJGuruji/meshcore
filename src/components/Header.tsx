@@ -151,9 +151,7 @@ export default function Header() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      console.log('Password change response:', response.data);
     } catch (error: any) {
-      console.error('Password change error:', error.response?.data || error);
       const errorMessage = error.response?.data?.error || 'Failed to change password';
       toast.error(errorMessage);
     } finally {

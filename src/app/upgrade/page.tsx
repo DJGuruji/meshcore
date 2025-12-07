@@ -183,7 +183,6 @@ function UpgradePageContent({ planParam }: { planParam: string | null }) {
               throw new Error(verifyResult.message || 'Payment verification failed');
             }
           } catch (verifyError: any) {
-            console.error('Payment verification error:', verifyError);
             alert('Payment verification failed. Please contact support.');
           }
         },
@@ -205,7 +204,6 @@ function UpgradePageContent({ planParam }: { planParam: string | null }) {
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
     } catch (err: any) {
-      console.error('Payment error:', err);
       setError(err.message || 'Failed to initiate payment. Please try again.');
     } finally {
       setLoading(false);

@@ -105,7 +105,6 @@ export default function RegisterClient({ registered }: RegisterClientProps) {
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Registration failed';
       setError(errorMessage);
-      console.error('Registration error:', error);
       // Reset the Turnstile token
       setTurnstileToken('');
     } finally {
@@ -130,7 +129,6 @@ export default function RegisterClient({ registered }: RegisterClientProps) {
       }
     } catch (error) {
       setError('An error occurred during Google sign up');
-      console.error('Google sign up error:', error);
     } finally {
       setLoading(false);
     }

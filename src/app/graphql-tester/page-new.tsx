@@ -127,7 +127,6 @@ export default function GraphQLTesterPage() {
       const res = await axios.get('/api/tools/graphql-tester/collections');
       setCollections(res.data);
     } catch (error) {
-      console.error('Failed to fetch collections', error);
     }
   };
 
@@ -136,7 +135,6 @@ export default function GraphQLTesterPage() {
       const res = await axios.get('/api/tools/graphql-tester/environments');
       setEnvironments(res.data);
     } catch (error) {
-      console.error('Failed to fetch environments', error);
     }
   };
 
@@ -145,7 +143,6 @@ export default function GraphQLTesterPage() {
       const res = await axios.get('/api/tools/graphql-tester/history');
       setHistory(res.data.history || []);
     } catch (error) {
-      console.error('Failed to fetch history', error);
     }
   };
 
@@ -268,12 +265,10 @@ export default function GraphQLTesterPage() {
         await axios.post('/api/tools/graphql-tester/history', historyItem);
         fetchHistory(); // Refresh history
       } catch (error) {
-        console.error('Failed to save to history', error);
       }
 
       toast.success('Request sent successfully!');
     } catch (error: any) {
-      console.error('Request failed', error);
       const errorMessage = error.response?.data?.message || error.message || 'Request failed';
       toast.error(errorMessage);
       
@@ -294,7 +289,6 @@ export default function GraphQLTesterPage() {
         await axios.post('/api/tools/graphql-tester/history', historyItem);
         fetchHistory(); // Refresh history
       } catch (historyError) {
-        console.error('Failed to save error to history', historyError);
       }
 
       setResponse(error.response?.data || { error: errorMessage });
@@ -319,7 +313,6 @@ export default function GraphQLTesterPage() {
       setHistory([]);
       toast.success('History cleared');
     } catch (error) {
-      console.error('Failed to clear history', error);
       toast.error('Failed to clear history');
     }
   };
@@ -379,7 +372,6 @@ export default function GraphQLTesterPage() {
       setNewCollectionName('');
       setNewCollectionDescription('');
     } catch (error: any) {
-      console.error('Save collection error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to save collection';
       toast.error(errorMessage);
     }
@@ -427,7 +419,6 @@ export default function GraphQLTesterPage() {
       setShowSaveRequestModal(false);
       setSelectedCollectionId('');
     } catch (error: any) {
-      console.error('Save request error:', error);
       toast.error(error.response?.data?.message || 'Failed to save request');
     }
   };
@@ -460,7 +451,6 @@ export default function GraphQLTesterPage() {
       toast.success('Collection deleted!');
       fetchCollections();
     } catch (error: any) {
-      console.error('Delete collection error:', error);
       toast.error(error.response?.data?.message || 'Failed to delete collection');
     }
   };
@@ -492,7 +482,6 @@ export default function GraphQLTesterPage() {
         setSelectedEnvironment(null);
       }
     } catch (error: any) {
-      console.error('Delete environment error:', error);
       toast.error(error.response?.data?.message || 'Failed to delete environment');
     }
   };
@@ -528,7 +517,6 @@ export default function GraphQLTesterPage() {
       setNewEnvironmentName('');
       setNewEnvironmentVariables([{ key: '', value: '', description: '', enabled: true }]);
     } catch (error: any) {
-      console.error('Save environment error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to save environment';
       toast.error(errorMessage);
     }

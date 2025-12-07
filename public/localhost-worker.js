@@ -22,7 +22,6 @@ const pendingFetches = new Map();
  * Skip waiting to activate immediately
  */
 self.addEventListener('install', (event) => {
-  console.log('[LocalhostWorker] Installing Service Worker...');
   self.skipWaiting();
 });
 
@@ -31,7 +30,6 @@ self.addEventListener('install', (event) => {
  * Claim all clients immediately
  */
 self.addEventListener('activate', (event) => {
-  console.log('[LocalhostWorker] Activating Service Worker...');
   event.waitUntil(self.clients.claim());
 });
 
@@ -43,13 +41,11 @@ self.addEventListener('message', async (event) => {
 
   // Handle skip waiting message for immediate activation
   if (type === 'SKIP_WAITING') {
-    console.log('[LocalhostWorker] Received SKIP_WAITING, activating immediately...');
     self.skipWaiting();
     return;
   }
 
   if (type === 'FETCH_LOCALHOST') {
-    console.log('[LocalhostWorker] Received fetch request:', requestId, request.url);
 
     try {
       // Parse the URL to check if it's a localhost URL
@@ -65,7 +61,6 @@ self.addEventListener('message', async (event) => {
       // For localhost URLs, we can bypass mixed content restrictions
       // because we're in a Service Worker context with elevated permissions
       if (isHTTPS && isHTTPRequest && isLocalhost) {
-        console.log('[LocalhostWorker] Handling mixed content localhost request - bypassing browser restrictions');
         // We can proceed with the fetch in Service Worker context
         // Service Workers have elevated permissions that bypass mixed content restrictions
       }
@@ -81,7 +76,6 @@ self.addEventListener('message', async (event) => {
       });
 
       const endTime = Date.now();
-      console.log('[LocalhostWorker] Fetch successful:', requestId, response.status);
 
       // Read response body (works even without CORS headers!)
       let responseBody;
@@ -122,10 +116,8 @@ self.addEventListener('message', async (event) => {
 
       // Send response via MessageChannel port
       event.ports[0].postMessage(result);
-      console.log('[LocalhostWorker] Response sent back to main thread');
 
     } catch (error) {
-      console.error('[LocalhostWorker] Fetch failed:', requestId, error.name, error.message);
       // Send error response back to main thread
       const result = {
         requestId,

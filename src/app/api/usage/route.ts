@@ -58,7 +58,6 @@ export async function GET(request: NextRequest) {
       accountType: user.accountType || 'free'
     });
   } catch (error) {
-    console.error('Error fetching usage data:', error);
     return NextResponse.json({ error: 'Failed to fetch usage data' }, { status: 500 });
   }
 }

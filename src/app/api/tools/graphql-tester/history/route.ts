@@ -20,11 +20,9 @@ export async function GET(request: NextRequest) {
     try {
       const cachedData = await cacheService.get(cacheKey);
       if (cachedData) {
-        console.log(`Cache hit for GraphQL history: ${cacheKey}`);
         return NextResponse.json(cachedData);
       }
     } catch (cacheError) {
-      console.error('Cache retrieval error:', cacheError);
     }
 
     await connectDB();
@@ -54,9 +52,7 @@ export async function GET(request: NextRequest) {
     // Cache the response for 2 minutes (shorter since history changes frequently)
     try {
       await cacheService.set(cacheKey, result, { ttl: 120 }); // 2 minutes
-      console.log(`Cached GraphQL history: ${cacheKey}`);
     } catch (cacheError) {
-      console.error('Cache storage error:', cacheError);
     }
     
     return NextResponse.json(result);
@@ -107,9 +103,7 @@ export async function POST(request: NextRequest) {
     try {
       // Delete all GraphQL history cache entries for this user
       const deletedCount = await cacheService.delPattern(`graphql_history_${userId}_*`);
-      console.log(`Invalidated ${deletedCount} GraphQL history cache entries for user: ${userId}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json(historyItem, { status: 201 });
@@ -157,9 +151,7 @@ export async function DELETE(request: NextRequest) {
     try {
       // Delete all GraphQL history cache entries for this user
       const deletedCount = await cacheService.delPattern(`graphql_history_${session.user.id}_*`);
-      console.log(`Invalidated ${deletedCount} GraphQL history cache entries for user: ${session.user.id}`);
     } catch (cacheError) {
-      console.error('Cache invalidation error:', cacheError);
     }
 
     return NextResponse.json({ message: 'History cleared successfully' });

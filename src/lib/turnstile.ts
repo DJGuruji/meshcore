@@ -17,7 +17,6 @@ export async function validateTurnstileToken(token: string): Promise<boolean> {
     
     return response.data.success;
   } catch (error) {
-    console.error('Turnstile validation error:', error);
     return false;
   }
 }
