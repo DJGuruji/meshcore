@@ -7,9 +7,9 @@ import { sendRequestLimitNotification, sendStorageLimitNotification } from '@/li
 
 // Helper function to match endpoint path with project name
 function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string): boolean {
-  // Expected path format: /{projectName}{baseUrl}{endpointPath}
+  // Expected path format: /mockserver/{projectName}{baseUrl}{endpointPath}
   const cleanProjectName = projectName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-  const expectedPath = `/${cleanProjectName}${baseUrl}${endpointPath}`;
+  const expectedPath = `/mockserver/${cleanProjectName}${baseUrl}${endpointPath}`;
 
    // For GET, PUT, PATCH, DELETE methods, the path might include an ID parameter at the end
   if (method === 'GET' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
@@ -490,7 +490,7 @@ async function handleRequest(request: NextRequest, method: string) {
     
     // Extract path from URL
     const url = new URL(request.url);
-    const pathSegments = url.pathname.split('/api/fake/');
+    const pathSegments = url.pathname.split('/mockserver/');
     
     // Periodically clean up old request data (roughly 1 in 100 requests)
     if (Math.random() < 0.01) {
