@@ -17,24 +17,17 @@ function matchEndpoint(requestPath: string, projectName: string, baseUrl: string
   // The expected combined path for this endpoint
   const expectedCombinedPath = `${cleanBaseUrl}${cleanEndpointPath}`;
 
-  console.log('DEBUG: matchEndpoint called with:', { requestPath, projectName, baseUrl, endpointPath, method });
-  console.log('DEBUG: cleanBaseUrl:', cleanBaseUrl);
-  console.log('DEBUG: cleanEndpointPath:', cleanEndpointPath);
-  console.log('DEBUG: expectedCombinedPath:', expectedCombinedPath);
 
   // For GET, PUT, PATCH, DELETE methods, the path might include an ID parameter at the end
   if (method === 'GET' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
     // Check if the request path matches the expected path with an ID at the end
     const pathWithIdPattern = new RegExp(`^${expectedCombinedPath}/[0-9a-fA-F]{24}$`);
-    console.log('DEBUG: Testing ID pattern:', pathWithIdPattern);
     if (pathWithIdPattern.test(requestPath)) {
-      console.log('DEBUG: ID pattern matched');
       return true;
     }
   }
   
   const isMatch = requestPath === expectedCombinedPath;
-  console.log('DEBUG: Direct match result:', isMatch);
   return isMatch;
 }
 
@@ -332,15 +325,11 @@ async function checkRateLimit(project: any): Promise<{ allowed: boolean; message
 async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean; message?: string }> {
   try {
     // Get the user associated with the project
-    console.log('DEBUG: Looking up user with ID:', project.user);
     let user = await User.findById(project.user);
     if (!user) {
-      console.log('DEBUG: User not found with ID:', project.user);
       return { allowed: false, message: 'User not found' };
     }
-    console.log('DEBUG: User found:', { id: user._id, email: user.email, accountType: user.accountType });
     
-    console.log('DEBUG: Checking if lastRequestReset exists:', user.lastRequestReset);
     // Initialize lastRequestReset if it doesn't exist
     if (!user.lastRequestReset) {
       user.lastRequestReset = new Date();
@@ -349,7 +338,6 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
       // Refresh the user object after saving
       user = await User.findById(project.user);
       if (!user) {
-        console.log('DEBUG: Returning allowed: false - user not found after save');
         return { allowed: false, message: 'User not found after save' };
       }
     }
@@ -359,7 +347,6 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
     const lastReset = new Date(user.lastRequestReset);
     const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
     
-    console.log('DEBUG: Hours since reset:', hoursSinceReset);
     
     // If 24 hours have passed, reset the counter
     if (hoursSinceReset >= 24) {
@@ -371,7 +358,6 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
       // Refresh the user object after saving
       user = await User.findById(project.user);
       if (!user) {
-        console.log('DEBUG: Returning allowed: false - user not found after reset');
         return { allowed: false, message: 'User not found after reset' };
       }
     }
@@ -395,12 +381,8 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
     
     // Get current request count for the current 24-hour window
     const currentWindowKey = lastReset.toISOString();
-    console.log('DEBUG: Current window key:', currentWindowKey);
-    console.log('DEBUG: All dailyRequests keys before update:', Object.keys(user.dailyRequests));
     const currentRequests = user.dailyRequests[currentWindowKey] || 0;
-    console.log('DEBUG: Current requests count:', currentRequests);
     
-    console.log('DEBUG: Checking if limit exceeded:', currentRequests, '>=', maxRequests);
     // Check if limit is exceeded
     if (currentRequests >= maxRequests) {
       // Calculate when the limit will renew
@@ -428,31 +410,22 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
         }
       }
       
-      console.log('DEBUG: Returning allowed: false due to limit exceeded');
-      console.log('DEBUG: Returning allowed: false due to limit exceeded');
       return { 
         allowed: false, 
         message: `Daily request limit exceeded. You have used all ${maxRequests} requests for your ${user.accountType} account. Limit will renew at ${renewalTime.toLocaleString()}.`
       };
     }
     
-    console.log('DEBUG: About to update request count');
     // Update request count
     const newCount = currentRequests + 1;
     user.dailyRequests[currentWindowKey] = newCount;
-    console.log('DEBUG: Setting dailyRequests[' + currentWindowKey + '] =', newCount);
-    console.log('DEBUG: All dailyRequests keys after set:', Object.keys(user.dailyRequests));
-    console.log('DEBUG: dailyRequests object size after set:', Object.keys(user.dailyRequests).length);
     
     // CRITICAL: Mark the Map as modified so Mongoose knows to save it
     // Without this, Map changes are not persisted to MongoDB!
     user.markModified('dailyRequests');
     
-    console.log('DEBUG: About to save user');
     await user.save();
-    console.log('DEBUG: User saved successfully');
     
-    console.log('DEBUG: Returning allowed: true after save');
     return { allowed: true };
   } catch (error: any) {
     // Allow the operation if there's an error checking limits
@@ -592,10 +565,8 @@ async function handleRequest(request: NextRequest, method: string) {
       const generatedSlug = project.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
       
       if (generatedSlug === projectSlug) {
-        console.log('DEBUG: Found matching project:', project.name);
         for (const endpoint of project.endpoints) {
           if (matchEndpoint(remainingPath, project.name, project.baseUrl, endpoint.path, method) && endpoint.method === method) {
-            console.log('DEBUG: Found matching endpoint:', endpoint.path, endpoint.method);
             // Check daily request limit
             const requestLimitCheck = await checkDailyRequestLimit(project);
             if (!requestLimitCheck.allowed) {
