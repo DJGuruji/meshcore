@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching usage data:', error);
+    // Silently handle errors in production
     return NextResponse.json({ error: 'Failed to fetch usage data' }, { status: 500 });
   }
 }

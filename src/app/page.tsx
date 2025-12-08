@@ -115,12 +115,9 @@ export default function Home() {
   const fetchUsage = async () => {
     if (status !== 'authenticated') return;
     try {
-      console.log('Fetching usage data...');
       const response = await fetch('/api/usage');
-      console.log('Usage API response status:', response.status);
       if (response.ok) {
         const data = await response.json();
-        console.log('Usage data received:', data);
         setUsageData({
           storageUsed: data.storageUsed,
           storageLimit: data.storageLimit,
@@ -128,12 +125,9 @@ export default function Home() {
           requestsLimit: data.requestsLimit,
           accountType: data.accountType
         });
-        console.log('Usage data state updated');
-      } else {
-        console.error('Usage API returned non-OK status:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching usage:', error);
+      // Silently handle errors in production
     }
   };
 

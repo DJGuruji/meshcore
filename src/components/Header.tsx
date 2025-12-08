@@ -129,7 +129,7 @@ export default function Header() {
       localStorage.removeItem('navigationState');
       await signOut({ callbackUrl: '/auth/signin' });
     } catch (error) {
-      console.error('Sign out error:', error);
+      // Silently handle sign out errors in production
       setIsSigningOut(false);
     }
   };
