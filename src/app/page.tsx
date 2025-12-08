@@ -112,25 +112,32 @@ export default function Home() {
     }
   }, [status]);
 
-  useEffect(() => {
+  const fetchUsage = async () => {
     if (status !== 'authenticated') return;
-    const fetchUsage = async () => {
-      try {
-        const response = await fetch('/api/usage');
-        if (response.ok) {
-          const data = await response.json();
-          setUsageData({
-            storageUsed: data.storageUsed,
-            storageLimit: data.storageLimit,
-            requestsUsed: data.requestsUsed,
-            requestsLimit: data.requestsLimit,
-            accountType: data.accountType
-          });
-        }
-      } catch (error) {
+    try {
+      console.log('Fetching usage data...');
+      const response = await fetch('/api/usage');
+      console.log('Usage API response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Usage data received:', data);
+        setUsageData({
+          storageUsed: data.storageUsed,
+          storageLimit: data.storageLimit,
+          requestsUsed: data.requestsUsed,
+          requestsLimit: data.requestsLimit,
+          accountType: data.accountType
+        });
+        console.log('Usage data state updated');
+      } else {
+        console.error('Usage API returned non-OK status:', response.status);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching usage:', error);
+    }
+  };
 
+  useEffect(() => {
     fetchUsage();
   }, [status]);
 
@@ -186,6 +193,8 @@ export default function Home() {
       setProjects([response.data, ...projects]);
       setSelectedProject(response.data);
       toast.success('Project created successfully');
+      // Refresh usage data after creating a project
+      fetchUsage();
     } catch (error) {
       toast.error('Failed to create project');
     } finally {
@@ -201,6 +210,8 @@ export default function Home() {
         setSelectedProject(null);
       }
       toast.success('Project deleted successfully');
+      // Refresh usage data after deleting a project
+      fetchUsage();
     } catch (error) {
       toast.error('Failed to delete project');
     }
@@ -229,6 +240,8 @@ export default function Home() {
         setSelectedProject(response.data);
         updateState({ selectedProjectId: response.data._id });
         toast.success('Project updated successfully');
+        // Refresh usage data after updating a project
+        fetchUsage();
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Failed to update project';
@@ -445,7 +458,7 @@ export default function Home() {
         data-aos-delay="200"
       >
         {selectedProject ? (
-          <ProjectDetail project={selectedProject ? convertApiProject(selectedProject) : null} onUpdateProject={handleUpdateProject} />
+          <ProjectDetail project={selectedProject ? convertApiProject(selectedProject) : null} onUpdateProject={handleUpdateProject} refreshUsage={fetchUsage} />
         ) : (
           <div className="flex h-full w-full items-center justify-center p-10 text-slate-300">
             <div

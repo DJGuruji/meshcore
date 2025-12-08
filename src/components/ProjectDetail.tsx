@@ -79,6 +79,7 @@ interface Endpoint {
 interface ProjectDetailProps {
   project: ApiProject;
   onUpdateProject: (project: ApiProject) => void;
+  refreshUsage?: () => void;
 }
 
 const createEmptyFieldDefinition = (): EndpointField => ({
@@ -92,7 +93,7 @@ const createEmptyFieldDefinition = (): EndpointField => ({
 
 
 
-export default function ProjectDetail({ project, onUpdateProject }: ProjectDetailProps) {
+export default function ProjectDetail({ project, onUpdateProject, refreshUsage }: ProjectDetailProps) {
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>(null);
   const [showAddEndpoint, setShowAddEndpoint] = useState(false);
   const [showToken, setShowToken] = useState(false);
@@ -589,6 +590,10 @@ export default function ProjectDetail({ project, onUpdateProject }: ProjectDetai
       
       // Show alert with response details
       alert(message);
+      // Refresh usage data after making an API call
+      if (refreshUsage) {
+        refreshUsage();
+      }
     } catch (error) {
       alert(`Error: ${error}`);
     }

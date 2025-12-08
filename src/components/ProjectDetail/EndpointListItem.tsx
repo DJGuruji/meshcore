@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { generateEndpointUrl } from '@/lib/urlUtils';
 import { formatAuthHeader } from '@/lib/tokenUtils';
+import { defaultJsonTemplates, generateRandomJson, getTemplateByName, generateJsonFromFields } from '@/lib/jsonGenerator';
 import CustomApiOptions from './CustomApiOptions';
 
 interface EndpointField {
@@ -341,13 +342,13 @@ export default function EndpointListItem({
                           // Generate from defined fields if available
                           const fields = endpoint.fields || [];
                           handleUpdateEndpoint(endpoint._id, { 
-                            responseBody: JSON.stringify(generateJsonFromFields(fields), null, 2)
+                            responseBody: generateJsonFromFields(fields)
                           });
                         } else if (e.target.value) {
                           const template = defaultJsonTemplates.find(t => t.name === e.target.value);
                           if (template) {
                             handleUpdateEndpoint(endpoint._id, { 
-                              responseBody: JSON.stringify(generateRandomJson(template), null, 2)
+                              responseBody: generateRandomJson(template)
                             });
                           }
                         }
@@ -691,98 +692,3 @@ export default function EndpointListItem({
   );
 };
 
-// Default JSON templates for generating sample data
-const defaultJsonTemplates = [
-  {
-    name: 'User Profile',
-    fields: [
-      { name: 'id', type: 'number' },
-      { name: 'name', type: 'string' },
-      { name: 'email', type: 'string' },
-      { name: 'isActive', type: 'boolean' }
-    ]
-  },
-  {
-    name: 'Product',
-    fields: [
-      { name: 'id', type: 'number' },
-      { name: 'title', type: 'string' },
-      { name: 'price', type: 'number' },
-      { name: 'description', type: 'string' },
-      { name: 'category', type: 'string' },
-      { name: 'rating', type: 'object', nestedFields: [
-        { name: 'rate', type: 'number' },
-        { name: 'count', type: 'number' }
-      ]}
-    ]
-  },
-  {
-    name: 'Order',
-    fields: [
-      { name: 'id', type: 'number' },
-      { name: 'userId', type: 'number' },
-      { name: 'date', type: 'string' },
-      { name: 'items', type: 'array', arrayItemType: 'object', nestedFields: [
-        { name: 'productId', type: 'number' },
-        { name: 'quantity', type: 'number' },
-        { name: 'price', type: 'number' }
-      ]},
-      { name: 'total', type: 'number' }
-    ]
-  }
-];
-
-// Helper function to generate random values based on field type
-const generateRandomValue = (field: any): any => {
-  switch (field.type) {
-    case 'string':
-      return Math.random().toString(36).substring(2, 15);
-    case 'number':
-      return Math.floor(Math.random() * 1000);
-    case 'boolean':
-      return Math.random() > 0.5;
-    case 'object':
-      const obj: any = {};
-      if (field.nestedFields) {
-        field.nestedFields.forEach((nestedField: any) => {
-          obj[nestedField.name] = generateRandomValue(nestedField);
-        });
-      }
-      return obj;
-    case 'array':
-      const arr: any[] = [];
-      const itemCount = Math.floor(Math.random() * 5) + 1;
-      for (let i = 0; i < itemCount; i++) {
-        if (field.arrayItemType === 'object' && field.nestedFields) {
-          const itemObj: any = {};
-          field.nestedFields.forEach((nestedField: any) => {
-            itemObj[nestedField.name] = generateRandomValue(nestedField);
-          });
-          arr.push(itemObj);
-        } else {
-          arr.push(generateRandomValue({ type: field.arrayItemType }));
-        }
-      }
-      return arr;
-    default:
-      return null;
-  }
-};
-
-// Function to generate JSON from fields
-const generateJsonFromFields = (fields: any[]): any => {
-  const obj: any = {};
-  fields.forEach(field => {
-    obj[field.name] = generateRandomValue(field);
-  });
-  return obj;
-};
-
-// Function to generate random JSON from template
-const generateRandomJson = (template: any): any => {
-  const obj: any = {};
-  template.fields.forEach((field: any) => {
-    obj[field.name] = generateRandomValue(field);
-  });
-  return obj;
-};

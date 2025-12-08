@@ -8,7 +8,7 @@ Redis caching has been implemented for the Mock Server to dramatically improve p
 
 ### 1. Cache Layer for GET Requests ✅
 
-**File:** `frontend/src/app/mockserver/[...path]/route.ts`
+**File:** `frontend/src/app/api/mockserver/[...path]/route.ts`
 
 **How It Works:**
 ```typescript

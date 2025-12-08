@@ -12,13 +12,13 @@ export function generateEndpointUrl(projectName: string, baseUrl: string, endpoi
   const cleanBaseUrl = baseUrl.startsWith('/') ? baseUrl : `/${baseUrl}`;
   const cleanEndpointPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
   
-  return `${baseUrlFromEnv}/mockserver/${projectSlug}${cleanBaseUrl}${cleanEndpointPath}`;
+  return `${baseUrlFromEnv}/api/mockserver/${projectSlug}${cleanBaseUrl}${cleanEndpointPath}`;
 }
 
 export function parseEndpointUrl(url: string): { projectSlug: string; baseUrl: string; endpointPath: string } | null {
   try {
     const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/mockserver/');
+    const pathParts = urlObj.pathname.split('/api/mockserver/');
     
     if (pathParts.length < 2) return null;
     
