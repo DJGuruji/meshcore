@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Create order options
     const options = {
-      amount: amount * 100, // Convert to paise
+      amount: amount, // Amount is already in paise
       currency,
       receipt: receipt || `receipt_${Date.now()}`,
       payment_capture: 1, // Auto-capture payment
@@ -97,10 +97,46 @@ export async function POST(request: NextRequest) {
       order
     });
   } catch (error: any) {
+
+    
+    // Provide more detailed error information
+    let errorMessage = 'Failed to create payment order';
+    
+    if (error.statusCode) {
+      switch (error.statusCode) {
+        case 400:
+          errorMessage = 'Bad request - Invalid payment details';
+          break;
+        case 401:
+          errorMessage = 'Authentication failed - Invalid Razorpay credentials';
+          break;
+        case 403:
+          errorMessage = 'Access forbidden - Check Razorpay key permissions';
+          break;
+        case 500:
+          errorMessage = 'Internal server error - Please try again later';
+          break;
+        default:
+          errorMessage = `Payment service error (${error.statusCode})`;
+      }
+    } else if (error.code) {
+      switch (error.code) {
+        case 'BAD_REQUEST_ERROR':
+          errorMessage = 'Invalid request - Check payment amount and currency';
+          break;
+        case 'SERVER_ERROR':
+          errorMessage = 'Razorpay server error - Please try again later';
+          break;
+        default:
+          errorMessage = `Razorpay error: ${error.code}`;
+      }
+    }
+    
     return Response.json({
       success: false,
-      message: 'Failed to create payment order',
-      error: error.message
+      message: errorMessage,
+      error: error.message,
+      ...(process.env.NODE_ENV === 'development' && { fullError: error })
     }, { status: 500 });
   }
 }

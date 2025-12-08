@@ -605,12 +605,11 @@ const PaymentSchema = new mongoose.Schema({
   },
   razorpayPaymentId: {
     type: String,
-    required: true,
-    unique: true
+    required: false
   },
   razorpaySignature: {
     type: String,
-    required: true
+    required: false
   },
   amount: {
     type: Number,
@@ -623,7 +622,8 @@ const PaymentSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['created', 'authorized', 'captured', 'refunded', 'failed'],
-    default: 'created'
+    default: 'created',
+    required: true
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
