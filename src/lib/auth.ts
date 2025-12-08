@@ -16,13 +16,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password || !credentials?.turnstileToken) {
-          return null;
+          throw new Error("Please provide email, password, and complete CAPTCHA");
         }
 
         // Validate Turnstile token
         const isTurnstileValid = await validateTurnstileToken(credentials.turnstileToken);
         if (!isTurnstileValid) {
-          return null;
+          throw new Error("CAPTCHA verification failed. Please try again.");
         }
 
         try {
@@ -32,14 +32,14 @@ export const authOptions: NextAuthOptions = {
           const user = await User.findOne({ email: credentials.email }).select("+password");
           
           if (!user) {
-            return null;
+            throw new Error("Invalid email or password");
           }
 
           // Check if password matches
           const isMatch = await user.matchPassword(credentials.password);
           
           if (!isMatch) {
-            return null;
+            throw new Error("Invalid email or password");
           }
 
           // Check if email is verified
@@ -61,8 +61,9 @@ export const authOptions: NextAuthOptions = {
             accountType: user.accountType, // Include account type
             blocked: (user as any).blocked // Include blocked status
           };
-        } catch (error) {
-          throw error; // Re-throw to be handled by NextAuth
+        } catch (error: any) {
+          // Re-throw with a more descriptive message
+          throw new Error( "An error occurred during authentication");
         }
       }
     }),

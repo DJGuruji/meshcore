@@ -147,12 +147,14 @@ function UpgradePageContent({ planParam }: { planParam: string | null }) {
       const result = await response.json();
 
       if (!result.success) {
+        // Log the full error in development
+       
         throw new Error(result.message || 'Failed to create payment order');
       }
 
       // Initialize Razorpay payment
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_xxxxxxxxxx',
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: result.order.amount,
         currency: result.order.currency,
         name: 'AnytimeRequest',

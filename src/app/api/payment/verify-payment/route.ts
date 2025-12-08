@@ -101,10 +101,32 @@ export async function POST(request: NextRequest) {
       message: 'Payment verified successfully and account upgraded'
     });
   } catch (error: any) {
+
+    
+    // Provide more detailed error information
+    let errorMessage = 'Failed to verify payment';
+    
+    if (error.statusCode) {
+      switch (error.statusCode) {
+        case 400:
+          errorMessage = 'Bad request - Invalid verification data';
+          break;
+        case 401:
+          errorMessage = 'Authentication failed - Invalid signature';
+          break;
+        case 500:
+          errorMessage = 'Internal server error - Please try again later';
+          break;
+        default:
+          errorMessage = `Payment verification error (${error.statusCode})`;
+      }
+    }
+    
     return Response.json({
       success: false,
-      message: 'Failed to verify payment',
-      error: error.message
+      message: errorMessage,
+      error: error.message,
+      ...(process.env.NODE_ENV === 'development' && { fullError: error })
     }, { status: 500 });
   }
 }
