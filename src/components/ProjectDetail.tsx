@@ -19,6 +19,7 @@ import AuthenticationSettings from './ProjectDetail/AuthenticationSettings';
 import AddEndpointForm from './ProjectDetail/AddEndpointForm';
 import EndpointListItem from './ProjectDetail/EndpointListItem';
 import EndpointList from './ProjectDetail/EndpointList';
+import NestedFieldsBuilder from './ProjectDetail/NestedFieldsBuilder';
 
 interface ApiProject {
   _id: string;
@@ -1070,7 +1071,14 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                   />
                 </div>
 
-
+                {newField.type === 'object' && (
+                  <NestedFieldsBuilder
+                    title="JSON 1"
+                    subtitle="Define keys that live inside this object"
+                    fields={newField.nestedFields || []}
+                    onChange={(nested: EndpointField[]) => setNewField({ ...newField, nestedFields: nested })}
+                  />
+                )}
 
                 {newField.type === 'array' && (
                   <div className="mt-3 space-y-3">
@@ -1098,7 +1106,14 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                         Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.
                       </p>
                     </div>
-
+                    {newField.arrayItemType === 'object' && (
+                      <NestedFieldsBuilder
+                        title="JSON 1"
+                        subtitle="Fields that belong to every array item"
+                        fields={newField.nestedFields || []}
+                        onChange={(nested: EndpointField[]) => setNewField({ ...newField, nestedFields: nested })}
+                      />
+                    )}
                   </div>
                 )}
                 
