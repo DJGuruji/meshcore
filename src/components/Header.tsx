@@ -120,10 +120,18 @@ export default function Header() {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-  const handleSignOut = () => {
-    // Clear navigation state when signing out
-    localStorage.removeItem('navigationState');
-    signOut({ callbackUrl: '/auth/signin' });
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      // Clear navigation state when signing out
+      localStorage.removeItem('navigationState');
+      await signOut({ callbackUrl: '/auth/signin' });
+    } catch (error) {
+      // Silently handle sign out errors in production
+      setIsSigningOut(false);
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -214,7 +222,13 @@ export default function Header() {
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
-            {status === 'authenticated' ? (
+            {status === 'loading' ? (
+              // Show skeleton loader while checking auth status
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-20 animate-pulse rounded-2xl bg-white/10"></div>
+                <div className="h-10 w-24 animate-pulse rounded-2xl bg-white/10"></div>
+              </div>
+            ) : status === 'authenticated' ? (
               <>
                 <nav className="flex items-center gap-2">
                   <Link
@@ -293,7 +307,14 @@ export default function Header() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-6">
-            {status === 'authenticated' ? (
+            {status === 'loading' ? (
+              // Show skeleton loader while checking auth status
+              <div className="space-y-4">
+                <div className="h-12 animate-pulse rounded-2xl bg-white/10"></div>
+                <div className="h-12 animate-pulse rounded-2xl bg-white/10"></div>
+                <div className="h-12 animate-pulse rounded-2xl bg-white/10"></div>
+              </div>
+            ) : status === 'authenticated' ? (
               <>
              <nav className="space-y-2">
   {navigation.map((item: { name: string; href: string; icon?: React.ComponentType<{className?: string}> }) => {
@@ -371,7 +392,7 @@ export default function Header() {
                     <Link
                       href="/pricing"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-orange-400/20 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:scale-[1.02] hover:shadow-indigo-500/40 w-full max-w-[200px]"
+                      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-orange-400/20 px-4 py-3 text-center font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:scale-[1.01] hover:shadow-indigo-500/40 w-full max-w-[200px]"
                     >
                       <div className="absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-r from-indigo-500/40 via-purple-500/40 to-orange-400/40 opacity-0 transition-opacity duration-1000 hover:opacity-100" />
                       <div className="relative z-10 flex items-center justify-center gap-2">
@@ -406,10 +427,20 @@ export default function Header() {
                       handleSignOut();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-left font-semibold text-rose-300 transition hover:border-rose-400/40 hover:text-white"
+                    disabled={isSigningOut}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-left font-semibold text-rose-300 transition hover:border-rose-400/40 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                    Sign out
+                    {isSigningOut ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-rose-300 border-t-transparent"></div>
+                        <span>Signing out...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                        <span>Sign out</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </>
@@ -653,10 +684,20 @@ export default function Header() {
                   handleSignOut();
                   setIsUtilityPanelOpen(false);
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-rose-300 transition hover:border-rose-400/40 hover:text-white"
+                disabled={isSigningOut}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-rose-300 transition hover:border-rose-400/40 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                Logout
+                {isSigningOut ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-rose-300 border-t-transparent"></div>
+                    <span>Signing out...</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                    <span>Logout</span>
+                  </>
+                )}
               </button>
             </nav>
           </div>

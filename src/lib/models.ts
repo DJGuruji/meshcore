@@ -47,9 +47,8 @@ const UserSchema = new mongoose.Schema({
   },
   // Daily request count with timestamp
   dailyRequests: {
-    type: Map,
-    of: Number,
-    default: () => ({}),
+    type: {},
+    default: {},
     required: true
   },
   // Rate limiting - timestamp of last request
@@ -146,15 +145,26 @@ UserSchema.methods.cleanupOldRequestData = function() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const thirtyDaysAgoString = thirtyDaysAgo.toISOString().split('T')[0];
-    
     // Remove entries older than 30 days
-    for (const [dateKey, count] of this.dailyRequests.entries()) {
-      if (dateKey < thirtyDaysAgoString) {
-        this.dailyRequests.delete(dateKey);
+    let hasChanges = false;
+    const keys = Object.keys(this.dailyRequests);
+    for (const dateKey of keys) {
+      // Parse the date key and compare with thirty days ago
+      const dateKeyDate = new Date(dateKey);
+      if (dateKeyDate < thirtyDaysAgo) {
+        delete this.dailyRequests[dateKey];
+        hasChanges = true;
       }
     }
+    
+    // If we made changes, mark the object as modified
+    if (hasChanges) {
+      this.markModified('dailyRequests');
+    }
+    
+    return hasChanges;
   } catch (error) {
+    return false;
   }
 };
 

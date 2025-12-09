@@ -23,9 +23,23 @@ export async function GET(request: NextRequest) {
     // Calculate storage usage
     let storageUsed = user.storageUsage || 0;
     
-    // Calculate daily requests used (today's count)
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    const requestsUsed = user.dailyRequests.get(today) || 0;
+    // Calculate daily requests used in current 24-hour window
+    let requestsUsed = 0;
+    
+    // Check if we need to reset the counter
+    const now = new Date();
+    const lastReset = user.lastRequestReset ? new Date(user.lastRequestReset) : null;
+    
+    if (lastReset) {
+      const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
+      
+      // If less than 24 hours have passed, get the current count
+      if (hoursSinceReset < 24) {
+        const currentWindowKey = lastReset.toISOString();
+        requestsUsed = user.dailyRequests[currentWindowKey] || 0;
+      }
+      // If 24 hours or more have passed, the count is 0 (will be reset on next API request)
+    }
     
     // Calculate limits based on account type
     let storageLimit = 10 * 1024 * 1024; // Default to 10MB for free tier
@@ -50,14 +64,17 @@ export async function GET(request: NextRequest) {
         break;
     }
     
-    return NextResponse.json({
+    const response = {
       storageUsed,
       storageLimit,
       requestsUsed,
       requestsLimit,
       accountType: user.accountType || 'free'
-    });
+    };
+    
+    return NextResponse.json(response);
   } catch (error) {
+    // Silently handle errors in production
     return NextResponse.json({ error: 'Failed to fetch usage data' }, { status: 500 });
   }
 }

@@ -30,6 +30,10 @@ const UsageIndicator: React.FC<UsageIndicatorProps> = ({
     if (num >= 1000) {
       return `${(num / 1000).toFixed(1)}K`;
     }
+    // For values less than 1, show 2 decimal places to avoid showing 0.0
+    if (num < 1 && num > 0) {
+      return num.toFixed(2);
+    }
     // For small numbers, check if it's a decimal
     if (num % 1 !== 0) {
       return num.toFixed(1);

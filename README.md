@@ -75,21 +75,21 @@ npm run dev
 
 ### 4. Use Your API
 - Copy the generated URL for each endpoint
-- Make HTTP requests to: `http://localhost:3000/api/fake{baseUrl}{path}`
-- Example: `http://localhost:3000/api/fake/api/v1/users`
+- Make HTTP requests to: `http://localhost:3000/api/mockserver{baseUrl}{path}`
+- Example: `http://localhost:3000/api/mockserver/api/v1/users`
 
 ## API URL Structure
 
 Your fake APIs follow this pattern:
 ```
-{BASE_URL}/api/fake/{projectName}{projectBaseUrl}{endpointPath}
+{BASE_URL}/api/mockserver/{projectName}{projectBaseUrl}{endpointPath}
 ```
 
 **Example:**
 - Project Name: "My Blog API" (becomes `my-blog-api`)
 - Project Base URL: `/api/v1`
 - Endpoint Path: `/users`
-- Full URL: `http://localhost:3000/api/fake/my-blog-api/api/v1/users`
+- Full URL: `http://localhost:3000/api/mockserver/my-blog-api/api/v1/users`
 
 **Project Name Conversion:**
 - Spaces and special characters are converted to hyphens
@@ -119,18 +119,18 @@ Protect your fake API endpoints with token-based authentication.
 **Protected Endpoint:**
 ```bash
 # Without token (401 Unauthorized)
-curl http://localhost:3000/api/fake/my-api/api/v1/users
+curl http://localhost:3000/api/mockserver/my-api/api/v1/users
 
 # With token (200 Success)
 curl -H "Authorization: Bearer abcd-1234-efgh-5678" \
-     http://localhost:3000/api/fake/my-api/api/v1/users
+     http://localhost:3000/api/mockserver/my-api/api/v1/users
 ```
 
 **Custom Header:**
 ```bash
 # Using custom header name and prefix
 curl -H "X-API-Key: Token abcd-1234-efgh-5678" \
-     http://localhost:3000/api/fake/my-api/api/v1/users
+     http://localhost:3000/api/mockserver/my-api/api/v1/users
 ```
 
 ### Authentication Levels
@@ -169,10 +169,10 @@ Choose from pre-built templates:
 3. **Use in Your App**:
 ```javascript
 // Fetch all users (project name: "User Management API")
-const users = await fetch('http://localhost:3000/api/fake/user-management-api/api/v1/users');
+const users = await fetch('http://localhost:3000/api/mockserver/user-management-api/api/v1/users');
 
 // Create a user
-const newUser = await fetch('http://localhost:3000/api/fake/user-management-api/api/v1/users', {
+const newUser = await fetch('http://localhost:3000/api/mockserver/user-management-api/api/v1/users', {
   method: 'POST',
   body: JSON.stringify({ name: 'John Doe' })
 });
@@ -185,7 +185,7 @@ const newUser = await fetch('http://localhost:3000/api/fake/user-management-api/
 src/
 ├── app/
 │   ├── api/
-│   │   ├── fake/[...path]/     # Dynamic fake API routes
+│   │   ├── mockserver/[...path]/     # Dynamic mock server routes
 │   │   ├── projects/           # Project management API
 │   │   └── auth/               # Authentication API
 │   ├── auth/                   # Auth pages

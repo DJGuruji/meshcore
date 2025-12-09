@@ -134,19 +134,29 @@ export default function SignInClient({ verified, error: errorParam }: SignInClie
   const labelStyles = 'text-xs font-semibold uppercase tracking-[0.2em] text-slate-300';
 
   // Show loading state while checking authentication
+  // But minimize flickering by showing a minimal loader
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#030712]">
-        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 shadow-xl shadow-black/50">
-          Checking authentication status…
+        <div className="flex items-center gap-2 rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 shadow-xl shadow-black/50">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent"></div>
+          <span>Checking authentication status…</span>
         </div>
       </div>
     );
   }
 
   // Don't render the sign in form if user is authenticated
+  // Add a small delay to prevent instant flickering
   if (status === 'authenticated') {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#030712]">
+        <div className="flex items-center gap-2 rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 shadow-xl shadow-black/50">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent"></div>
+          <span>Redirecting to dashboard…</span>
+        </div>
+      </div>
+    );
   }
 
   return (
