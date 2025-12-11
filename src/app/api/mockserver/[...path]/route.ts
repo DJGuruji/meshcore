@@ -282,7 +282,7 @@ async function checkRateLimit(project: any): Promise<{ allowed: boolean; message
       case 'free':
         maxRequestsPerSecond = 5;
         break;
-      case 'freemium':
+      case 'plus':
         maxRequestsPerSecond = 20;
         break;
       case 'pro':
@@ -368,7 +368,7 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
       case 'free':
         maxRequests = 300;
         break;
-      case 'freemium':
+      case 'plus':
         maxRequests = 3000;
         break;
       case 'pro':
@@ -448,7 +448,7 @@ async function checkStorageLimit(project: any, dataSize: number, isWriteOperatio
       case 'free':
         maxStorage = 10 * 1024 * 1024; // 10 MB
         break;
-      case 'freemium':
+      case 'plus':
         maxStorage = 200 * 1024 * 1024; // 200 MB
         break;
       case 'pro':

@@ -170,7 +170,7 @@ export async function PUT(
         case 'free':
           maxStorage = 10 * 1024 * 1024; // 10 MB
           break;
-        case 'freemium':
+        case 'plus':
           maxStorage = 200 * 1024 * 1024; // 200 MB
           break;
         case 'pro':

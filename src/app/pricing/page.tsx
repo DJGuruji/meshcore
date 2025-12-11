@@ -34,7 +34,7 @@ const PricingPage = () => {
       popular: false,
     },
     {
-      name: 'Freemium',
+      name: 'plus',
       price: '\u20B9429',
       period: '/month',
       description: 'Great for small projects',
@@ -105,7 +105,7 @@ const PricingPage = () => {
   // Define account hierarchy for determining upgrades/downgrades
   const accountHierarchy: { [key: string]: number } = {
     'free': 0,
-    'freemium': 1,
+    'plus': 1,
     'pro': 2,
     'ultra-pro': 3,
     'custom': 4
@@ -115,7 +115,7 @@ const PricingPage = () => {
   const planNameToAccountType = (planName: string) => {
     switch (planName) {
       case 'Free': return 'free';
-      case 'Freemium': return 'freemium';
+      case 'plus': return 'plus';
       case 'Pro': return 'pro';
       case 'Ultra Pro': return 'ultra-pro';
       case 'Custom': return 'custom';
