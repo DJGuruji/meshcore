@@ -286,9 +286,9 @@ export default function Home() {
             ].map((card) => (
               <div
                 key={card.title}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl"
+                className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)] hover:-translate-y-1 group"
               >
-                <div className="text-3xl">{card.icon}</div>
+                <div className="text-3xl transform transition-transform duration-300 group-hover:scale-110">{card.icon}</div>
                 <h3 className="mt-4 text-lg font-semibold text-white">{card.title}</h3>
                 <p className="mt-2 text-sm text-slate-300">{card.desc}</p>
               </div>
@@ -298,7 +298,7 @@ export default function Home() {
           <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/auth/signin"
-              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
+              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:from-blue-500 hover:to-indigo-600 hover:shadow-blue-500/40 hover:-translate-y-0.5"
             >
               Enter Workspace
               <svg className="h-4 w-4 transition group-hover:translate-x-1" viewBox="0 0 20 20" fill="none">
@@ -307,7 +307,7 @@ export default function Home() {
             </Link>
             <Link
               href="/auth/register"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/10 px-8 py-3 text-base font-semibold text-white/80 transition hover:border-indigo-400/40 hover:text-white"
+              className="inline-flex items-center justify-center rounded-2xl border border-gray-700 bg-gray-800/50 px-8 py-3 text-base font-semibold text-gray-200 backdrop-blur-sm transition-all duration-300 hover:border-blue-400/40 hover:bg-gray-800/70 hover:text-white hover:-translate-y-0.5"
             >
               Create free account
             </Link>
@@ -317,7 +317,7 @@ export default function Home() {
           <div className="mt-6">
             <Link
               href="/pricing"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/30 transition hover:scale-[1.02]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:from-blue-500 hover:to-indigo-600 hover:shadow-blue-500/40 hover:-translate-y-0.5"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -327,9 +327,9 @@ export default function Home() {
           </div>
 
           <div className="mt-12 grid gap-4 text-left text-sm text-slate-400 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Unlimited workspaces</div>
-            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Collaboration ready</div>
-            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3">Free API Tester</div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 transition-all duration-300 hover:border-white/10 hover:bg-white/10 hover:-translate-y-1">Unlimited workspaces</div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 transition-all duration-300 hover:border-white/10 hover:bg-white/10 hover:-translate-y-1">Collaboration ready</div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 transition-all duration-300 hover:border-white/10 hover:bg-white/10 hover:-translate-y-1">Free API Tester</div>
           </div>
         </div>
 
