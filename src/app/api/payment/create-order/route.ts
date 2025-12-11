@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     // Define account hierarchy for determining upgrades/downgrades
     const accountHierarchy: { [key: string]: number } = {
       'free': 0,
-      'freemium': 1,
+      'plus': 1,
       'pro': 2,
       'ultra-pro': 3,
       'custom': 4

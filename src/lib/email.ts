@@ -233,7 +233,7 @@ export const sendStorageLimitNotification = async (
               Upgrade to a higher plan to increase your storage limit:
             </p>
             <ul style="color: #fef3c7; margin: 15px 0 0 20px; padding: 0; font-size: 15px;">
-              <li style="margin-bottom: 8px;">Freemium: 200 MB</li>
+              <li style="margin-bottom: 8px;">plus: 200 MB</li>
               <li style="margin-bottom: 8px;">Pro: 1 GB</li>
               <li style="margin-bottom: 0;">Ultra-Pro: 5 GB</li>
             </ul>
@@ -333,7 +333,7 @@ export const sendRequestLimitNotification = async (
               Upgrade to a higher plan to increase your request limit:
             </p>
             <ul style="color: #fef3c7; margin: 15px 0 0 20px; padding: 0; font-size: 15px;">
-              <li style="margin-bottom: 8px;">Freemium: 3,000 requests/day</li>
+              <li style="margin-bottom: 8px;">plus: 3,000 requests/day</li>
               <li style="margin-bottom: 8px;">Pro: 20,000 requests/day</li>
               <li style="margin-bottom: 0;">Ultra-Pro: 200,000 requests/day</li>
             </ul>

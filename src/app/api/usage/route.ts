@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         storageLimit = 10 * 1024 * 1024; // 10 MB
         requestsLimit = 300;
         break;
-      case 'freemium':
+      case 'plus':
         storageLimit = 200 * 1024 * 1024; // 200 MB
         requestsLimit = 3000;
         break;

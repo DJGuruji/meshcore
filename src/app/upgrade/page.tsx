@@ -29,8 +29,8 @@ function UpgradePageContent({ planParam }: { planParam: string | null }) {
   // Available plans
   const plans = [
     {
-      id: 'freemium',
-      name: 'Freemium',
+      id: 'plus',
+      name: 'plus',
       price: 42900, // ₹429
       dollarPrice: '\u20B9429',
       description: 'Great for small projects',
@@ -77,7 +77,7 @@ function UpgradePageContent({ planParam }: { planParam: string | null }) {
     if (!param) return null;
     
     const planMap: Record<string, string> = {
-      'freemium': 'freemium',
+      'plus': 'plus',
       'pro': 'pro',
       'ultra-pro': 'ultra-pro'
     };

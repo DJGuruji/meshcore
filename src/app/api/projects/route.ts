@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       case 'free':
         maxProjects = 2;
         break;
-      case 'freemium':
+      case 'plus':
         maxProjects = 5;
         break;
       case 'pro':
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       case 'free':
         maxStorage = 10 * 1024 * 1024; // 10 MB
         break;
-      case 'freemium':
+      case 'plus':
         maxStorage = 200 * 1024 * 1024; // 200 MB
         break;
       case 'pro':

@@ -29,7 +29,7 @@ const UserSchema = new mongoose.Schema({
   // Account type field with default value
   accountType: {
     type: String,
-    enum: ['free', 'freemium', 'pro', 'ultra-pro','custom'],
+    enum: ['free', 'plus', 'pro', 'ultra-pro','custom'],
     default: 'free',
     required: true
   },
@@ -642,7 +642,7 @@ const PaymentSchema = new mongoose.Schema({
   },
   plan: {
     type: String,
-    enum: ['freemium', 'pro', 'ultra-pro', 'custom'],
+    enum: ['plus', 'pro', 'ultra-pro', 'custom'],
     required: true
   },
   // Expiration date for the payment/subscription
@@ -653,7 +653,7 @@ const PaymentSchema = new mongoose.Schema({
   // Queue for next plan (used for upgrades/downgrades)
   nextPlan: {
     type: String,
-    enum: ['free', 'freemium', 'pro', 'ultra-pro', 'custom'],
+    enum: ['free', 'plus', 'pro', 'ultra-pro', 'custom'],
     default: null
   },
   createdAt: { type: Date, default: Date.now },
