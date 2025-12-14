@@ -5,13 +5,13 @@ import { PlayIcon } from '@heroicons/react/24/outline';
 
 interface EndpointField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
   required: boolean;
   description?: string;
   // For nested object validation
   nestedFields?: EndpointField[];
   // For array validation
-  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
 }
 
 type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';

@@ -5,13 +5,13 @@ import { TrashIcon } from '@heroicons/react/24/outline';
 
 interface EndpointField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
   required: boolean;
   description?: string;
   // For nested object validation
   nestedFields?: EndpointField[];
   // For array validation
-  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
 }
 
 interface NestedFieldsBuilderProps {
@@ -133,6 +133,10 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
             <option className={optionClasses} value="boolean">Boolean</option>
             <option className={optionClasses} value="object">Object</option>
             <option className={optionClasses} value="array">Array</option>
+            <option className={optionClasses} value="image">Image Upload</option>
+            <option className={optionClasses} value="video">Video Upload</option>
+            <option className={optionClasses} value="audio">Audio Upload</option>
+            <option className={optionClasses} value="file">File Upload</option>
           </select>
         </div>
         <div>
@@ -216,6 +220,10 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
                       <option className={optionClasses} value="boolean">Boolean</option>
                       <option className={optionClasses} value="object">Object</option>
                       <option className={optionClasses} value="array">Array</option>
+                      <option className={optionClasses} value="image">Image Upload</option>
+                      <option className={optionClasses} value="video">Video Upload</option>
+                      <option className={optionClasses} value="audio">Audio Upload</option>
+                      <option className={optionClasses} value="file">File Upload</option>
                     </select>
                   </div>
                   {field.arrayItemType === 'object' && (

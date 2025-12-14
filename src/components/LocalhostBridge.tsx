@@ -122,12 +122,56 @@ export default function LocalhostBridge({ socket, isReady }: Props) {
             if (!requestHeaders['Content-Type']) {
               requestHeaders['Content-Type'] = 'application/json';
             }
+          } else if (request.body.type === 'xml' && request.body.xml) {
+            requestBody = request.body.xml;
+            if (!requestHeaders['Content-Type']) {
+              requestHeaders['Content-Type'] = 'application/xml';
+            }
+          } else if (request.body.type === 'text' && request.body.text) {
+            requestBody = request.body.text;
+            if (!requestHeaders['Content-Type']) {
+              requestHeaders['Content-Type'] = 'text/plain';
+            }
           } else if (request.body.type === 'raw' && request.body.raw) {
             requestBody = request.body.raw;
+          } else if (request.body.type === 'form-data' && request.body.formData) {
+            const formData = new FormData();
+            request.body.formData.filter((f: any) => f.enabled).forEach((f: any) => {
+              // Check if this is a file field (starts with [FILE])
+              if (f.value && f.value.startsWith('[FILE] ')) {
+                // For file fields, we would normally attach the actual file
+                // But in this browser context, we can't access the file directly
+                // We'll just send the filename as a placeholder
+                formData.append(f.key, f.value.substring(7)); // Remove "[FILE] " prefix
+              } else {
+                formData.append(f.key, f.value);
+              }
+            });
+            requestBody = formData;
+          } else if (request.body.type === 'x-www-form-urlencoded' && request.body.formUrlEncoded) {
+            const urlEncoded = new URLSearchParams();
+            request.body.formUrlEncoded.filter((f: any) => f.enabled).forEach((f: any) => {
+              urlEncoded.append(f.key, f.value);
+            });
+            requestBody = urlEncoded;
+            if (!requestHeaders['Content-Type']) {
+              requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+            }
+          } else if (request.body.type === 'binary' && request.body.binary) {
+            // For binary data, we'll treat it as a base64 string that needs to be decoded
+            try {
+              const binaryData = atob(request.body.binary);
+              const bytes = new Uint8Array(binaryData.length);
+              for (let i = 0; i < binaryData.length; i++) {
+                bytes[i] = binaryData.charCodeAt(i);
+              }
+              requestBody = bytes;
+            } catch (e) {
+              // If not valid base64, send as-is
+              requestBody = request.body.binary;
+            }
           }
-        }
-
-        // Check if Service Worker is active
+        }        // Check if Service Worker is active
         let workerStatus = localhostWorker.getStatus();
         
         

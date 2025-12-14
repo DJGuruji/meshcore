@@ -1,30 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import connectDB from '@/lib/db';
+import { ApiTesterHistory } from '@/lib/models';
 
-// Enable Edge Runtime
-export const runtime = 'edge';
+// Enable Node.js runtime for file handling
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-// API Tester - Send HTTP Request (Edge Runtime)
+// POST - Send HTTP Request with file uploads
 export async function POST(request: NextRequest) {
   try {
-    // Use JWT token instead of session for Edge compatibility
+    // Use JWT token instead of session for compatibility
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     
     if (!token || !token.sub) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    // Parse multipart form data
+    const formData = await request.formData();
+    
+    // Get request metadata
+    const requestMetadataStr = formData.get('request') as string;
+    if (!requestMetadataStr) {
+      return NextResponse.json({ error: 'Request metadata is required' }, { status: 400 });
+    }
+    
+    const requestMetadata = JSON.parse(requestMetadataStr);
     const { 
       method = 'GET',
       url,
       headers = [],
       params = [],
-      requestBody,
-      auth,
-      graphqlQuery,
-      graphqlVariables
-    } = body;
+      auth
+    } = requestMetadata;
 
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
@@ -95,70 +104,29 @@ export async function POST(request: NextRequest) {
 
       // Add body for non-GET requests
       if (method !== 'GET' && method !== 'HEAD') {
-        // Check if this is a GraphQL request
-        if (graphqlQuery) {
-          // GraphQL request
-          requestOptions.body = JSON.stringify({
-            query: graphqlQuery,
-            variables: graphqlVariables ? JSON.parse(graphqlVariables) : {}
-          });
-          if (!requestHeaders['Content-Type']) {
-            requestHeaders['Content-Type'] = 'application/json';
+        // Handle form-data with files
+        const bodyType = formData.get('bodyType') as string;
+        
+        if (bodyType === 'form-data') {
+          // Use the formData directly (it already contains files)
+          // Remove metadata fields to avoid sending them as form fields
+          const cleanFormData = new FormData();
+          for (const [key, value] of formData.entries()) {
+            if (key !== 'request' && key !== 'bodyType') {
+              cleanFormData.append(key, value);
+            }
           }
-        } else if (requestBody) {
-          if (requestBody.type === 'json' && requestBody.json) {
-            requestOptions.body = requestBody.json;
-            if (!requestHeaders['Content-Type']) {
-              requestHeaders['Content-Type'] = 'application/json';
-            }
-          } else if (requestBody.type === 'xml' && requestBody.xml) {
-            requestOptions.body = requestBody.xml;
-            if (!requestHeaders['Content-Type']) {
-              requestHeaders['Content-Type'] = 'application/xml';
-            }
-          } else if (requestBody.type === 'text' && requestBody.text) {
-            requestOptions.body = requestBody.text;
-            if (!requestHeaders['Content-Type']) {
-              requestHeaders['Content-Type'] = 'text/plain';
-            }
-          } else if (requestBody.type === 'raw' && requestBody.raw) {
-            requestOptions.body = requestBody.raw;
-          } else if (requestBody.type === 'form-data' && requestBody.formData) {
-            const formData = new FormData();
-            requestBody.formData.filter((f: any) => f.enabled).forEach((f: any) => {
-              // Check if this is a file field (starts with [FILE])
-              if (f.value.startsWith('[FILE] ')) {
-                // For file fields, we would normally attach the actual file
-                // But in this edge runtime, we can't process file uploads
-                // We'll just send the filename as a placeholder
-                formData.append(f.key, f.value.substring(7)); // Remove "[FILE] " prefix
-              } else {
-                formData.append(f.key, f.value);
-              }
-            });
-            requestOptions.body = formData as any;          } else if (requestBody.type === 'x-www-form-urlencoded' && requestBody.formUrlEncoded) {
-            const urlEncoded = new URLSearchParams();
-            requestBody.formUrlEncoded.filter((f: any) => f.enabled).forEach((f: any) => {
-              urlEncoded.append(f.key, f.value);
-            });
-            requestOptions.body = urlEncoded;
-            requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-          } else if (requestBody.type === 'binary' && requestBody.binary) {
-            // For binary data, we'll treat it as a base64 string that needs to be decoded
-            try {
-              const binaryData = atob(requestBody.binary);
-              const bytes = new Uint8Array(binaryData.length);
-              for (let i = 0; i < binaryData.length; i++) {
-                bytes[i] = binaryData.charCodeAt(i);
-              }
-              requestOptions.body = bytes;
-            } catch (e) {
-              // If not valid base64, send as-is
-              requestOptions.body = requestBody.binary;
-            }
+          requestOptions.body = cleanFormData;
+        } else if (bodyType === 'binary') {
+          // Handle binary file
+          const binaryFile = formData.get('binaryFile');
+          if (binaryFile && binaryFile instanceof Blob) {
+            requestOptions.body = binaryFile;
           }
         }
-      }      // Send request
+      }
+
+      // Send request
       const response = await fetch(finalUrl.toString(), requestOptions);
       const endTime = Date.now();
 
@@ -187,36 +155,28 @@ export async function POST(request: NextRequest) {
       // Calculate response size
       const responseSize = new Blob([responseText]).size;
 
-      // Save to history asynchronously (fire-and-forget)
-      // This doesn't block the response
-      const historyData = {
-        method: method.toUpperCase(),
-        url: finalUrl.toString(),
-        statusCode: response.status,
-        responseTime: endTime - startTime,
-        responseSize,
-        requestData: {
-          headers: headers.filter((h: any) => h.enabled),
-          params: params.filter((p: any) => p.enabled),
-          body: requestBody,
-          auth: auth,
-          graphqlQuery: graphqlQuery,
-          graphqlVariables: graphqlVariables
-        }
-      };
-
-      // Async history save - don't await
-      fetch(new URL('/api/tools/api-tester/history', request.url).toString(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Forward the cookie for authentication
-          'Cookie': request.headers.get('cookie') || ''
-        },
-        body: JSON.stringify(historyData)
-      }).catch(err => {
+      // Save to history
+      try {
+        await connectDB();
+        const historyEntry = new ApiTesterHistory({
+          method: method.toUpperCase(),
+          url: finalUrl.toString(),
+          statusCode: response.status,
+          responseTime: endTime - startTime,
+          responseSize,
+          user: token.sub,
+          requestData: {
+            headers: headers.filter((h: any) => h.enabled),
+            params: params.filter((p: any) => p.enabled),
+            // Note: We don't save file data in history for security reasons
+            body: { type: formData.get('bodyType') },
+            auth: auth
+          }
+        });
+        await historyEntry.save();
+      } catch (historyError) {
         // Log error but don't fail the request
-      });
+      }
 
       return NextResponse.json({
         status: response.status,

@@ -4,6 +4,7 @@ import { ApiProject, MockServerData, User } from '@/lib/models';
 import { extractTokenFromHeader } from '@/lib/tokenUtils';
 import cache from '@/lib/cache';
 import { sendRequestLimitNotification, sendStorageLimitNotification } from '@/lib/email';
+import { uploadFileToCloudinary } from '@/lib/cloudinary';
 
 // Helper function to match endpoint path with project name
 function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string): boolean {
@@ -150,10 +151,196 @@ function validateFieldType(field: any, value: any, fieldName: string): { isValid
         }
       }
       break;
+    case 'image':
+    case 'video':
+    case 'audio':
+    case 'file':
+      if (typeof value === 'string') {
+        break;
+      }
+      if (value && typeof value === 'object' && (value.url || value.secureUrl)) {
+        break;
+      }
+      errors.push(`${fieldName} should be a file reference (URL or metadata object)`);
+      break;
   }
   
   return { isValid: errors.length === 0, errors };
 }
+
+const FILE_FIELD_TYPES = new Set(['image', 'video', 'audio', 'file']);
+
+const appendValue = (target: Record<string, any>, key: string, value: any) => {
+  if (key in target) {
+    if (!Array.isArray(target[key])) {
+      target[key] = [target[key]];
+    }
+    target[key].push(value);
+  } else {
+    target[key] = value;
+  }
+};
+
+const buildFieldMap = (fields: any[] = []) => {
+  const map = new Map<string, any>();
+  fields.forEach((field) => {
+    if (field?.name) {
+      map.set(field.name, field);
+    }
+  });
+  return map;
+};
+
+const coerceTextValue = (value: string, field?: any) => {
+  if (!field) return value;
+  switch (field.type) {
+    case 'number': {
+      const parsed = Number(value);
+      return Number.isNaN(parsed) ? value : parsed;
+    }
+    case 'boolean': {
+      const lower = value.toLowerCase();
+      if (lower === 'true') return true;
+      if (lower === 'false') return false;
+      return value;
+    }
+    case 'object':
+    case 'array': {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    default:
+      return value;
+  }
+};
+
+const convertFileEntry = async (file: File, field?: any) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const mimeType = file.type || 'application/octet-stream';
+
+  if (field && FILE_FIELD_TYPES.has(field.type)) {
+    try {
+      const uploadedFile = await uploadFileToCloudinary(
+        buffer,
+        file.name,
+        mimeType,
+        field.name || 'upload'
+      );
+
+      return {
+        metadata: {
+          type: uploadedFile.fileType,
+          fileName: uploadedFile.fileName,
+          originalName: uploadedFile.originalName,
+          url: uploadedFile.url,
+          secureUrl: uploadedFile.secureUrl,
+          publicId: uploadedFile.publicId,
+          format: uploadedFile.format,
+          resourceType: uploadedFile.resourceType,
+          fileSize: uploadedFile.fileSize,
+          uploadedAt: new Date().toISOString(),
+          fieldName: uploadedFile.fieldName
+        },
+        bytes: uploadedFile.fileSize || 0
+      };
+    } catch (error: any) {
+      throw new Error(`UPLOAD_ERROR:${error?.message || 'Failed to upload file.'}`);
+    }
+  }
+
+  const dataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+  return {
+    metadata: dataUrl,
+    bytes: buffer.length
+  };
+};
+
+const formDataToJson = async (formData: FormData, endpoint: any) => {
+  const body: Record<string, any> = {};
+  const fieldMap = buildFieldMap(endpoint?.fields || []);
+  let filesSize = 0;
+  const uploadedFiles: Array<Record<string, any>> = [];
+
+  for (const [key, formValue] of formData.entries()) {
+    const field = fieldMap.get(key);
+    if (typeof File !== 'undefined' && formValue instanceof File) {
+      const { metadata, bytes } = await convertFileEntry(formValue, field);
+      filesSize += bytes;
+      if (metadata && typeof metadata === 'object' && FILE_FIELD_TYPES.has(field?.type)) {
+        uploadedFiles.push(metadata);
+      }
+      appendValue(body, key, metadata);
+    } else {
+      appendValue(body, key, coerceTextValue(String(formValue), field));
+    }
+  }
+
+  return { body, filesSize, uploadedFiles };
+};
+
+const parseRequestBody = async (request: NextRequest, endpoint: any) => {
+  const contentType = request.headers.get('content-type') || '';
+
+  const tryParseFormData = async () => {
+    try {
+      const cloned = request.clone();
+      const formData = await cloned.formData();
+      const entries = Array.from(formData.keys());
+      if (entries.length === 0) {
+        return null;
+      }
+      return await formDataToJson(formData, endpoint);
+    } catch {
+      return null;
+    }
+  };
+
+  const parseJsonBody = async () => {
+    try {
+      const cloned = request.clone();
+      const json = await cloned.json();
+      return { body: json, filesSize: 0, uploadedFiles: [] };
+    } catch {
+      throw new Error('INVALID_JSON');
+    }
+  };
+
+  if (contentType.includes('multipart/form-data')) {
+    const formResult = await tryParseFormData();
+    if (formResult) return formResult;
+    throw new Error('INVALID_JSON');
+  }
+
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    const text = await request.clone().text();
+    const params = new URLSearchParams(text);
+    const body: Record<string, any> = {};
+    const fieldMap = buildFieldMap(endpoint?.fields || []);
+    params.forEach((value, key) => {
+      const field = fieldMap.get(key);
+      appendValue(body, key, coerceTextValue(value, field));
+    });
+    return { body, filesSize: 0, uploadedFiles: [] };
+  }
+
+  if (!contentType) {
+    const formResult = await tryParseFormData();
+    if (formResult) return formResult;
+    return await parseJsonBody();
+  }
+
+  if (contentType.includes('application/json') || contentType.includes('text/json')) {
+    return await parseJsonBody();
+  }
+
+  const formFallback = await tryParseFormData();
+  if (formFallback) return formFallback;
+  return await parseJsonBody();
+};
 
 // Helper function to filter data based on conditions
 function filterDataByConditions(data: any, conditions: any[]): any {
@@ -608,8 +795,23 @@ async function handleRequest(request: NextRequest, method: string) {
             
             // For POST requests, validate required fields if defined
             if (method === 'POST' && endpoint.fields && endpoint.fields.length > 0) {
+              let parsedBody;
               try {
-                const requestBody = await request.json();
+                parsedBody = await parseRequestBody(request, endpoint);
+              } catch (parseError: any) {
+                const rawMessage = parseError?.message || '';
+                const uploadErrorPrefix = 'UPLOAD_ERROR:';
+                const message = rawMessage.startsWith(uploadErrorPrefix)
+                  ? rawMessage.slice(uploadErrorPrefix.length)
+                  : 'Request body must be valid JSON or multipart/form-data.';
+                const response = NextResponse.json({ 
+                  error: rawMessage.startsWith(uploadErrorPrefix) ? 'File upload failed' : 'Invalid JSON',
+                  message
+                }, { status: 400 });
+                return addCorsHeaders(response);
+              }
+              const { body: requestBody, filesSize, uploadedFiles } = parsedBody;
+              try {
                 const validation = validatePostRequestBody(endpoint.fields, requestBody);
                 
                 if (!validation.isValid) {
@@ -622,7 +824,7 @@ async function handleRequest(request: NextRequest, method: string) {
                 }
                 
                 // Check storage limit before storing data (write operation)
-                const dataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8');
+                const dataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8') + filesSize;
                 const storageCheck = await checkStorageLimit(project, dataSize, true);
                 if (!storageCheck.allowed) {
                   const response = NextResponse.json({ 
@@ -633,20 +835,36 @@ async function handleRequest(request: NextRequest, method: string) {
                   return addCorsHeaders(response);
                 }
                 
+                // Process file data to store only URLs instead of full metadata
+                const processedData = { ...requestBody };
+                const processedFiles: any[] = [];
+                
+                // Convert file metadata to simple URL format
+                uploadedFiles.forEach((fileMeta: any) => {
+                  if (fileMeta.fieldName && fileMeta.secureUrl) {
+                    // Store only the URL in the data object
+                    processedData[fileMeta.fieldName] = fileMeta.secureUrl;
+                    // Store minimal file info for reference
+                    processedFiles.push({
+                      fieldName: fileMeta.fieldName,
+                      url: fileMeta.secureUrl
+                    });
+                  }
+                });
+
                 // Store the data in the database
                 try {
                   const mockData = new MockServerData({
                     endpointId: endpoint._id,
                     projectId: project._id,
-                    data: requestBody
+                    data: processedData,
+                    files: processedFiles
                   });
-                  await mockData.save();
-                  
+                  await mockData.save();                  
                   // Update user's storage usage
                   try {
                     const user = await User.findById(project.user);
                     if (user) {
-                      const dataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8');
                       const currentUsage = user.storageUsage || 0;
                       await User.findByIdAndUpdate(project.user, { 
                         storageUsage: currentUsage + dataSize 
@@ -663,23 +881,20 @@ async function handleRequest(request: NextRequest, method: string) {
                   // Return success response with the stored data
                   const successResponse = NextResponse.json({ 
                     message: 'Data stored successfully',
-                    data: requestBody,
+                    data: processedData,
                     id: mockData._id
-                  }, { status: 201 });
-                  return addCorsHeaders(successResponse);
+                  }, { status: 201 });                  return addCorsHeaders(successResponse);
                 } catch (saveError: any) {
-                  // Return error response
                   const errorResponse = NextResponse.json({ 
                     error: 'Failed to store data',
-                    message: 'Data validation passed but storage failed'
+                    message: saveError?.message || 'Data validation passed but storage failed'
                   }, { status: 500 });
                   return addCorsHeaders(errorResponse);
                 }
               } catch (error: any) {
-                // Return error response for invalid JSON
                 const errorResponse = NextResponse.json({ 
-                  error: 'Invalid JSON',
-                  message: 'Request body must be valid JSON'
+                  error: 'Request processing failed',
+                  message: error?.message || 'Failed to process request body'
                 }, { status: 400 });
                 return addCorsHeaders(errorResponse);
               }
@@ -775,22 +990,34 @@ async function handleRequest(request: NextRequest, method: string) {
                     
                     // For PUT/PATCH requests, update the data
                     if (method === 'PUT' || method === 'PATCH') {
-                      let requestBody;
+                      let parsedBody;
                       try {
-                        requestBody = await request.json();
-                      } catch (jsonError: any) {
-                        requestBody = {};
+                        parsedBody = await parseRequestBody(request, endpoint);
+                      } catch (parseError: any) {
+                        const rawMessage = parseError?.message || '';
+                        const uploadErrorPrefix = 'UPLOAD_ERROR:';
+                        const message = rawMessage.startsWith(uploadErrorPrefix)
+                          ? rawMessage.slice(uploadErrorPrefix.length)
+                          : 'Request body must be valid JSON or multipart/form-data.';
+                        const response = NextResponse.json({
+                          error: rawMessage.startsWith(uploadErrorPrefix) ? 'File upload failed' : 'Invalid JSON',
+                          message
+                        }, { status: 400 });
+                        return addCorsHeaders(response);
                       }
+                      const { body: requestBody, filesSize, uploadedFiles } = parsedBody;
                       
                       // Check storage limit before updating data
-                      const newDataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8');
+                      const newDataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8') + filesSize;
                       let oldDataSize = 0;
                       
                       // Get the old data size for storage calculation
                       if (isValidId) {
                         const oldData = await MockServerData.findById(id);
                         if (oldData) {
-                          oldDataSize = Buffer.byteLength(JSON.stringify(oldData.data), 'utf8');
+                          const existingFilesSize = Array.isArray(oldData.files)
+                            ? oldData.files.reduce((sum: number, file: any) => sum + (file.fileSize || 0), 0)
+                            : 0;                          oldDataSize = Buffer.byteLength(JSON.stringify(oldData.data), 'utf8') + existingFilesSize;
                         }
                       }
                       
@@ -808,21 +1035,47 @@ async function handleRequest(request: NextRequest, method: string) {
                         }
                       }
                       
+                      // Initialize processedData with the original request body
+                      let processedData = { ...requestBody };
+                      
                       // Update the data
                       if (isValidId) {
+                        // Process file data to store only URLs instead of full metadata
+                        processedData = { ...storedData[0].data, ...requestBody };
+                        const existingFiles = storedData[0]?.files || [];
+                        const mergedFiles = Array.isArray(existingFiles) ? [...existingFiles] : [];
+                        
+                        // Convert file metadata to simple URL format
+                        uploadedFiles.forEach((fileMeta: any) => {
+                          if (fileMeta.fieldName && fileMeta.secureUrl) {
+                            // Store only the URL in the data object
+                            processedData[fileMeta.fieldName] = fileMeta.secureUrl;
+                            // Store minimal file info for reference
+                            const index = mergedFiles.findIndex((file: any) => file.fieldName === fileMeta.fieldName);
+                            if (index >= 0) {
+                              mergedFiles[index] = {
+                                fieldName: fileMeta.fieldName,
+                                url: fileMeta.secureUrl
+                              };
+                            } else {
+                              mergedFiles.push({
+                                fieldName: fileMeta.fieldName,
+                                url: fileMeta.secureUrl
+                              });
+                            }
+                          }
+                        });
+
                         await MockServerData.updateOne(
                           { _id: id },
                           { 
                             $set: { 
-                              data: {
-                                ...storedData[0].data,
-                                ...requestBody
-                              },
+                              data: processedData,
+                              files: mergedFiles,
                               updatedAt: new Date()
                             }
                           }
-                        );
-                        
+                        );                        
                         // Update user's storage usage
                         try {
                           const user = await User.findById(project.user);
@@ -847,7 +1100,7 @@ async function handleRequest(request: NextRequest, method: string) {
                         updatedData: {
                           id: isValidId ? id : undefined,
                           ...filteredData,
-                          ...requestBody
+                          ...processedData
                         }
                       }, { status: 200 });
                       return addCorsHeaders(updateResponse);

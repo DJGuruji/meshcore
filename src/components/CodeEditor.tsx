@@ -5,12 +5,11 @@ import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
-  language?: 'json' | 'javascript' | 'text';
+  language?: 'json' | 'javascript' | 'text' | 'xml';
   placeholder?: string;
   className?: string;
   readOnly?: boolean;
 }
-
 export default function CodeEditor({
   value,
   onChange,
@@ -28,12 +27,13 @@ export default function CodeEditor({
       setDisplayValue(highlightJSON(value));
     } else if (language === 'javascript') {
       setDisplayValue(highlightJavaScript(value));
+    } else if (language === 'xml') {
+      setDisplayValue(highlightXML(value));
     } else {
       // For plain text, just escape HTML
       setDisplayValue(escapeHtml(value));
     }
   }, [value, language]);
-
   // Helper function to escape HTML
   const escapeHtml = (text: string): string => {
     return text
@@ -81,6 +81,12 @@ export default function CodeEditor({
       .replace(/(\d+)/g, '<span class="number">$&</span>');
   };
 
+  const highlightXML = (code: string): string => {
+    return escapeHtml(code)
+      .replace(/(&lt;\/?[^&gt;]+&gt;)/g, '<span class="keyword">$&</span>') // Tags
+      .replace(/(&quot;[^&quot;]*&quot;|'[^']*')/g, '<span class="string">$&</span>') // Attributes
+      .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="comment">$&</span>'); // Comments
+  };
   // Enhanced auto-closing functionality
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (readOnly || !textareaRef.current) return;

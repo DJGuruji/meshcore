@@ -170,13 +170,13 @@ UserSchema.methods.cleanupOldRequestData = function() {
 
 interface EndpointField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
   required: boolean;
   description?: string;
   // For nested object validation
   nestedFields?: EndpointField[];
   // For array validation
-  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
 }
 
 // API Project Schema
@@ -244,7 +244,7 @@ const ApiProjectSchema = new mongoose.Schema({
       },
       type: {
         type: String,
-        enum: ['string', 'number', 'boolean', 'object', 'array'],
+        enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file'],
         required: true
       },
       required: {
@@ -261,7 +261,7 @@ const ApiProjectSchema = new mongoose.Schema({
           },
           type: {
             type: String,
-            enum: ['string', 'number', 'boolean', 'object', 'array'],
+            enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file'],
             required: true
           },
           required: {
@@ -277,7 +277,7 @@ const ApiProjectSchema = new mongoose.Schema({
           // For array validation within nested objects
           arrayItemType: {
             type: String,
-            enum: ['string', 'number', 'boolean', 'object', 'array']
+            enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file']
           }
         }],
         default: []
@@ -285,7 +285,7 @@ const ApiProjectSchema = new mongoose.Schema({
       // For array validation
       arrayItemType: {
         type: String,
-        enum: ['string', 'number', 'boolean', 'object', 'array']
+        enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file']
       }
     }],
     // Data source for GET endpoints
@@ -506,6 +506,26 @@ const MockServerDataSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     required: true
   },
+  // Store Cloudinary file information
+  files: {
+    type: [{
+      fieldName: String,
+      fileType: {
+        type: String,
+        enum: ['image', 'video', 'audio', 'file']
+      },
+      fileName: String,
+      originalName: String,
+      url: String,
+      secureUrl: String,
+      publicId: String,
+      format: String,
+      resourceType: String,
+      fileSize: Number,
+      uploadedAt: { type: Date, default: Date.now }
+    }],
+    default: []
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -655,6 +675,27 @@ const PaymentSchema = new mongoose.Schema({
     type: String,
     enum: ['free', 'plus', 'pro', 'ultra-pro', 'custom'],
     default: null
+  },
+  // Additional payment details
+  transactionId: {
+    type: String,
+    required: false
+  },
+  bankRrn: {
+    type: String,
+    required: false
+  },
+  paymentMethod: {
+    type: String,
+    required: false
+  },
+  customerEmail: {
+    type: String,
+    required: false
+  },
+  customerPhone: {
+    type: String,
+    required: false
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
