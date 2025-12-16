@@ -554,7 +554,7 @@ export default function ApiTesterPage() {
     request: {
       name: 'Untitled Request',
       method: 'GET',
-      url: 'http://localhost:3000/api/users', // Provide a helpful default
+      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/users`, // Use BASE_URL from env
       headers: [],
       params: [],
       body: { type: 'none' },
