@@ -831,6 +831,43 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
 
     setIsLoading(true);
     
+    // Helper function to create clean body with ONLY active type's data (like Postman)
+    const createCleanBody = (body: any) => {
+      const cleanBody: any = { type: body.type };
+      
+      switch (body.type) {
+        case 'json':
+          cleanBody.json = body.json;
+          break;
+        case 'xml':
+          cleanBody.xml = body.xml;
+          break;
+        case 'text':
+          cleanBody.text = body.text;
+          break;
+        case 'raw':
+          cleanBody.raw = body.raw;
+          break;
+        case 'form-data':
+          cleanBody.formData = body.formData;
+          break;
+        case 'x-www-form-urlencoded':
+          cleanBody.formUrlEncoded = body.formUrlEncoded;
+          break;
+        case 'binary':
+          cleanBody.binary = body.binary;
+          cleanBody.binaryFile = body.binaryFile;
+          break;
+        case 'none':
+        default:
+          // No body data needed
+          break;
+      }
+      
+      return cleanBody;
+    };
+
+    
     // Clear current tab's response
     setRequestTabs(tabs => tabs.map(tab => 
       tab.id === activeTabId 
@@ -886,7 +923,7 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
           url: finalUrl,
           headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
           params: currentRequest.params,
-          body: currentRequest.body,
+          body: createCleanBody(currentRequest.body),  // Use clean body
           auth: currentRequest.auth
         });
         
@@ -965,6 +1002,12 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
             if (currentRequest.body.type === 'json') {
               (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
               fetchOptions.body = currentRequest.body.json;
+            } else if (currentRequest.body.type === 'xml') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/xml';
+              fetchOptions.body = currentRequest.body.xml;
+            } else if (currentRequest.body.type === 'text') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'text/plain';
+              fetchOptions.body = currentRequest.body.text;
             } else if (currentRequest.body.type === 'raw') {
               fetchOptions.body = currentRequest.body.raw;
             }
@@ -1007,6 +1050,12 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
             if (currentRequest.body.type === 'json') {
               (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
               fetchOptions.body = currentRequest.body.json;
+            } else if (currentRequest.body.type === 'xml') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/xml';
+              fetchOptions.body = currentRequest.body.xml;
+            } else if (currentRequest.body.type === 'text') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'text/plain';
+              fetchOptions.body = currentRequest.body.text;
             } else if (currentRequest.body.type === 'raw') {
               fetchOptions.body = currentRequest.body.raw;
             }
@@ -1094,9 +1143,10 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
           url: finalUrl,
           headers: currentRequest.headers.filter(h => h.enabled).map(h => ({ key: h.key, value: h.value })),
           params: currentRequest.params.filter(p => p.enabled),
-          body: currentRequest.body,
+          body: createCleanBody(currentRequest.body),  // Send ONLY the active type's data
           auth: currentRequest.auth
         };
+
 
         res = await axios.post('/api/tools/api-tester/send', requestData, {
           signal: abortControllerRef.current.signal
@@ -1127,7 +1177,7 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
         requestData: {
           headers: currentRequest.headers,
           params: currentRequest.params,
-          body: currentRequest.body,
+          body: createCleanBody(currentRequest.body),  // Use clean body
           auth: currentRequest.auth
         }
       });
@@ -1425,6 +1475,8 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
           }
         }
       }
+
+      
       // Send request directly from browser
       const response = await fetch(finalUrl.toString(), requestOptions);
       const endTime = Date.now();
@@ -2401,6 +2453,26 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
                         
                         if (type === 'x-www-form-urlencoded' && !newBody.formUrlEncoded) {
                           newBody.formUrlEncoded = [{ key: '', value: '', enabled: true }];
+                        }
+                        
+                        // Initialize xml field if needed
+                        if (type === 'xml' && !newBody.xml) {
+                          newBody.xml = '';
+                        }
+                        
+                        // Initialize text field if needed
+                        if (type === 'text' && !newBody.text) {
+                          newBody.text = '';
+                        }
+                        
+                        // Initialize json field if needed
+                        if (type === 'json' && !newBody.json) {
+                          newBody.json = '';
+                        }
+                        
+                        // Initialize raw field if needed
+                        if (type === 'raw' && !newBody.raw) {
+                          newBody.raw = '';
                         }
                         
                         setCurrentRequest({ ...currentRequest, body: newBody });

@@ -67,6 +67,17 @@ function validatePostRequestBody(fields: any[], requestBody: any): { isValid: bo
   const errors: string[] = [];
   const requiredFields = fields.filter(field => field.required);
   
+  // Get list of allowed field names
+  const allowedFieldNames = fields.map(field => field.name);
+  
+  // Check for unknown/extra fields in request body
+  const requestBodyKeys = Object.keys(requestBody);
+  for (const key of requestBodyKeys) {
+    if (!allowedFieldNames.includes(key)) {
+      errors.push(`Unknown field '${key}' is not allowed. Expected fields: ${allowedFieldNames.join(', ')}`);
+    }
+  }
+  
   // Check if all required fields are present
   for (const field of requiredFields) {
     if (!(field.name in requestBody)) {
@@ -309,12 +320,24 @@ const parseRequestBody = async (request: NextRequest, endpoint: any) => {
     }
   };
 
+  const parseTextBody = async () => {
+    try {
+      const cloned = request.clone();
+      const text = await cloned.text();
+      return { body: text, filesSize: 0, uploadedFiles: [] };
+    } catch {
+      throw new Error('Failed to parse request body as text');
+    }
+  };
+
+  // Handle multipart/form-data
   if (contentType.includes('multipart/form-data')) {
     const formResult = await tryParseFormData();
     if (formResult) return formResult;
     throw new Error('INVALID_JSON');
   }
 
+  // Handle application/x-www-form-urlencoded
   if (contentType.includes('application/x-www-form-urlencoded')) {
     const text = await request.clone().text();
     const params = new URLSearchParams(text);
@@ -327,20 +350,53 @@ const parseRequestBody = async (request: NextRequest, endpoint: any) => {
     return { body, filesSize: 0, uploadedFiles: [] };
   }
 
-  if (!contentType) {
-    const formResult = await tryParseFormData();
-    if (formResult) return formResult;
-    return await parseJsonBody();
-  }
-
+  // Handle JSON content types
   if (contentType.includes('application/json') || contentType.includes('text/json')) {
     return await parseJsonBody();
   }
 
+  // Handle XML content types
+  if (contentType.includes('application/xml') || 
+      contentType.includes('text/xml') || 
+      contentType.includes('application/xhtml+xml')) {
+    return await parseTextBody();
+  }
+
+  // Handle plain text
+  if (contentType.includes('text/plain') || 
+      contentType.includes('text/html') || 
+      contentType.includes('text/css') || 
+      contentType.includes('text/javascript')) {
+    return await parseTextBody();
+  }
+
+  // Handle other text-based content types
+  if (contentType.startsWith('text/')) {
+    return await parseTextBody();
+  }
+
+  // No content-type header - try to parse intelligently
+  if (!contentType) {
+    const formResult = await tryParseFormData();
+    if (formResult) return formResult;
+    
+    // Try JSON first
+    try {
+      return await parseJsonBody();
+    } catch {
+      // Fall back to text
+      return await parseTextBody();
+    }
+  }
+
+  // For any other content type, try form-data first, then text
   const formFallback = await tryParseFormData();
   if (formFallback) return formFallback;
-  return await parseJsonBody();
+  
+  // Return as text instead of forcing JSON
+  return await parseTextBody();
 };
+
 
 // Helper function to filter data based on conditions
 function filterDataByConditions(data: any, conditions: any[]): any {
@@ -811,20 +867,28 @@ async function handleRequest(request: NextRequest, method: string) {
                 return addCorsHeaders(response);
               }
               const { body: requestBody, filesSize, uploadedFiles } = parsedBody;
+              
               try {
-                const validation = validatePostRequestBody(endpoint.fields, requestBody);
-                
-                if (!validation.isValid) {
-                  const response = NextResponse.json({ 
-                    error: 'Validation failed',
-                    message: 'Required fields are missing or invalid',
-                    details: validation.errors
-                  }, { status: 400 });
-                  return addCorsHeaders(response);
+                // Only validate fields if the body is an object (JSON/form-data)
+                // Skip validation for text/XML content
+                if (typeof requestBody === 'object' && requestBody !== null && !Array.isArray(requestBody)) {
+                  const validation = validatePostRequestBody(endpoint.fields, requestBody);
+                  
+                  if (!validation.isValid) {
+                    const response = NextResponse.json({ 
+                      error: 'Validation failed',
+                      message: 'Required fields are missing or invalid',
+                      details: validation.errors
+                    }, { status: 400 });
+                    return addCorsHeaders(response);
+                  }
                 }
                 
                 // Check storage limit before storing data (write operation)
-                const dataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8') + filesSize;
+                const bodyString = typeof requestBody === 'string' 
+                  ? requestBody 
+                  : JSON.stringify(requestBody);
+                const dataSize = Buffer.byteLength(bodyString, 'utf8') + filesSize;
                 const storageCheck = await checkStorageLimit(project, dataSize, true);
                 if (!storageCheck.allowed) {
                   const response = NextResponse.json({ 
@@ -836,23 +900,31 @@ async function handleRequest(request: NextRequest, method: string) {
                 }
                 
                 // Process file data to store only URLs instead of full metadata
-                const processedData = { ...requestBody };
+                // Only process if requestBody is an object
+                let processedData = typeof requestBody === 'object' && requestBody !== null && !Array.isArray(requestBody)
+                  ? { ...requestBody }
+                  : requestBody;
                 const processedFiles: any[] = [];
                 
                 // Convert file metadata to simple URL format
-                uploadedFiles.forEach((fileMeta: any) => {
-                  if (fileMeta.fieldName && fileMeta.secureUrl) {
-                    // Store only the URL in the data object
-                    processedData[fileMeta.fieldName] = fileMeta.secureUrl;
-                    // Store minimal file info for reference
-                    processedFiles.push({
-                      fieldName: fileMeta.fieldName,
-                      url: fileMeta.secureUrl
-                    });
-                  }
-                });
+                // Only if processedData is an object (not for text/XML)
+                if (typeof processedData === 'object' && processedData !== null && !Array.isArray(processedData)) {
+                  uploadedFiles.forEach((fileMeta: any) => {
+                    if (fileMeta.fieldName && fileMeta.secureUrl) {
+                      // Store only the URL in the data object
+                      processedData[fileMeta.fieldName] = fileMeta.secureUrl;
+                      // Store minimal file info for reference
+                      processedFiles.push({
+                        fieldName: fileMeta.fieldName,
+                        url: fileMeta.secureUrl
+                      });
+                    }
+                  });
+                }
+
 
                 // Store the data in the database
+                
                 try {
                   const mockData = new MockServerData({
                     endpointId: endpoint._id,
@@ -1179,16 +1251,39 @@ async function handleRequest(request: NextRequest, method: string) {
                     // Use the stored data
                     if (storedData.length === 1 && isValidId) {
                       // If we're fetching a specific item by ID, return just that item
-                      sourceData = {
-                        id: storedData[0]._id,
-                        ...storedData[0].data
-                      };
+                      const itemData = storedData[0].data;
+                      
+                      // Check if data is a string (XML, text, etc.) or an object
+                      if (typeof itemData === 'string') {
+                        // For string data, return it directly
+                        sourceData = itemData;
+                      } else {
+                        // For object data, spread it with id
+                        sourceData = {
+                          id: storedData[0]._id,
+                          ...itemData
+                        };
+                      }
                     } else if (!isValidId) {
                       // If no ID was provided, return all items (array)
-                      sourceData = storedData.map(item => ({
-                        id: item._id,
-                        ...item.data
-                      }));
+                      sourceData = storedData.map(item => {
+                        const itemData = item.data;
+                        
+                        // Check if data is a string or an object
+                        if (typeof itemData === 'string') {
+                          // For string data, return an object with id and data
+                          return {
+                            id: item._id,
+                            data: itemData
+                          };
+                        } else {
+                          // For object data, spread it with id
+                          return {
+                            id: item._id,
+                            ...itemData
+                          };
+                        }
+                      });
                     } else {
                       // If ID was provided but no item found, return 404
                       const notFoundResponse = NextResponse.json({ 

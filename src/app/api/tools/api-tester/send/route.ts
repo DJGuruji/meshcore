@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
             requestHeaders['Content-Type'] = 'application/json';
           }
         } else if (requestBody) {
+          
           if (requestBody.type === 'json' && requestBody.json) {
             requestOptions.body = requestBody.json;
             if (!requestHeaders['Content-Type']) {
