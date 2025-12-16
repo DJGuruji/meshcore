@@ -53,8 +53,9 @@ interface ProjectPanelProps {
   setIsOpen: (isOpen: boolean) => void;
   isMobile: boolean;
   isLoading: boolean;
-  isCreatingProject?: boolean; // Add the new prop
+  isCreatingProject?: boolean;
   usageData?: UsageData | null;
+  onOpenCreateModal?: () => void;
 }
 
 export default function ProjectPanel({
@@ -66,25 +67,14 @@ export default function ProjectPanel({
   setIsOpen,
   isMobile,
   isLoading,
-  isCreatingProject = false, // Default to false
-  usageData
+  isCreatingProject = false,
+  usageData,
+  onOpenCreateModal
 }: ProjectPanelProps) {
   const PAGE_SIZE = 5;
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectBaseUrl, setNewProjectBaseUrl] = useState('/api/v1');
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  const handleCreateProject = () => {
-    if (newProjectName.trim()) {
-      onCreateProject(newProjectName.trim(), newProjectBaseUrl.trim());
-      setNewProjectName('');
-      setNewProjectBaseUrl('/api/v1');
-      setShowCreateForm(false);
-    }
-  };
 
   const copyProjectUrl = (project: ApiProject, endpoint: Endpoint) => {
     const fullUrl = generateEndpointUrl(project.name, project.baseUrl, endpoint.path);
@@ -164,13 +154,13 @@ export default function ProjectPanel({
             </div>
 
             <button
-              onClick={() => setShowCreateForm(!showCreateForm)}
+              onClick={onOpenCreateModal}
               className="flex items-center space-x-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02]"
               data-aos="zoom-in"
               data-aos-delay="300"
             >
               <PlusIcon className="h-4 w-4" />
-              <span>Create</span>
+              <span>Create </span>
             </button>
           </div>
 
@@ -197,57 +187,6 @@ export default function ProjectPanel({
               )}
             </div>
           </div>
-
-          {/* Create Project Form */}
-          {showCreateForm && (
-            <div className="mb-4 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 animate-fadeIn">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-300">Server Name</label>
-                <input
-                  type="text"
-                  placeholder="My API Server"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-300">Base URL</label>
-                <input
-                  type="text"
-                  placeholder="/api/v1"
-                  value={newProjectBaseUrl}
-                  onChange={(e) => setNewProjectBaseUrl(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCreateProject}
-                  disabled={!newProjectName.trim()}
-                  className={`flex-1 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                    newProjectName.trim()
-                      ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 text-white shadow-lg shadow-indigo-500/30 hover:scale-[1.01]'
-                      : 'cursor-not-allowed border border-white/5 bg-white/5 text-slate-400'
-                  }`}
-                >
-                  Create Server
-                </button>
-                <button
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setNewProjectName('');
-                    setNewProjectBaseUrl('/api/v1');
-                  }}
-                  className="flex-1 rounded-2xl border border-white/10 px-3 py-2 text-sm text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
 
           {usageData && (
             <div className="">
@@ -284,7 +223,7 @@ export default function ProjectPanel({
                 </p>
                 {!searchQuery && (
                   <button
-                    onClick={() => setShowCreateForm(true)}
+                    onClick={onOpenCreateModal}
                     className="mt-3 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
                   >
                     Create Server
