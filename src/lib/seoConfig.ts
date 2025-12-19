@@ -32,4 +32,4 @@ export const siteConfig = {
   }
 };
 
-export const ogImage = `${siteConfig.url}/favicon.ico`;
+export const ogImage = `${siteConfig.url}/favicon.png`;
