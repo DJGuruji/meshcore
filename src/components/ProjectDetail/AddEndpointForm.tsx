@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   TrashIcon,
   EyeIcon,
@@ -12,13 +12,13 @@ import CustomApiOptions from './CustomApiOptions';
 
 interface EndpointField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
   required: boolean;
   description?: string;
   // For nested object validation
   nestedFields?: EndpointField[];
   // For array validation
-  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
 }
 
 type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
@@ -104,6 +104,11 @@ export default function AddEndpointForm({
     operator: '=' as '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith',
     value: ''
   });
+  
+  // Log the newField state for debugging
+  useEffect(() => {
+    console.log('NewField state:', newField);
+  }, [newField]);
 
   const getSourceEndpoint = (sourceId: string | undefined) => {
     if (!sourceId) return undefined;
@@ -212,7 +217,7 @@ export default function AddEndpointForm({
 
   const inputStyles = 'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
   const textareaStyles = 'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-mono text-white placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30';
-  const optionStyles = 'text-slate-900';
+  const optionStyles = 'text-slate-900 bg-white';
   const labelStyles = 'mb-2 block text-xs font-semibold uppercase tracking-[0.3em] text-slate-300';
 
   if (!showAddEndpoint) return null;
@@ -396,6 +401,10 @@ export default function AddEndpointForm({
                 <option className={optionStyles} value="boolean">Boolean</option>
                 <option className={optionStyles} value="object">Object</option>
                 <option className={optionStyles} value="array">Array</option>
+                <option className={optionStyles} value="image">ImageRelation Upload</option>
+                <option className={optionStyles} value="video">Video Upload</option>
+                <option className={optionStyles} value="audio">Audio Upload</option>
+                <option className={optionStyles} value="file">File Upload</option>
               </select>
             </div>
             <div>
@@ -462,6 +471,10 @@ export default function AddEndpointForm({
                   <option className={optionStyles} value="boolean">Boolean</option>
                   <option className={optionStyles} value="object">Object</option>
                   <option className={optionStyles} value="array">Array</option>
+                  <option className={optionStyles} value="image">Image Upload</option>
+                  <option className={optionStyles} value="video">Video Upload</option>
+                  <option className={optionStyles} value="audio">Audio Upload</option>
+                  <option className={optionStyles} value="file">File Upload</option>
                 </select>
                 <p className="mt-1 text-[11px] text-slate-400">
                   Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.

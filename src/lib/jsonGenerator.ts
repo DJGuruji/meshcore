@@ -8,11 +8,11 @@ export interface JsonTemplate {
 
 export interface EndpointFieldDefinition {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
   required: boolean;
   description?: string;
   nestedFields?: EndpointFieldDefinition[];
-  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
 }
 
 // Helper function to generate user data
@@ -167,6 +167,58 @@ const getSampleValueForField = (field: EndpointFieldDefinition): any => {
       return inferNumberSample(field.name);
     case 'boolean':
       return true;
+    case 'image':
+      return {
+        type: 'image',
+        fileName: 'sample.jpg',
+        originalName: 'sample-image.jpg',
+        url: 'https://example.com/sample.jpg',
+        secureUrl: 'https://example.com/sample.jpg',
+        publicId: 'sample-public-id',
+        format: 'jpg',
+        resourceType: 'image',
+        fileSize: 102400,
+        uploadedAt: new Date().toISOString()
+      };
+    case 'video':
+      return {
+        type: 'video',
+        fileName: 'sample.mp4',
+        originalName: 'sample-video.mp4',
+        url: 'https://example.com/sample.mp4',
+        secureUrl: 'https://example.com/sample.mp4',
+        publicId: 'sample-public-id',
+        format: 'mp4',
+        resourceType: 'video',
+        fileSize: 1024000,
+        uploadedAt: new Date().toISOString()
+      };
+    case 'audio':
+      return {
+        type: 'audio',
+        fileName: 'sample.mp3',
+        originalName: 'sample-audio.mp3',
+        url: 'https://example.com/sample.mp3',
+        secureUrl: 'https://example.com/sample.mp3',
+        publicId: 'sample-public-id',
+        format: 'mp3',
+        resourceType: 'video',
+        fileSize: 51200,
+        uploadedAt: new Date().toISOString()
+      };
+    case 'file':
+      return {
+        type: 'file',
+        fileName: 'sample.pdf',
+        originalName: 'sample-document.pdf',
+        url: 'https://example.com/sample.pdf',
+        secureUrl: 'https://example.com/sample.pdf',
+        publicId: 'sample-public-id',
+        format: 'pdf',
+        resourceType: 'raw',
+        fileSize: 204800,
+        uploadedAt: new Date().toISOString()
+      };
     case 'object': {
       const nested = field.nestedFields || [];
       if (nested.length === 0) {
@@ -191,6 +243,66 @@ const getSampleValueForField = (field: EndpointFieldDefinition): any => {
 
       if (itemType === 'array') {
         return [[]];
+      }
+
+      if (itemType === 'image') {
+        return [{
+          type: 'image',
+          fileName: 'sample.jpg',
+          originalName: 'sample-image.jpg',
+          url: 'https://example.com/sample.jpg',
+          secureUrl: 'https://example.com/sample.jpg',
+          publicId: 'sample-public-id',
+          format: 'jpg',
+          resourceType: 'image',
+          fileSize: 102400,
+          uploadedAt: new Date().toISOString()
+        }];
+      }
+
+      if (itemType === 'video') {
+        return [{
+          type: 'video',
+          fileName: 'sample.mp4',
+          originalName: 'sample-video.mp4',
+          url: 'https://example.com/sample.mp4',
+          secureUrl: 'https://example.com/sample.mp4',
+          publicId: 'sample-public-id',
+          format: 'mp4',
+          resourceType: 'video',
+          fileSize: 1024000,
+          uploadedAt: new Date().toISOString()
+        }];
+      }
+
+      if (itemType === 'audio') {
+        return [{
+          type: 'audio',
+          fileName: 'sample.mp3',
+          originalName: 'sample-audio.mp3',
+          url: 'https://example.com/sample.mp3',
+          secureUrl: 'https://example.com/sample.mp3',
+          publicId: 'sample-public-id',
+          format: 'mp3',
+          resourceType: 'video',
+          fileSize: 51200,
+          uploadedAt: new Date().toISOString()
+        }];
+      }
+
+      if (itemType === 'file') {
+        return [{
+          type: 'file',
+          fileName: 'sample.pdf',
+          originalName: 'sample-document.pdf',
+          url: 'https://example.com/sample.pdf',
+          secureUrl: 'https://example.com/sample.pdf',
+          publicId: 'sample-public-id',
+          format: 'pdf',
+          resourceType: 'raw',
+          fileSize: 204800,
+          uploadedAt: new Date().toISOString()
+        }];
       }
 
       return [inferStringSample(field.name)];

@@ -38,13 +38,13 @@ interface ApiProject {
 
 interface EndpointField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
   required: boolean;
   description?: string;
   // For nested object validation
   nestedFields?: EndpointField[];
   // For array validation
-  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  arrayItemType?: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
 }
 
 type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
@@ -1035,6 +1035,10 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                       <option className={optionStyles} value="boolean">Boolean</option>
                       <option className={optionStyles} value="object">Object</option>
                       <option className={optionStyles} value="array">Array</option>
+                      <option className={optionStyles} value="image">Image Upload</option>
+                      <option className={optionStyles} value="video">Video Upload</option>
+                      <option className={optionStyles} value="audio">Audio Upload</option>
+                      <option className={optionStyles} value="file">File Upload</option>
                     </select>
                   </div>
                   <div>
@@ -1076,7 +1080,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                     title="JSON 1"
                     subtitle="Define keys that live inside this object"
                     fields={newField.nestedFields || []}
-                    onChange={(nested: EndpointField[]) => setNewField({ ...newField, nestedFields: nested })}
+                    onChange={(nested) => setNewField({ ...newField, nestedFields: nested })}
                   />
                 )}
 
@@ -1101,6 +1105,10 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                         <option className={optionStyles} value="boolean">Boolean</option>
                         <option className={optionStyles} value="object">Object</option>
                         <option className={optionStyles} value="array">Array</option>
+                        <option className={optionStyles} value="image">Image Upload</option>
+                        <option className={optionStyles} value="video">Video Upload</option>
+                        <option className={optionStyles} value="audio">Audio Upload</option>
+                        <option className={optionStyles} value="file">File Upload</option>
                       </select>
                       <p className="mt-1 text-[11px] text-slate-400">
                         Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.
@@ -1111,7 +1119,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                         title="JSON 1"
                         subtitle="Fields that belong to every array item"
                         fields={newField.nestedFields || []}
-                        onChange={(nested: EndpointField[]) => setNewField({ ...newField, nestedFields: nested })}
+                        onChange={(nested) => setNewField({ ...newField, nestedFields: nested })}
                       />
                     )}
                   </div>

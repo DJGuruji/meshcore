@@ -1,10 +1,17 @@
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
 import connectDB from '@/lib/db';
 import { User, Payment } from '@/lib/models';
 import { sendPaymentConfirmation } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
+  // Initialize Razorpay instance
+  const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || '',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || ''
+  });
+  
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await request.json();
     
@@ -32,6 +39,14 @@ export async function POST(request: NextRequest) {
     // Connect to database
     await connectDB();
     
+    // Fetch payment details from Razorpay
+    let paymentDetails = null;
+    try {
+      paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
+    } catch (razorpayError) {
+      console.error('Error fetching payment details from Razorpay:', razorpayError);
+    }
+    
     // Find the payment record by order ID
     const paymentRecord = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
     
@@ -42,11 +57,35 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
     
-    // Update payment status
+    // Update payment status and additional details
     paymentRecord.razorpayPaymentId = razorpay_payment_id;
     paymentRecord.razorpaySignature = razorpay_signature;
     paymentRecord.status = 'captured';
     paymentRecord.updatedAt = new Date();
+    
+    // Store additional payment details if available
+    if (paymentDetails) {
+      paymentRecord.transactionId = paymentDetails.id || null;
+      // Correctly access the bank transaction ID from acquirer_data
+      paymentRecord.bankRrn = paymentDetails.acquirer_data?.bank_transaction_id || paymentDetails.acquirer_data?.rrn || null;
+      paymentRecord.paymentMethod = paymentDetails.method || null;
+      
+      // Store customer details if available
+      if (paymentDetails.email) {
+        paymentRecord.customerEmail = paymentDetails.email;
+      }
+      
+      if (paymentDetails.contact) {
+        paymentRecord.customerPhone = paymentDetails.contact.toString();
+      }
+      
+      // Alternative way to get customer details from notes if available
+      if (paymentDetails.notes) {
+        paymentRecord.customerEmail = paymentDetails.notes.email || paymentRecord.customerEmail;
+        paymentRecord.customerPhone = paymentDetails.notes.phone || paymentRecord.customerPhone;
+      }
+    }
+    
     await paymentRecord.save();
     
     // Find and update user account type
@@ -101,7 +140,6 @@ export async function POST(request: NextRequest) {
       message: 'Payment verified successfully and account upgraded'
     });
   } catch (error: any) {
-
     
     // Provide more detailed error information
     let errorMessage = 'Failed to verify payment';

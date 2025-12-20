@@ -50,6 +50,15 @@ interface Param {
   enabled: boolean;
 }
 
+interface FormDataField {
+  id?: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  file?: File;
+  mode?: 'text' | 'file';
+}
+
 interface Request {
   _id?: string;
   name: string;
@@ -61,6 +70,12 @@ interface Request {
     type: string;
     raw?: string;
     json?: string;
+    xml?: string;
+    text?: string;
+    formUrlEncoded?: Array<{ key: string; value: string; enabled: boolean }>;
+    formData?: FormDataField[];
+    binary?: string;
+    binaryFile?: File;
   };
   auth: {
     type: string;
@@ -80,9 +95,7 @@ interface RequestTab {
   testResults?: TestResult[];
   consoleLogs?: any[];
   isSaved: boolean;
-}
-
-interface TestResult {
+}interface TestResult {
   name: string;
   passed: boolean;
   error?: string;
@@ -117,6 +130,79 @@ interface Environment {
   variables: Array<{ key: string; value: string; enabled: boolean; description?: string }>;
   isGlobal: boolean;
 }
+
+const generateFieldId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `field_${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const normalizeFormDataFields = (fields?: FormDataField[]) => {
+  if (!fields || fields.length === 0) {
+    return fields;
+  }
+
+  let updated = false;
+  const normalized = fields.map(field => {
+    let nextField = field;
+    if (!field.id) {
+      updated = true;
+      nextField = {
+        ...nextField,
+        id: generateFieldId()
+      };
+    }
+    if (!field.mode) {
+      updated = true;
+      nextField = {
+        ...nextField,
+        mode: 'text'
+      };
+    }
+    if (nextField.mode !== 'file' && nextField.file) {
+      updated = true;
+      nextField = {
+        ...nextField,
+        file: undefined
+      };
+    }
+    return nextField;
+  });
+
+  return updated ? normalized : fields;
+};
+
+const normalizeRequest = (request: Request): Request => {
+  const normalizedFormData = normalizeFormDataFields(request.body?.formData);
+  if (!normalizedFormData || normalizedFormData === request.body.formData) {
+    return request;
+  }
+
+  return {
+    ...request,
+    body: {
+      ...request.body,
+      formData: normalizedFormData
+    }
+  };
+};
+
+const normalizeTabs = (tabs: RequestTab[]) =>
+  tabs.map(tab => {
+    const normalizedRequest = normalizeRequest(tab.request);
+    return normalizedRequest === tab.request ? tab : { ...tab, request: normalizedRequest };
+  });
+
+const getFormDataFileKey = (tabId: string, fieldId: string) => `${tabId}::${fieldId}`;
+
+const createEmptyFormDataField = (): FormDataField => ({
+  id: generateFieldId(),
+  key: '',
+  value: '',
+  enabled: true,
+  mode: 'text'
+});
 
 function EnvironmentModal({ onClose, onSave, existingEnvironment }: { 
   onClose: () => void; 
@@ -463,12 +549,12 @@ export default function ApiTesterPage() {
   };
 
   // Multi-tab state
-  const [requestTabs, setRequestTabs] = useState<RequestTab[]>(state.apiTesterTabs.length > 0 ? state.apiTesterTabs : [{
+  const initialTabs = state.apiTesterTabs.length > 0 ? state.apiTesterTabs : [{
     id: 'tab-1',
     request: {
       name: 'Untitled Request',
       method: 'GET',
-      url: 'http://localhost:3000/api/users', // Provide a helpful default
+      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/users`, // Use BASE_URL from env
       headers: [],
       params: [],
       body: { type: 'none' },
@@ -477,15 +563,80 @@ export default function ApiTesterPage() {
       testScript: ''
     },
     isSaved: false
-  }]);
+  }];
+  const [requestTabs, setRequestTabs] = useState<RequestTab[]>(() => normalizeTabs(initialTabs));
   const [activeTabId, setActiveTabId] = useState(state.activeApiTesterTabId || 'tab-1');
+  const formDataFilesRef = useRef<Record<string, File | undefined>>({});
 
   // Get current tab data
-  const currentTab = requestTabs.find(tab => tab.id === activeTabId);
+  const resolvedActiveTab =
+    requestTabs.find(tab => tab.id === activeTabId) || requestTabs[0];
+  const resolvedActiveTabId = resolvedActiveTab?.id || requestTabs[0]?.id || 'tab-1';
+  const currentTab = resolvedActiveTab;
   const currentRequest = currentTab?.request || requestTabs[0].request;
+
+  const getTabKey = (tabId?: string) => tabId || resolvedActiveTabId || 'tab-1';
+  const getActiveTabKey = () => getTabKey(currentTab?.id || resolvedActiveTabId);
+
+const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => {
+  if (!fieldId) return;
+  const cacheKey = getFormDataFileKey(getTabKey(tabId || getActiveTabKey()), fieldId);
+  if (!file) {
+    delete formDataFilesRef.current[cacheKey];
+      return;
+    }
+    formDataFilesRef.current[cacheKey] = file;
+  };
+
+  const clearFormDataFilesForTab = (tabId?: string) => {
+    const targetTabId = getTabKey(tabId || getActiveTabKey());
+    const prefix = `${targetTabId}::`;
+    Object.keys(formDataFilesRef.current).forEach((key) => {
+      if (key.startsWith(prefix)) {
+        delete formDataFilesRef.current[key];
+      }
+    });
+  };
+
+  const getCachedFormDataFile = (field: FormDataField, tabKey: string) => {
+    if (field.file instanceof File) {
+      return field.file;
+    }
+    if (!field.id) {
+      return undefined;
+    }
+    return formDataFilesRef.current[getFormDataFileKey(tabKey, field.id)];
+  };
+
+  const syncFormDataFilesForRequest = (request: Request, tabId?: string) => {
+    const targetTabId = getTabKey(tabId || getActiveTabKey());
+    if (request.body?.type !== 'form-data' || !request.body.formData?.length) {
+      clearFormDataFilesForTab(targetTabId);
+      return;
+    }
+
+    const validIds = new Set(
+      request.body.formData
+        .map((field) => field.id)
+        .filter((id): id is string => Boolean(id))
+    );
+    const prefix = `${targetTabId}::`;
+    Object.keys(formDataFilesRef.current).forEach((key) => {
+      if (key.startsWith(prefix)) {
+        const fieldId = key.slice(prefix.length);
+        if (!validIds.has(fieldId)) {
+          delete formDataFilesRef.current[key];
+        }
+      }
+    });
+  };
+
   const setCurrentRequest = (request: Request) => {
+    const normalizedRequest = normalizeRequest(request);
+    syncFormDataFilesForRequest(normalizedRequest, resolvedActiveTabId);
+
     const newTabs = requestTabs.map(tab => 
-      tab.id === activeTabId ? { ...tab, request, isSaved: false } : tab
+      tab.id === resolvedActiveTabId ? { ...tab, request: normalizedRequest, isSaved: false } : tab
     );
     setRequestTabs(newTabs);
     // Save to navigation state
@@ -517,6 +668,16 @@ export default function ApiTesterPage() {
 
   // WebSocket Localhost Relay
   const localhostRelay = useLocalhostRelay();
+
+  useEffect(() => {
+    if (!requestTabs.length) return;
+    const hasActive = requestTabs.some(tab => tab.id === activeTabId);
+    if (!hasActive) {
+      const fallbackId = requestTabs[0].id;
+      setActiveTabId(fallbackId);
+      updateState({ activeApiTesterTabId: fallbackId });
+    }
+  }, [requestTabs, activeTabId, updateState]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -670,6 +831,43 @@ export default function ApiTesterPage() {
 
     setIsLoading(true);
     
+    // Helper function to create clean body with ONLY active type's data (like Postman)
+    const createCleanBody = (body: any) => {
+      const cleanBody: any = { type: body.type };
+      
+      switch (body.type) {
+        case 'json':
+          cleanBody.json = body.json;
+          break;
+        case 'xml':
+          cleanBody.xml = body.xml;
+          break;
+        case 'text':
+          cleanBody.text = body.text;
+          break;
+        case 'raw':
+          cleanBody.raw = body.raw;
+          break;
+        case 'form-data':
+          cleanBody.formData = body.formData;
+          break;
+        case 'x-www-form-urlencoded':
+          cleanBody.formUrlEncoded = body.formUrlEncoded;
+          break;
+        case 'binary':
+          cleanBody.binary = body.binary;
+          cleanBody.binaryFile = body.binaryFile;
+          break;
+        case 'none':
+        default:
+          // No body data needed
+          break;
+      }
+      
+      return cleanBody;
+    };
+
+    
     // Clear current tab's response
     setRequestTabs(tabs => tabs.map(tab => 
       tab.id === activeTabId 
@@ -725,7 +923,7 @@ export default function ApiTesterPage() {
           url: finalUrl,
           headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
           params: currentRequest.params,
-          body: currentRequest.body,
+          body: createCleanBody(currentRequest.body),  // Use clean body
           auth: currentRequest.auth
         });
         
@@ -735,106 +933,227 @@ export default function ApiTesterPage() {
         throw error;
       }
     } else if (isLocalhost) {
-      // Localhost URL in any environment  Try direct client-side fetch
-      toast.loading('Testing localhost API directly...', { duration: 2000 });
+      // Localhost URL in any environment - Check if we need to use file upload endpoint
+      const hasFiles = hasFileUploads(currentRequest);
       
-      try {
-        // Fallback 1: Try direct fetch with CORS mode
-        const fetchOptions: RequestInit = {
+      if (hasFiles) {
+        // Use file upload endpoint even for localhost URLs when files are involved
+        toast.loading('Routing localhost request with file uploads...', { duration: 2000 });
+        
+        // Create FormData for file uploads
+        const formData = new FormData();
+        
+        // Add request metadata as JSON string
+        const requestMetadata = {
           method: currentRequest.method,
-          headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+          url: finalUrl,
+          headers: currentRequest.headers.filter(h => h.enabled).map(h => ({ key: h.key, value: h.value })),
+          params: currentRequest.params.filter(p => p.enabled),
+          auth: currentRequest.auth
         };
         
-        const methodAllowsBody = currentRequest.method !== 'GET' && currentRequest.method !== 'HEAD';
-        if (methodAllowsBody && currentRequest.body && currentRequest.body.type !== 'none') {
-          if (currentRequest.body.type === 'json') {
-            (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
-            fetchOptions.body = currentRequest.body.json;
-          } else if (currentRequest.body.type === 'raw') {
-            fetchOptions.body = currentRequest.body.raw;
-          }
+        formData.append('request', JSON.stringify(requestMetadata));
+        formData.append('bodyType', currentRequest.body.type);
+        
+        // Handle form-data body
+        if (currentRequest.body.type === 'form-data' && currentRequest.body.formData) {
+          currentRequest.body.formData.filter(f => f.enabled).forEach(field => {
+            if (field.mode === 'file' && field.value.startsWith('[FILE] ')) {
+              // Get actual file from cache
+              const file = getCachedFormDataFile(field, getActiveTabKey());
+              if (file) {
+                formData.append(field.key, file, file.name);
+              } else {
+                formData.append(field.key, '');
+              }
+            } else {
+              formData.append(field.key, field.value);
+            }
+          });
+        } 
+        // Handle binary body
+        else if (currentRequest.body.type === 'binary' && currentRequest.body.binaryFile) {
+          formData.append('binaryFile', currentRequest.body.binaryFile);
         }
         
-        const response = await fetch(finalUrl, fetchOptions);
+        // Create new abort controller for this request
+        abortControllerRef.current = new AbortController();
         
-        // Parse response
-        const contentType = response.headers.get('content-type') || '';
-        let body;
-        if (contentType.includes('application/json')) {
-          body = await response.json();
-        } else {
-          body = await response.text();
-        }
-        
-        res = {
-          data: {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            body,
-            time: 0, // We don't have timing info from direct fetch
-            size: 0 // We don't have size info from direct fetch
+        res = await axios.post('/api/tools/api-tester/send-with-files', formData, {
+          signal: abortControllerRef.current.signal,
+          headers: {
+            'Content-Type': 'multipart/form-data'
           }
-        };
+        });
+        toast.success(' Localhost request with files executed via proxy!');
+      } else {
+        // Localhost URL in any environment  Try direct client-side fetch
+        toast.loading('Testing localhost API directly...', { duration: 2000 });
         
-        toast.success(' Localhost request executed directly!');
-      } catch (fetchError) {
+        try {
+          // Fallback 1: Try direct fetch with CORS mode
+          const fetchOptions: RequestInit = {
+            method: currentRequest.method,
+            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+          };
+          
+          const methodAllowsBody = currentRequest.method !== 'GET' && currentRequest.method !== 'HEAD';
+          if (methodAllowsBody && currentRequest.body && currentRequest.body.type !== 'none') {
+            if (currentRequest.body.type === 'json') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
+              fetchOptions.body = currentRequest.body.json;
+            } else if (currentRequest.body.type === 'xml') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/xml';
+              fetchOptions.body = currentRequest.body.xml;
+            } else if (currentRequest.body.type === 'text') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'text/plain';
+              fetchOptions.body = currentRequest.body.text;
+            } else if (currentRequest.body.type === 'raw') {
+              fetchOptions.body = currentRequest.body.raw;
+            }
+          }
+          
+          const response = await fetch(finalUrl, fetchOptions);
+          
+          // Parse response
+          const contentType = response.headers.get('content-type') || '';
+          let body;
+          if (contentType.includes('application/json')) {
+            body = await response.json();
+          } else {
+            body = await response.text();
+          }
+          
+          res = {
+            data: {
+              status: response.status,
+              statusText: response.statusText,
+              headers: Object.fromEntries(response.headers.entries()),
+              body,
+              time: 0, // We don't have timing info from direct fetch
+              size: 0 // We don't have size info from direct fetch
+            }
+          };
+          
+          toast.success(' Localhost request executed directly!');
+        } catch (fetchError) {
+          
+          // Final fallback: Try fetch with no-cors mode (limited functionality)
+          const fetchOptions: RequestInit = {
+            method: currentRequest.method,
+            headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+            mode: 'no-cors' // This will limit what we can read from the response
+          };
+          
+          const methodAllowsBody = currentRequest.method !== 'GET' && currentRequest.method !== 'HEAD';
+          if (methodAllowsBody && currentRequest.body && currentRequest.body.type !== 'none') {
+            if (currentRequest.body.type === 'json') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
+              fetchOptions.body = currentRequest.body.json;
+            } else if (currentRequest.body.type === 'xml') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/xml';
+              fetchOptions.body = currentRequest.body.xml;
+            } else if (currentRequest.body.type === 'text') {
+              (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'text/plain';
+              fetchOptions.body = currentRequest.body.text;
+            } else if (currentRequest.body.type === 'raw') {
+              fetchOptions.body = currentRequest.body.raw;
+            }
+          }
+          
+          const response = await fetch(finalUrl, fetchOptions);
+          
+          // With no-cors mode, we can't read most response data
+          res = {
+            data: {
+              status: response.status,
+              statusText: response.statusText,
+              headers: {}, // Can't read headers in no-cors mode
+              body: 'Response body not accessible due to CORS restrictions', // Can't read body in no-cors mode
+              time: 0,
+              size: 0
+            }
+          };
+          
+          toast.success(' Localhost request executed with limited CORS access!');
+        }
+      }    } else {
+      // Non-localhost URL - Check if we need to use file upload endpoint
+      const hasFiles = hasFileUploads(currentRequest);
+      
+      if (hasFiles) {
+        // Use file upload endpoint
+        toast.loading('Routing request with file uploads...', { duration: 2000 });
         
-        // Final fallback: Try fetch with no-cors mode (limited functionality)
-        const fetchOptions: RequestInit = {
+        // Create FormData for file uploads
+        const formData = new FormData();
+        
+        // Add request metadata as JSON string
+        const requestMetadata = {
           method: currentRequest.method,
-          headers: currentRequest.headers.filter(h => h.enabled).reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
-          mode: 'no-cors' // This will limit what we can read from the response
+          url: finalUrl,
+          headers: currentRequest.headers.filter(h => h.enabled).map(h => ({ key: h.key, value: h.value })),
+          params: currentRequest.params.filter(p => p.enabled),
+          auth: currentRequest.auth
         };
         
-        const methodAllowsBody = currentRequest.method !== 'GET' && currentRequest.method !== 'HEAD';
-        if (methodAllowsBody && currentRequest.body && currentRequest.body.type !== 'none') {
-          if (currentRequest.body.type === 'json') {
-            (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
-            fetchOptions.body = currentRequest.body.json;
-          } else if (currentRequest.body.type === 'raw') {
-            fetchOptions.body = currentRequest.body.raw;
-          }
+        formData.append('request', JSON.stringify(requestMetadata));
+        formData.append('bodyType', currentRequest.body.type);
+        
+        // Handle form-data body
+        if (currentRequest.body.type === 'form-data' && currentRequest.body.formData) {
+          currentRequest.body.formData.filter(f => f.enabled).forEach(field => {
+            if (field.mode === 'file' && field.value.startsWith('[FILE] ')) {
+              // Get actual file from cache
+              const file = getCachedFormDataFile(field, getActiveTabKey());
+              if (file) {
+                formData.append(field.key, file, file.name);
+              } else {
+                formData.append(field.key, '');
+              }
+            } else {
+              formData.append(field.key, field.value);
+            }
+          });
+        } 
+        // Handle binary body
+        else if (currentRequest.body.type === 'binary' && currentRequest.body.binaryFile) {
+          formData.append('binaryFile', currentRequest.body.binaryFile);
         }
         
-        const response = await fetch(finalUrl, fetchOptions);
+        // Create new abort controller for this request
+        abortControllerRef.current = new AbortController();
         
-        // With no-cors mode, we can't read most response data
-        res = {
-          data: {
-            status: response.status,
-            statusText: response.statusText,
-            headers: {}, // Can't read headers in no-cors mode
-            body: 'Response body not accessible due to CORS restrictions', // Can't read body in no-cors mode
-            time: 0,
-            size: 0
+        res = await axios.post('/api/tools/api-tester/send-with-files', formData, {
+          signal: abortControllerRef.current.signal,
+          headers: {
+            'Content-Type': 'multipart/form-data'
           }
+        });
+        toast.success(' Request with files executed via proxy!');
+      } else {
+        // Use regular endpoint for non-file requests
+        toast.loading('Routing request through secure proxy...', { duration: 2000 });
+
+        // Create new abort controller for this request
+        abortControllerRef.current = new AbortController();
+
+        const requestData = {
+          method: currentRequest.method,
+          url: finalUrl,
+          headers: currentRequest.headers.filter(h => h.enabled).map(h => ({ key: h.key, value: h.value })),
+          params: currentRequest.params.filter(p => p.enabled),
+          body: createCleanBody(currentRequest.body),  // Send ONLY the active type's data
+          auth: currentRequest.auth
         };
-        
-        toast.success(' Localhost request executed with limited CORS access!');
+
+
+        res = await axios.post('/api/tools/api-tester/send', requestData, {
+          signal: abortControllerRef.current.signal
+        });
+        toast.success(' Request executed via proxy!');
       }
-    } else {
-      // Non-localhost URL  Use server-side proxy
-      toast.loading('Routing request through secure proxy...', { duration: 2000 });
-
-      // Create new abort controller for this request
-      abortControllerRef.current = new AbortController();
-
-      const requestData = {
-        method: currentRequest.method,
-        url: finalUrl,
-        headers: currentRequest.headers.filter(h => h.enabled).map(h => ({ key: h.key, value: h.value })),
-        params: currentRequest.params.filter(p => p.enabled),
-        body: currentRequest.body,
-        auth: currentRequest.auth
-      };
-
-      res = await axios.post('/api/tools/api-tester/send', requestData, {
-        signal: abortControllerRef.current.signal
-      });
-      toast.success(' Request executed via proxy!');
     }
-
     // Ensure we have a response
     if (!res) {
       throw new Error('Failed to execute request - no response received');
@@ -858,7 +1177,7 @@ export default function ApiTesterPage() {
         requestData: {
           headers: currentRequest.headers,
           params: currentRequest.params,
-          body: currentRequest.body,
+          body: createCleanBody(currentRequest.body),  // Use clean body
           auth: currentRequest.auth
         }
       });
@@ -954,9 +1273,23 @@ export default function ApiTesterPage() {
     }
   };
 
-  // Helper to check if URL is localhost
-  const isLocalhostUrl = (url: string): boolean => {
-    try {
+  // Helper to check if request contains file uploads
+  const hasFileUploads = (request: Request): boolean => {
+    // Check form-data body type
+    if (request.body?.type === 'form-data' && request.body.formData) {
+      return request.body.formData.some(field => 
+        field.mode === 'file' && field.value && field.value.startsWith('[FILE] ')
+      );
+    }
+    
+    // Check binary body type
+    if (request.body?.type === 'binary' && request.body.binary) {
+      return request.body.binary.startsWith('[FILE] ');
+    }
+    
+    return false;
+  };  // Helper to check if URL is localhost
+  const isLocalhostUrl = (url: string): boolean => {    try {
       const urlLower = url.toLowerCase();
       
       // Check for localhost, 127.0.0.1, ::1, and local IP addresses
@@ -1078,11 +1411,72 @@ export default function ApiTesterPage() {
           if (!requestHeaders['Content-Type']) {
             requestHeaders['Content-Type'] = 'application/json';
           }
+        } else if (currentRequest.body.type === 'xml' && currentRequest.body.xml) {
+          requestOptions.body = currentRequest.body.xml;
+          if (!requestHeaders['Content-Type']) {
+            requestHeaders['Content-Type'] = 'application/xml';
+          }
+        } else if (currentRequest.body.type === 'text' && currentRequest.body.text) {
+          requestOptions.body = currentRequest.body.text;
+          if (!requestHeaders['Content-Type']) {
+            requestHeaders['Content-Type'] = 'text/plain';
+          }
         } else if (currentRequest.body.type === 'raw' && currentRequest.body.raw) {
           requestOptions.body = currentRequest.body.raw;
+        } else if (currentRequest.body.type === 'form-data' && currentRequest.body.formData) {
+          const formData = new FormData();
+          const tabKey = getActiveTabKey();
+          // Remove any manually set Content-Type so browser can attach proper multipart boundary
+          Object.keys(requestHeaders).forEach((headerKey) => {
+            if (headerKey.toLowerCase() === 'content-type') {
+              delete requestHeaders[headerKey];
+            }
+          });
+
+          currentRequest.body.formData.forEach((field) => {
+            if (!field.enabled || !field.key) {
+              return;
+            }
+
+            if (field.mode === 'file') {
+              const file = getCachedFormDataFile(field, tabKey);
+              if (file) {
+                formData.append(field.key, file, file.name);
+              } else {
+                formData.append(field.key, '');
+              }
+            } else {
+              formData.append(field.key, typeof field.value === 'string' ? field.value : '');
+            }
+          });
+
+          requestOptions.body = formData;
+        } else if (currentRequest.body.type === 'x-www-form-urlencoded' && currentRequest.body.formUrlEncoded) {
+          const urlEncoded = new URLSearchParams();
+          currentRequest.body.formUrlEncoded.filter((f: any) => f.enabled).forEach((f: any) => {
+            urlEncoded.append(f.key, f.value);
+          });
+          requestOptions.body = urlEncoded;
+          if (!requestHeaders['Content-Type']) {
+            requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+          }
+        } else if (currentRequest.body.type === 'binary' && currentRequest.body.binary) {
+          // For binary data, we'll treat it as a base64 string that needs to be decoded
+          try {
+            const binaryData = atob(currentRequest.body.binary);
+            const bytes = new Uint8Array(binaryData.length);
+            for (let i = 0; i < binaryData.length; i++) {
+              bytes[i] = binaryData.charCodeAt(i);
+            }
+            requestOptions.body = bytes;
+          } catch (e) {
+            // If not valid base64, send as-is
+            requestOptions.body = currentRequest.body.binary;
+          }
         }
       }
 
+      
       // Send request directly from browser
       const response = await fetch(finalUrl.toString(), requestOptions);
       const endTime = Date.now();
@@ -1498,6 +1892,8 @@ export default function ApiTesterPage() {
       }
     }
 
+    clearFormDataFilesForTab(tabId);
+
     const newTabs = requestTabs.filter(tab => tab.id !== tabId);
     setRequestTabs(newTabs);
     
@@ -1521,7 +1917,7 @@ export default function ApiTesterPage() {
     const newTabId = `tab-${Date.now()}`;
     const newTab: RequestTab = {
       id: newTabId,
-      request: { ...tabToDuplicate.request, name: `${tabToDuplicate.request.name} (Copy)` },
+      request: normalizeRequest({ ...tabToDuplicate.request, name: `${tabToDuplicate.request.name} (Copy)` }),
       response: tabToDuplicate.response,
       testResults: tabToDuplicate.testResults,
       consoleLogs: tabToDuplicate.consoleLogs,
@@ -2042,18 +2438,52 @@ export default function ApiTesterPage() {
 
             {activeTab === 'body' && (
               <div className="space-y-4">
-                <div className="flex gap-2">
-                  {(['none', 'json', 'raw'] as const).map((type) => (
+                <div className="flex gap-2 flex-wrap">
+                  {(['none', 'json', 'xml', 'text', 'raw', 'form-data', 'x-www-form-urlencoded', 'binary'] as const).map((type) => (
                     <button
                       key={type}
-                      onClick={() => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, type } })}
+                      onClick={() => {
+                        // Initialize the appropriate body structure when switching types
+                        const newBody = { ...currentRequest.body, type };
+                        
+                        // Initialize form arrays if needed
+                        if (type === 'form-data' && !newBody.formData) {
+                          newBody.formData = [createEmptyFormDataField()];
+                        }
+                        
+                        if (type === 'x-www-form-urlencoded' && !newBody.formUrlEncoded) {
+                          newBody.formUrlEncoded = [{ key: '', value: '', enabled: true }];
+                        }
+                        
+                        // Initialize xml field if needed
+                        if (type === 'xml' && !newBody.xml) {
+                          newBody.xml = '';
+                        }
+                        
+                        // Initialize text field if needed
+                        if (type === 'text' && !newBody.text) {
+                          newBody.text = '';
+                        }
+                        
+                        // Initialize json field if needed
+                        if (type === 'json' && !newBody.json) {
+                          newBody.json = '';
+                        }
+                        
+                        // Initialize raw field if needed
+                        if (type === 'raw' && !newBody.raw) {
+                          newBody.raw = '';
+                        }
+                        
+                        setCurrentRequest({ ...currentRequest, body: newBody });
+                      }}
                       className={`px-3 py-1 rounded text-sm ${
                         currentRequest.body.type === type
                           ? 'bg-yellow-500 text-black'
                           : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                       }`}
                     >
-                      {type}
+                      {type === 'x-www-form-urlencoded' ? 'Form-encode' : type}
                     </button>
                   ))}
                 </div>
@@ -2069,6 +2499,28 @@ export default function ApiTesterPage() {
                   </div>
                 )}
 
+                {currentRequest.body.type === 'xml' && (
+                  <div className="w-full" style={{ height: '300px' }}>
+                    <CodeEditor
+                      value={currentRequest.body.xml || ''}
+                      onChange={(value) => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, xml: value } })}
+                      language="xml"
+                      placeholder="<root>\n  <element>value</element>\n</root>"
+                    />
+                  </div>
+                )}
+
+                {currentRequest.body.type === 'text' && (
+                  <div className="w-full" style={{ height: '300px' }}>
+                    <CodeEditor
+                      value={currentRequest.body.text || ''}
+                      onChange={(value) => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, text: value } })}
+                      language="text"
+                      placeholder="Plain text content"
+                    />
+                  </div>
+                )}
+
                 {currentRequest.body.type === 'raw' && (
                   <div className="w-full" style={{ height: '300px' }}>
                     <CodeEditor
@@ -2079,9 +2531,242 @@ export default function ApiTesterPage() {
                     />
                   </div>
                 )}
-              </div>
-            )}
 
+                {currentRequest.body.type === 'form-data' && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-sm font-medium text-slate-300">Form Data</h3>
+                      <button
+                        onClick={() => {
+                          const newFormData = [...(currentRequest.body.formData || []), createEmptyFormDataField()];
+                          setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formData: newFormData } });
+                        }}
+                        className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1"
+                      >
+                        <PlusIcon className="w-4 h-4" /> Add Field
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {(currentRequest.body.formData || []).map((field, idx) => {
+                        const fieldId = field.id || `field-${idx}`;
+                        return (
+                          <div key={fieldId} className="flex gap-2 items-center">
+                            <input
+                              type="checkbox"
+                              checked={field.enabled}
+                              onChange={(e) => {
+                                const newFormData = [...(currentRequest.body.formData || [])];
+                                newFormData[idx] = { ...newFormData[idx], enabled: e.target.checked };
+                                setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formData: newFormData } });
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <input
+                              type="text"
+                              value={field.key}
+                              onChange={(e) => {
+                                const newFormData = [...(currentRequest.body.formData || [])];
+                                newFormData[idx] = { ...newFormData[idx], key: e.target.value };
+                                setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formData: newFormData } });
+                              }}
+                              placeholder="Key"
+                              className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                            />
+                            <select
+                              value={field.mode || 'text'}
+                              onChange={(e) => {
+                                const nextMode = (e.target.value === 'file' ? 'file' : 'text') as 'text' | 'file';
+                                const newFormData = [...(currentRequest.body.formData || [])];
+                                const nextId = newFormData[idx]?.id || generateFieldId();
+                                const updatedField: FormDataField = {
+                                  ...newFormData[idx],
+                                  id: nextId,
+                                  mode: nextMode
+                                };
+                                if (nextMode === 'file') {
+                                  updatedField.value = '';
+                                  updatedField.file = undefined;
+                                } else {
+                                  updatedField.value = newFormData[idx]?.mode === 'text' ? (newFormData[idx]?.value || '') : '';
+                                  updatedField.file = undefined;
+                                }
+                                registerFormDataFile(nextId, undefined);
+                                newFormData[idx] = updatedField;
+                                setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formData: newFormData } });
+                              }}
+                              className="px-2 py-2 bg-slate-800 rounded border border-slate-600 text-xs uppercase tracking-wider text-slate-300 focus:border-yellow-400 focus:outline-none"
+                            >
+                              <option value="text">Text</option>
+                              <option value="file">File</option>
+                            </select>
+                            {/* File upload option for form-data */}
+                            <div className="flex-1 flex gap-2">
+                              {field.mode === 'file' ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={field.value}
+                                    readOnly
+                                    placeholder="No file selected"
+                                    className="flex-1 px-3 py-2 bg-slate-900 rounded border border-slate-600 text-slate-300 focus:border-yellow-400 focus:outline-none"
+                                  />
+                                  <label className="flex items-center justify-center px-3 py-2 bg-slate-700 rounded border border-slate-600 hover:bg-slate-600 cursor-pointer text-xs text-slate-200">
+                                    Choose File
+                                    <input
+                                      type="file"
+                                      onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                          const file = e.target.files[0];
+                                          const newFormData = [...(currentRequest.body.formData || [])];
+                                          const nextId = newFormData[idx]?.id || generateFieldId();
+                                          const updatedField: FormDataField = {
+                                            ...newFormData[idx],
+                                            id: nextId,
+                                            mode: 'file',
+                                            value: `[FILE] ${file.name}`,
+                                            file
+                                          };
+                                          newFormData[idx] = updatedField;
+                                          registerFormDataFile(nextId, file);
+                                          setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formData: newFormData } });
+                                        }
+                                      }}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                </>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={field.value}
+                                  onChange={(e) => {
+                                    const newFormData = [...(currentRequest.body.formData || [])];
+                                    newFormData[idx] = { ...newFormData[idx], value: e.target.value, mode: 'text' };
+                                    setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formData: newFormData } });
+                                  }}
+                                  placeholder="Value"
+                                  className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                                />
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                const existingFormData = currentRequest.body.formData || [];
+                                const fieldToRemove = existingFormData[idx];
+                                if (fieldToRemove?.id) {
+                                  registerFormDataFile(fieldToRemove.id, undefined);
+                                }
+                                const newFormData = existingFormData.filter((_, i) => i !== idx);
+                                setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formData: newFormData } });
+                              }}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}                {currentRequest.body.type === 'x-www-form-urlencoded' && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-sm font-medium text-slate-300">URL Encoded Form</h3>
+                      <button
+                        onClick={() => {
+                          const newFormUrlEncoded = [...(currentRequest.body.formUrlEncoded || []), { key: '', value: '', enabled: true }];
+                          setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formUrlEncoded: newFormUrlEncoded } });
+                        }}
+                        className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1"
+                      >
+                        <PlusIcon className="w-4 h-4" /> Add Field
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {(currentRequest.body.formUrlEncoded || []).map((field, idx) => (
+                        <div key={idx} className="flex gap-2 items-center">
+                          <input
+                            type="checkbox"
+                            checked={field.enabled}
+                            onChange={(e) => {
+                              const newFormUrlEncoded = [...(currentRequest.body.formUrlEncoded || [])];
+                              newFormUrlEncoded[idx].enabled = e.target.checked;
+                              setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formUrlEncoded: newFormUrlEncoded } });
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <input
+                            type="text"
+                            value={field.key}
+                            onChange={(e) => {
+                              const newFormUrlEncoded = [...(currentRequest.body.formUrlEncoded || [])];
+                              newFormUrlEncoded[idx].key = e.target.value;
+                              setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formUrlEncoded: newFormUrlEncoded } });
+                            }}
+                            placeholder="Key"
+                            className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={field.value}
+                            onChange={(e) => {
+                              const newFormUrlEncoded = [...(currentRequest.body.formUrlEncoded || [])];
+                              newFormUrlEncoded[idx].value = e.target.value;
+                              setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formUrlEncoded: newFormUrlEncoded } });
+                            }}
+                            placeholder="Value"
+                            className="flex-1 px-3 py-2 bg-slate-800 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none"
+                          />
+                          <button
+                            onClick={() => {
+                              const newFormUrlEncoded = (currentRequest.body.formUrlEncoded || []).filter((_, i) => i !== idx);
+                              setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, formUrlEncoded: newFormUrlEncoded } });
+                            }}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {currentRequest.body.type === 'binary' && (
+                  <div className="space-y-3">
+                    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+                      <h3 className="text-sm font-medium text-slate-300 mb-2">Binary Data</h3>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Select a file to upload as binary data
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={currentRequest.body.binary || ''}
+                          onChange={(e) => setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, binary: e.target.value } })}
+                          placeholder="File path or base64 encoded data"
+                          className="flex-1 px-3 py-2 bg-slate-900 rounded border border-slate-600 focus:border-yellow-400 focus:outline-none text-xs font-mono"
+                          readOnly
+                        />
+                        <label className="flex items-center justify-center px-3 py-2 bg-slate-700 rounded border border-slate-600 hover:bg-slate-600 cursor-pointer">
+                          <span className="text-xs text-slate-300">Choose File</span>
+                          <input
+                            type="file"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                // Store file reference for actual upload
+                                setCurrentRequest({ ...currentRequest, body: { ...currentRequest.body, binary: `[FILE] ${file.name}`, binaryFile: file } });
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}              </div>
+            )}
             {activeTab === 'auth' && (
               <div className="space-y-4">
                 <select

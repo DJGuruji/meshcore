@@ -11,6 +11,7 @@ import ProjectPanel from '@/components/ProjectPanel';
 import ProjectDetail from '@/components/ProjectDetail';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import SEOContent from '@/components/SEOContent';
+import CreateMockServerModal from '@/components/CreateMockServerModal';
 
 // Simplified type definitions for API data
 interface Endpoint {
@@ -73,6 +74,8 @@ export default function Home() {
     requestsLimit: 300,
     accountType: 'free'
   });
+  // State for the create mock server modal
+  const [showCreateMockServerModal, setShowCreateMockServerModal] = useState(false);
 
   // Redirect to sign in if not authenticated
   useEffect(() => {
@@ -193,6 +196,7 @@ export default function Home() {
       toast.error('Failed to create project');
     } finally {
       setIsCreatingProject(false); // Reset loading state
+      setShowCreateMockServerModal(false); // Close the modal
     }
   };
 
@@ -444,6 +448,7 @@ export default function Home() {
           isLoading={isLoading}
           isCreatingProject={isCreatingProject} // Pass the new prop
           usageData={usageData}
+          onOpenCreateModal={() => setShowCreateMockServerModal(true)}
         />
       </div>
       <div 
@@ -516,6 +521,13 @@ export default function Home() {
             borderColor: '#334155'
           }
         }}
+      />
+      
+      {/* Create Mock Server Modal - Rendered at the root level to ensure proper positioning */}
+      <CreateMockServerModal
+        isOpen={showCreateMockServerModal}
+        onClose={() => setShowCreateMockServerModal(false)}
+        onCreate={handleCreateProject}
       />
     </div>
   );

@@ -41,21 +41,21 @@ const utilityLinks = [
 
 const BrandMark = ({ priority = false }: { priority?: boolean }) => (
   <div className="flex items-center gap-3">
-    {/* <div className="relative  flex h-11 w-11 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-1 shadow-[0_12px_35px_rgba(8,8,20,0.65)]">
+    <div className="relative  flex h-11 w-11 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-1 shadow-[0_12px_35px_rgba(8,8,20,0.65)]">
       <div
         className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-orange-400 opacity-70 blur-2xl"
         aria-hidden
       />
       <div className="absolute inset-0 rounded-3xl border border-white/20 opacity-60" aria-hidden />
       <Image
-        src="/AnyTimeRequest.svg"
+        src="/anytime.jpg"
         alt="AnyTimeRequest logo"
         width={42}
         height={42}
         priority={priority}
         className="relative z-10 h-9 w-9 object-contain"
       />
-    </div> */}
+    </div>
     <div className="leading-tight">
       <p className="text-lg font-semibold tracking-wide text-white">AnyTimeRequest</p>
       <p className="text-[10px] uppercase tracking-[0.55em] text-indigo-200/90">Collective</p>
