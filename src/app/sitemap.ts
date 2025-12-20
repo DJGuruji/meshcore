@@ -4,6 +4,8 @@ import { siteConfig } from '@/lib/seoConfig';
 const importantPaths = [
   '',
   '/pricing',
+  '/blog',
+  '/use-cases',
   '/api-tester',
   '/graphql-tester',
   '/tools',
