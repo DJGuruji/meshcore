@@ -1,18 +1,7 @@
 'use client';
 
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { useState } from 'react';
-
-export const metadata: Metadata = {
-  title: 'API Development Blog - Tutorials, Best Practices & Insights',
-  description: 'Expert guides, tutorials, and best practices for building, testing, and scaling modern APIs. Learn about mock servers, API testing, GraphQL, security, and more.',
-  keywords: ['API development', 'API testing', 'mock server', 'REST API', 'GraphQL', 'API security', 'API design', 'developer tutorials'],
-  openGraph: {
-    title: 'API Development Blog - Expert Guides & Tutorials',
-    description: 'Learn API development best practices, testing strategies, and modern techniques from industry experts.',
-  },
-};
 
 interface BlogPost {
   id: string;
