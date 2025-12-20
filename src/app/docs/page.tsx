@@ -41,13 +41,25 @@ const DocsPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white" style={{ scrollPaddingTop: '5rem' }}>
-      <div className="container mx-auto px-4 py-12">
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">
+    <div className="relative min-h-screen bg-[#030712] text-white" style={{ scrollPaddingTop: '5rem' }}>
+      {/* Background Effects */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-indigo-500/20 blur-[140px]" />
+        <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-purple-500/15 blur-[160px]" />
+        <div className="absolute left-1/2 bottom-0 h-96 w-96 rounded-full bg-orange-500/10 blur-[180px]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-40" />
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 py-12">
+        <header className="mb-16 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.4em] text-indigo-200 mb-6 backdrop-blur-xl">
+            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-indigo-500 to-orange-400" />
+            Documentation
+          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-indigo-100 to-purple-100 bg-clip-text text-transparent">
             Developer Documentation
           </h1>
-          <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
             Comprehensive guides and resources for developers working with our platform
           </p>
         </header>
@@ -55,20 +67,30 @@ const DocsPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Navigation */}
           <nav className="lg:col-span-1">
-            <div className="sticky top-24 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-6">
-              <h2 className="text-lg font-semibold mb-4 text-indigo-300">Documentation</h2>
+            <div className="sticky top-24 rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl">
+              <h2 className="text-lg font-semibold mb-6 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">Contents</h2>
               <ul className="space-y-2">
                 {navSections.map((section) => (
                   <li key={section.id}>
                     <a
                       href={`#${section.id}`}
-                      className={`block py-2 px-4 rounded-lg transition ${
+                      className={`group relative block py-3 px-4 rounded-xl transition-all duration-300 ${
                         activeSection === section.id
-                          ? 'bg-white/10 text-white border border-white/20'
-                          : 'hover:bg-white/5 text-slate-300'
+                          ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white border border-indigo-400/30 shadow-lg shadow-indigo-500/20'
+                          : 'hover:bg-white/5 text-slate-300 hover:text-white hover:border-white/10 border border-transparent'
                       }`}
                     >
-                      {section.label}
+                      {activeSection === section.id && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl" />
+                      )}
+                      <span className="relative z-10 flex items-center gap-2">
+                        <span className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                          activeSection === section.id 
+                            ? 'bg-indigo-400 scale-125' 
+                            : 'bg-slate-500 group-hover:bg-indigo-400 group-hover:scale-125'
+                        }`} />
+                        {section.label}
+                      </span>
                     </a>
                   </li>
                 ))}
@@ -79,60 +101,73 @@ const DocsPage = () => {
           {/* Main Content */}
           <main className="lg:col-span-3">
             {/* Introduction Section */}
-            <section id="introduction" className="mb-16 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-8 pt-20">
-              <h2 className="text-3xl font-bold mb-6 text-indigo-300">Introduction</h2>
+            <section id="introduction" className="group mb-16 rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-8 pt-20 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)]">
+              {/* Gradient overlay on hover */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 group-hover:opacity-100" />
               
-              <div className="prose prose-invert max-w-none">
-                <p className="text-lg mb-6">
-                  Welcome to our comprehensive developer platform designed to streamline your API development and testing workflow. Our suite of tools empowers developers to create, test, and debug APIs with unprecedented ease and efficiency.
-                </p>
+              <div className="relative z-10">
+                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">Introduction</h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="bg-slate-700/50 p-6 rounded-xl border border-white/10">
-                    <h3 className="text-xl font-semibold mb-3 text-purple-300">API Development Made Simple</h3>
-                    <p>
-                      Create realistic mock servers, test RESTful APIs, and debug GraphQL endpoints all within a single integrated environment. Our platform eliminates the complexity traditionally associated with API development and testing.
-                    </p>
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-lg mb-6 text-slate-200 leading-relaxed">
+                    Welcome to our comprehensive developer platform designed to streamline your API development and testing workflow. Our suite of tools empowers developers to create, test, and debug APIs with unprecedented ease and efficiency.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="group/card relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-700/50 to-slate-800/30 p-6 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover/card:from-indigo-500/10 group-hover/card:to-purple-500/10 group-hover/card:opacity-100" />
+                      <div className="relative z-10">
+                        <h3 className="text-xl font-semibold mb-3 text-purple-300 transition-colors duration-300 group-hover/card:text-purple-200">API Development Made Simple</h3>
+                        <p className="text-slate-300 leading-relaxed">
+                          Create realistic mock servers, test RESTful APIs, and debug GraphQL endpoints all within a single integrated environment. Our platform eliminates the complexity traditionally associated with API development and testing.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="group/card relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-700/50 to-slate-800/30 p-6 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover/card:from-indigo-500/10 group-hover/card:to-purple-500/10 group-hover/card:opacity-100" />
+                      <div className="relative z-10">
+                        <h3 className="text-xl font-semibold mb-3 text-purple-300 transition-colors duration-300 group-hover/card:text-purple-200">Real-World Testing Scenarios</h3>
+                        <p className="text-slate-300 leading-relaxed">
+                          Simulate various network conditions, test edge cases, and validate your API responses with our robust testing tools. Ensure your applications work flawlessly in production environments.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="bg-slate-700/50 p-6 rounded-xl border border-white/10">
-                    <h3 className="text-xl font-semibold mb-3 text-purple-300">Real-World Testing Scenarios</h3>
-                    <p>
-                      Simulate various network conditions, test edge cases, and validate your API responses with our robust testing tools. Ensure your applications work flawlessly in production environments.
-                    </p>
-                  </div>
+                  <h3 className="text-2xl font-semibold mb-4 mt-8 text-white">Why Choose Our Platform?</h3>
+                  
+                  <ul className="space-y-3 mb-6">
+                    <li className="group/item flex items-start rounded-xl border border-white/5 bg-white/5 p-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/10">
+                      <div className="mt-1 mr-3 text-indigo-400 transition-transform duration-300 group-hover/item:scale-125">✓</div>
+                      <span className="text-slate-200"><strong className="text-white">Cross-Origin Resource Sharing (CORS) Solutions:</strong> Seamlessly test localhost APIs without CORS restrictions using our WebSocket relay technology.</span>
+                    </li>
+                    <li className="group/item flex items-start rounded-xl border border-white/5 bg-white/5 p-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/10">
+                      <div className="mt-1 mr-3 text-indigo-400 transition-transform duration-300 group-hover/item:scale-125">✓</div>
+                      <span className="text-slate-200"><strong className="text-white">JSON Data Handling:</strong> Effortlessly work with JSON payloads, validate structures, and transform data with our intuitive interface.</span>
+                    </li>
+                    <li className="group/item flex items-start rounded-xl border border-white/5 bg-white/5 p-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/10">
+                      <div className="mt-1 mr-3 text-indigo-400 transition-transform duration-300 group-hover/item:scale-125">✓</div>
+                      <span className="text-slate-200"><strong className="text-white">Fake API Generation:</strong> Instantly create mock APIs with customizable responses for rapid prototyping and testing.</span>
+                    </li>
+                    <li className="group/item flex items-start rounded-xl border border-white/5 bg-white/5 p-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/10">
+                      <div className="mt-1 mr-3 text-indigo-400 transition-transform duration-300 group-hover/item:scale-125">✓</div>
+                      <span className="text-slate-200"><strong className="text-white">Localhost API Testing:</strong> Test your locally hosted APIs securely without exposing them to the public internet.</span>
+                    </li>
+                  </ul>
+                  
+                  <p className="text-slate-200 leading-relaxed">
+                    Whether you're building a simple REST API or a complex GraphQL service, our platform provides all the tools you need to develop, test, and deploy with confidence. Dive into the specific sections below to learn how each tool can enhance your development workflow.
+                  </p>
                 </div>
-                
-                <h3 className="text-2xl font-semibold mb-4 mt-8">Why Choose Our Platform?</h3>
-                
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-start">
-                    <div className="mt-1 mr-3 text-indigo-400">✓</div>
-                    <span><strong>Cross-Origin Resource Sharing (CORS) Solutions:</strong> Seamlessly test localhost APIs without CORS restrictions using our WebSocket relay technology.</span>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="mt-1 mr-3 text-indigo-400">✓</div>
-                    <span><strong>JSON Data Handling:</strong> Effortlessly work with JSON payloads, validate structures, and transform data with our intuitive interface.</span>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="mt-1 mr-3 text-indigo-400">✓</div>
-                    <span><strong>Fake API Generation:</strong> Instantly create mock APIs with customizable responses for rapid prototyping and testing.</span>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="mt-1 mr-3 text-indigo-400">✓</div>
-                    <span><strong>Localhost API Testing:</strong> Test your locally hosted APIs securely without exposing them to the public internet.</span>
-                  </li>
-                </ul>
-                
-                <p>
-                  Whether you're building a simple REST API or a complex GraphQL service, our platform provides all the tools you need to develop, test, and deploy with confidence. Dive into the specific sections below to learn how each tool can enhance your development workflow.
-                </p>
               </div>
             </section>
 
             {/* Custom API & Aggregation Section */}
-            <section id="custom-api" className="mb-16 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-8 pt-20">
-              <h2 className="text-3xl font-bold mb-6 text-indigo-300">Custom API Modes & Aggregation</h2>
+            <section id="custom-api" className="group relative mb-16 rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-8 pt-20 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)]">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 group-hover:opacity-100" />
+              <div className="relative z-10">
+              <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">Custom API Modes & Aggregation</h2>
               <div className="prose prose-invert max-w-none">
                 <p className="text-lg mb-6">
                   GET endpoints can be linked to POST data sources, projected into lightweight payloads, or converted into real-time reports using aggregations. This lets you reuse the same data definition for multiple read scenarios without writing additional backend code.
@@ -206,11 +241,14 @@ const DocsPage = () => {
                   By combining data sources, column selection, and aggregations, AnyTimeRequest doubles as a lightweight data service. You can validate frontend contracts, iterate on API shapes, and demo analytics-heavy experiences without spinning up a bespoke backend.
                 </p>
               </div>
+              </div>
             </section>
 
             {/* Mock Server Section */}
-            <section id="mock-server" className="mb-16 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-8 pt-20">
-              <h2 className="text-3xl font-bold mb-6 text-indigo-300">Mock Server</h2>
+            <section id="mock-server" className="group relative mb-16 rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-8 pt-20 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)]">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 group-hover:opacity-100" />
+              <div className="relative z-10">
+              <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">Mock Server</h2>
               
               <div className="prose prose-invert max-w-none">
                 <p className="text-lg mb-6">
@@ -450,11 +488,14 @@ const DocsPage = () => {
                   </p>
                 </div>
               </div>
+              </div>
             </section>
 
             {/* REST API Tester Section */}
-            <section id="rest-api-tester" className="mb-16 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-8 pt-20">
-              <h2 className="text-3xl font-bold mb-6 text-indigo-300">REST API Tester</h2>
+            <section id="rest-api-tester" className="group relative mb-16 rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-8 pt-20 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)]">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 group-hover:opacity-100" />
+              <div className="relative z-10">
+              <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">REST API Tester</h2>
               
               <div className="prose prose-invert max-w-none">
                 <p className="text-lg mb-6">
@@ -752,11 +793,14 @@ const DocsPage = () => {
                   </ul>
                 </div>
               </div>
+              </div>
             </section>
 
             {/* GraphQL Tester Section */}
-            <section id="graphql-tester" className="mb-16 bg-slate-800/50 backdrop-blur rounded-2xl border border-white/10 p-8 pt-20">
-              <h2 className="text-3xl font-bold mb-6 text-indigo-300">GraphQL Tester</h2>
+            <section id="graphql-tester" className="group relative mb-16 rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-8 pt-20 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)]">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 group-hover:opacity-100" />
+              <div className="relative z-10">
+              <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">GraphQL Tester</h2>
               
               <div className="prose prose-invert max-w-none">
                 <p className="text-lg mb-6">
@@ -1023,6 +1067,7 @@ const DocsPage = () => {
                     </li>
                   </ul>
                 </div>
+              </div>
               </div>
             </section>
           </main>
