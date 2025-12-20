@@ -14,17 +14,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const requestPayload = await request.json();
     const { 
       method = 'GET',
       url,
       headers = [],
       params = [],
-      requestBody,
+      body: legacyRequestBody,
+      requestBody: explicitRequestBody,
       auth,
       graphqlQuery,
       graphqlVariables
-    } = body;
+    } = requestPayload;
+
+    // Support both legacy `requestBody` and new `body` payload keys
+    const requestBody = explicitRequestBody ?? legacyRequestBody ?? null;
 
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
@@ -108,6 +112,8 @@ export async function POST(request: NextRequest) {
         } else if (requestBody) {
           
           if (requestBody.type === 'json' && requestBody.json) {
+            // For JSON, we always send the raw string content
+            // The requestBody.json field contains the JSON string entered by the user
             requestOptions.body = requestBody.json;
             if (!requestHeaders['Content-Type']) {
               requestHeaders['Content-Type'] = 'application/json';
