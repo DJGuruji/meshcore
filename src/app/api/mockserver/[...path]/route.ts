@@ -869,18 +869,50 @@ async function handleRequest(request: NextRequest, method: string) {
               const { body: requestBody, filesSize, uploadedFiles } = parsedBody;
               
               try {
-                // Only validate fields if the body is an object (JSON/form-data)
-                // Skip validation for text/XML content
-                if (typeof requestBody === 'object' && requestBody !== null && !Array.isArray(requestBody)) {
-                  const validation = validatePostRequestBody(endpoint.fields, requestBody);
-                  
-                  if (!validation.isValid) {
-                    const response = NextResponse.json({ 
-                      error: 'Validation failed',
-                      message: 'Required fields are missing or invalid',
-                      details: validation.errors
-                    }, { status: 400 });
-                    return addCorsHeaders(response);
+                // Validate fields for all content types except when explicitly disabled
+                // For text/XML content, we still validate structure if fields are defined
+                if (endpoint.fields && endpoint.fields.length > 0) {
+                  // For object-based data (JSON/form-data), validate structure
+                  if (typeof requestBody === 'object' && requestBody !== null && !Array.isArray(requestBody)) {
+                    const validation = validatePostRequestBody(endpoint.fields, requestBody);
+                    
+                    if (!validation.isValid) {
+                      const response = NextResponse.json({ 
+                        error: 'Validation failed',
+                        message: 'Required fields are missing or invalid',
+                        details: validation.errors
+                      }, { status: 400 });
+                      return addCorsHeaders(response);
+                    }
+                  }
+                  // For text/XML content, if fields are defined but content doesn't match,
+                  // we should still return validation errors
+                  else if (typeof requestBody === 'string' && requestBody.trim() !== '') {
+                    // For text content with defined fields, we expect either JSON or form data
+                    // If we receive text but have field definitions, that's a mismatch
+                    const validation = validatePostRequestBody(endpoint.fields, {});
+                    
+                    if (!validation.isValid) {
+                      const response = NextResponse.json({ 
+                        error: 'Validation failed',
+                        message: 'Endpoint expects structured data but received text content',
+                        details: validation.errors
+                      }, { status: 400 });
+                      return addCorsHeaders(response);
+                    }
+                  }
+                  // Also handle case where we receive empty string but fields are defined
+                  else if (typeof requestBody === 'string' && requestBody.trim() === '' && endpoint.fields.length > 0) {
+                    const validation = validatePostRequestBody(endpoint.fields, {});
+                    
+                    if (!validation.isValid) {
+                      const response = NextResponse.json({ 
+                        error: 'Validation failed',
+                        message: 'Endpoint expects structured data but received empty content',
+                        details: validation.errors
+                      }, { status: 400 });
+                      return addCorsHeaders(response);
+                    }
                   }
                 }
                 
@@ -900,19 +932,31 @@ async function handleRequest(request: NextRequest, method: string) {
                 }
                 
                 // Process file data to store only URLs instead of full metadata
-                // Only process if requestBody is an object
+                // Handle both object and text data properly
                 let processedData = typeof requestBody === 'object' && requestBody !== null && !Array.isArray(requestBody)
                   ? { ...requestBody }
                   : requestBody;
                 const processedFiles: any[] = [];
                 
                 // Convert file metadata to simple URL format
-                // Only if processedData is an object (not for text/XML)
+                // For object data, embed URLs in the data object
                 if (typeof processedData === 'object' && processedData !== null && !Array.isArray(processedData)) {
                   uploadedFiles.forEach((fileMeta: any) => {
                     if (fileMeta.fieldName && fileMeta.secureUrl) {
                       // Store only the URL in the data object
                       processedData[fileMeta.fieldName] = fileMeta.secureUrl;
+                      // Store minimal file info for reference
+                      processedFiles.push({
+                        fieldName: fileMeta.fieldName,
+                        url: fileMeta.secureUrl
+                      });
+                    }
+                  });
+                }
+                // For text/XML data with file uploads, store file info separately
+                else if (uploadedFiles.length > 0) {
+                  uploadedFiles.forEach((fileMeta: any) => {
+                    if (fileMeta.fieldName && fileMeta.secureUrl) {
                       // Store minimal file info for reference
                       processedFiles.push({
                         fieldName: fileMeta.fieldName,
@@ -1079,6 +1123,53 @@ async function handleRequest(request: NextRequest, method: string) {
                       }
                       const { body: requestBody, filesSize, uploadedFiles } = parsedBody;
                       
+                      // Validate fields for all content types except when explicitly disabled
+                      // For text/XML content, we still validate structure if fields are defined
+                      if (endpoint.fields && endpoint.fields.length > 0) {
+                        // For object-based data (JSON/form-data), validate structure
+                        if (typeof requestBody === 'object' && requestBody !== null && !Array.isArray(requestBody)) {
+                          const validation = validatePostRequestBody(endpoint.fields, requestBody);
+                          
+                          if (!validation.isValid) {
+                            const response = NextResponse.json({ 
+                              error: 'Validation failed',
+                              message: 'Required fields are missing or invalid',
+                              details: validation.errors
+                            }, { status: 400 });
+                            return addCorsHeaders(response);
+                          }
+                        }
+                        // For text/XML content, if fields are defined but content doesn't match,
+                        // we should still return validation errors
+                        else if (typeof requestBody === 'string' && requestBody.trim() !== '') {
+                          // For text content with defined fields, we expect either JSON or form data
+                          // If we receive text but have field definitions, that's a mismatch
+                          const validation = validatePostRequestBody(endpoint.fields, {});
+                          
+                          if (!validation.isValid) {
+                            const response = NextResponse.json({ 
+                              error: 'Validation failed',
+                              message: 'Endpoint expects structured data but received text content',
+                              details: validation.errors
+                            }, { status: 400 });
+                            return addCorsHeaders(response);
+                          }
+                        }
+                        // Also handle case where we receive empty string but fields are defined
+                        else if (typeof requestBody === 'string' && requestBody.trim() === '' && endpoint.fields.length > 0) {
+                          const validation = validatePostRequestBody(endpoint.fields, {});
+                          
+                          if (!validation.isValid) {
+                            const response = NextResponse.json({ 
+                              error: 'Validation failed',
+                              message: 'Endpoint expects structured data but received empty content',
+                              details: validation.errors
+                            }, { status: 400 });
+                            return addCorsHeaders(response);
+                          }
+                        }
+                      }
+                      
                       // Check storage limit before updating data
                       const newDataSize = Buffer.byteLength(JSON.stringify(requestBody), 'utf8') + filesSize;
                       let oldDataSize = 0;
@@ -1192,8 +1283,15 @@ async function handleRequest(request: NextRequest, method: string) {
                     }
                   }
                 }
-              } catch (error) {
-                // Fall back to original response handling
+              } catch (error: any) {
+                // Log the error for debugging
+                
+                // Return error response instead of falling back
+                const errorResponse = NextResponse.json({ 
+                  error: 'Data processing failed',
+                  message: error?.message || 'Failed to process request'
+                }, { status: 500 });
+                return addCorsHeaders(errorResponse);
               }
             }
             
@@ -1370,8 +1468,15 @@ async function handleRequest(request: NextRequest, method: string) {
                   
                   const response = NextResponse.json(responseData, { status: endpoint.statusCode });
                   return addCorsHeaders(response);
-                } catch (error) {
-                  // Fall back to original response body
+                } catch (error: any) {
+                  // Log the error for debugging
+                  
+                  // Return error response instead of falling back
+                  const errorResponse = NextResponse.json({ 
+                    error: 'Response processing failed',
+                    message: error?.message || 'Failed to generate response'
+                  }, { status: 500 });
+                  return addCorsHeaders(errorResponse);
                 }
               }
             }
