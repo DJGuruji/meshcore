@@ -74,6 +74,7 @@ export default function Home() {
     requestsLimit: 300,
     accountType: 'free'
   });
+  const [isUsageLoading, setIsUsageLoading] = useState(true);
   // State for the create mock server modal
   const [showCreateMockServerModal, setShowCreateMockServerModal] = useState(false);
 
@@ -118,6 +119,7 @@ export default function Home() {
   const fetchUsage = async () => {
     if (status !== 'authenticated') return;
     try {
+      setIsUsageLoading(true);
       const response = await fetch('/api/usage');
       if (response.ok) {
         const data = await response.json();
@@ -131,6 +133,8 @@ export default function Home() {
       }
     } catch (error) {
       // Silently handle errors in production
+    } finally {
+      setIsUsageLoading(false);
     }
   };
 
@@ -290,9 +294,9 @@ export default function Home() {
             ].map((card) => (
               <div
                 key={card.title}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)] hover:-translate-y-1 group"
+                className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)] hover:-translate-y-1 group transform-gpu backface-hidden perspective-1000"
               >
-                <div className="text-3xl transform transition-transform duration-300 group-hover:scale-110">{card.icon}</div>
+                <div className="text-3xl transform transition-transform duration-300 group-hover:scale-110 transform-gpu backface-hidden">{card.icon}</div>
                 <h3 className="mt-4 text-lg font-semibold text-white">{card.title}</h3>
                 <p className="mt-2 text-sm text-slate-300">{card.desc}</p>
               </div>
@@ -302,10 +306,8 @@ export default function Home() {
           <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/auth/signin"
-              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:from-blue-500 hover:to-indigo-600 hover:shadow-xl hover:shadow-blue-500/50 hover:-translate-y-1 hover:scale-105"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:from-blue-500 hover:to-indigo-600 hover:shadow-xl hover:shadow-blue-500/50 hover:-translate-y-1 hover:scale-105 transform-gpu backface-hidden perspective-1000"
             >
-              {/* Shine effect */}
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               <span className="relative z-10">Enter Workspace</span>
               <svg className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 20 20" fill="none">
                 <path d="M5 10h10M10 5l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -313,10 +315,8 @@ export default function Home() {
             </Link>
             <Link
               href="/auth/register"
-              className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-base font-semibold text-gray-200 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/50 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1 hover:scale-105"
+              className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-base font-semibold text-gray-200 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/50 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1 hover:scale-105 transform-gpu backface-hidden perspective-1000"
             >
-              {/* Gradient overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
               <span className="relative z-10">Create free account</span>
             </Link>
           </div>
@@ -325,11 +325,9 @@ export default function Home() {
           <div className="mt-6">
             <Link
               href="/pricing"
-              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600/80 to-purple-600/80 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 backdrop-blur-xl transition-all duration-300 hover:from-indigo-500 hover:to-purple-500 hover:shadow-xl hover:shadow-indigo-500/50 hover:-translate-y-1 hover:scale-105"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600/80 to-purple-600/80 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 backdrop-blur-xl transition-all duration-300 hover:from-indigo-500 hover:to-purple-500 hover:shadow-xl hover:shadow-indigo-500/50 hover:-translate-y-1 hover:scale-105 transform-gpu backface-hidden perspective-1000"
             >
-              {/* Shine effect */}
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              <svg className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110 transform-gpu backface-hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="relative z-10">View Pricing</span>
@@ -449,6 +447,7 @@ export default function Home() {
           isLoading={isLoading}
           isCreatingProject={isCreatingProject} // Pass the new prop
           usageData={usageData}
+          isUsageLoading={isUsageLoading}
           onOpenCreateModal={() => setShowCreateMockServerModal(true)}
         />
       </div>
@@ -458,7 +457,12 @@ export default function Home() {
         data-aos-delay="200"
       >
         {selectedProject ? (
-          <ProjectDetail project={selectedProject ? convertApiProject(selectedProject) : null} onUpdateProject={handleUpdateProject} refreshUsage={fetchUsage} />
+          <ProjectDetail 
+            project={selectedProject ? convertApiProject(selectedProject) : null} 
+            onUpdateProject={handleUpdateProject} 
+            refreshUsage={fetchUsage}
+            accountType={usageData.accountType}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center p-10 text-slate-300">
             <div

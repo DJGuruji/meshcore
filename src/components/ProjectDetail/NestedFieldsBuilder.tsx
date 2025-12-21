@@ -20,6 +20,7 @@ interface NestedFieldsBuilderProps {
   depth?: number;
   title?: string;
   subtitle?: string;
+  accountType?: string;
 }
 
 const createEmptyFieldDefinition = (): EndpointField => ({
@@ -31,19 +32,31 @@ const createEmptyFieldDefinition = (): EndpointField => ({
   arrayItemType: undefined
 });
 
-export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title, subtitle }: NestedFieldsBuilderProps) {
+export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title, subtitle, accountType = 'free' }: NestedFieldsBuilderProps) {
   const [draftField, setDraftField] = useState<EndpointField>(createEmptyFieldDefinition());
   const optionClasses = 'text-slate-900';
+
+  // Helper function to check if file uploads are allowed
+  const canUseFileUploads = () => {
+    const tier = accountType.toLowerCase();
+    return tier !== 'free' && tier !== 'plus';
+  };
 
   const handleDraftTypeChange = (value: EndpointField['type']) => {
     setDraftField((prev) => ({
       ...prev,
       type: value,
-      nestedFields: value === 'object' ? prev.nestedFields : [],
+      nestedFields: value === 'object' || (value === 'array' && prev.arrayItemType === 'object') ? prev.nestedFields || [] : [],
       arrayItemType: value === 'array' ? prev.arrayItemType || 'object' : undefined
     }));
   };
-
+  const handleDraftArrayItemTypeChange = (value: EndpointField['type']) => {
+    setDraftField((prev) => ({
+      ...prev,
+      arrayItemType: value,
+      nestedFields: value === 'object' ? prev.nestedFields || [] : []
+    }));
+  };
   const handleAddNestedField = () => {
     if (!draftField.name.trim()) {
       alert('Nested field name is required');
@@ -100,7 +113,7 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
       nestedFields: value === 'object' ? target.nestedFields || [] : []
     });
   };
-
+  
   return (
     <div className={`${depth === 0 ? 'mt-2' : 'mt-3'} rounded-2xl border border-dashed border-white/10 bg-white/5 p-3`}>
       <div className="flex items-center justify-between gap-3 mb-3">
@@ -133,10 +146,14 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
             <option className={optionClasses} value="boolean">Boolean</option>
             <option className={optionClasses} value="object">Object</option>
             <option className={optionClasses} value="array">Array</option>
-            <option className={optionClasses} value="image">Image Upload</option>
-            <option className={optionClasses} value="video">Video Upload</option>
-            <option className={optionClasses} value="audio">Audio Upload</option>
-            <option className={optionClasses} value="file">File Upload</option>
+            {canUseFileUploads() && (
+              <>
+                <option className={optionClasses} value="image">Image Upload</option>
+                <option className={optionClasses} value="video">Video Upload</option>
+                <option className={optionClasses} value="audio">Audio Upload</option>
+                <option className={optionClasses} value="file">File Upload</option>
+              </>
+            )}
           </select>
         </div>
         <div>
@@ -171,6 +188,49 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
           className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
         />
       </div>
+
+      {/* Show array item type selector when draft field is array */}
+      {draftField.type === 'array' && (
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-slate-400 mb-1">Array Item Type</label>
+          <select
+            value={draftField.arrayItemType || 'string'}
+            onChange={(e) => handleDraftArrayItemTypeChange(e.target.value as EndpointField['type'])}
+            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400"
+          >
+            <option className={optionClasses} value="string">String</option>
+            <option className={optionClasses} value="number">Number</option>
+            <option className={optionClasses} value="boolean">Boolean</option>
+            <option className={optionClasses} value="object">Object</option>
+            <option className={optionClasses} value="array">Array</option>
+            {canUseFileUploads() && (
+              <>
+                <option className={optionClasses} value="image">Image Upload</option>
+                <option className={optionClasses} value="video">Video Upload</option>
+                <option className={optionClasses} value="audio">Audio Upload</option>
+                <option className={optionClasses} value="file">File Upload</option>
+              </>
+            )}
+          </select>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.
+          </p>
+        </div>
+      )}
+
+      {/* Show nested fields builder for draft field when it's an object or array with object items */}
+      {(draftField.type === 'object' || (draftField.type === 'array' && draftField.arrayItemType === 'object')) && (
+        <div className="mt-3">
+          <NestedFieldsBuilder
+            title={draftField.type === 'object' ? "JSON 1" : "JSON 1"}
+            subtitle={draftField.type === 'object' ? "Define keys that live inside this object" : "Fields that belong to every array item"}
+            fields={draftField.nestedFields || []}
+            onChange={(nested) => setDraftField({ ...draftField, nestedFields: nested })}
+            depth={depth + 1}
+            accountType={accountType}
+          />
+        </div>
+      )}
 
       {fields.length > 0 && (
         <div className="space-y-3">
@@ -220,10 +280,14 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
                       <option className={optionClasses} value="boolean">Boolean</option>
                       <option className={optionClasses} value="object">Object</option>
                       <option className={optionClasses} value="array">Array</option>
-                      <option className={optionClasses} value="image">Image Upload</option>
-                      <option className={optionClasses} value="video">Video Upload</option>
-                      <option className={optionClasses} value="audio">Audio Upload</option>
-                      <option className={optionClasses} value="file">File Upload</option>
+                      {canUseFileUploads() && (
+                        <>
+                          <option className={optionClasses} value="image">Image Upload</option>
+                          <option className={optionClasses} value="video">Video Upload</option>
+                          <option className={optionClasses} value="audio">Audio Upload</option>
+                          <option className={optionClasses} value="file">File Upload</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   {field.arrayItemType === 'object' && (
@@ -231,6 +295,7 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
                       fields={field.nestedFields || []}
                       onChange={(nested) => handleNestedFieldsChange(index, nested)}
                       depth={depth + 1}
+                      accountType={accountType}
                     />
                   )}
                 </div>
@@ -241,6 +306,7 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
                   fields={field.nestedFields || []}
                   onChange={(nested) => handleNestedFieldsChange(index, nested)}
                   depth={depth + 1}
+                  accountType={accountType}
                 />
               )}
             </div>

@@ -81,6 +81,7 @@ interface ProjectDetailProps {
   project: ApiProject;
   onUpdateProject: (project: ApiProject) => void;
   refreshUsage?: () => void;
+  accountType?: string;
 }
 
 const createEmptyFieldDefinition = (): EndpointField => ({
@@ -94,7 +95,12 @@ const createEmptyFieldDefinition = (): EndpointField => ({
 
 
 
-export default function ProjectDetail({ project, onUpdateProject, refreshUsage }: ProjectDetailProps) {
+export default function ProjectDetail({ project, onUpdateProject, refreshUsage, accountType = 'free' }: ProjectDetailProps) {
+  // Helper function to check if file uploads are allowed
+  const canUseFileUploads = () => {
+    const tier = accountType.toLowerCase();
+    return tier !== 'free' && tier !== 'plus';
+  };
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>(null);
   const [showAddEndpoint, setShowAddEndpoint] = useState(false);
   const [showToken, setShowToken] = useState(false);
@@ -1035,12 +1041,15 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                       <option className={optionStyles} value="boolean">Boolean</option>
                       <option className={optionStyles} value="object">Object</option>
                       <option className={optionStyles} value="array">Array</option>
-                      <option className={optionStyles} value="image">Image Upload</option>
-                      <option className={optionStyles} value="video">Video Upload</option>
-                      <option className={optionStyles} value="audio">Audio Upload</option>
-                      <option className={optionStyles} value="file">File Upload</option>
-                    </select>
-                  </div>
+                      {canUseFileUploads() && (
+                        <>
+                          <option className={optionStyles} value="image">Image Upload</option>
+                          <option className={optionStyles} value="video">Video Upload</option>
+                          <option className={optionStyles} value="audio">Audio Upload</option>
+                          <option className={optionStyles} value="file">File Upload</option>
+                        </>
+                      )}
+                    </select>                  </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1">Required</label>
                     <select
@@ -1105,12 +1114,15 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage }
                         <option className={optionStyles} value="boolean">Boolean</option>
                         <option className={optionStyles} value="object">Object</option>
                         <option className={optionStyles} value="array">Array</option>
-                        <option className={optionStyles} value="image">Image Upload</option>
-                        <option className={optionStyles} value="video">Video Upload</option>
-                        <option className={optionStyles} value="audio">Audio Upload</option>
-                        <option className={optionStyles} value="file">File Upload</option>
-                      </select>
-                      <p className="mt-1 text-[11px] text-slate-400">
+                        {canUseFileUploads() && (
+                          <>
+                            <option className={optionStyles} value="image">Image Upload</option>
+                            <option className={optionStyles} value="video">Video Upload</option>
+                            <option className={optionStyles} value="audio">Audio Upload</option>
+                            <option className={optionStyles} value="file">File Upload</option>
+                          </>
+                        )}
+                      </select>                      <p className="mt-1 text-[11px] text-slate-400">
                         Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.
                       </p>
                     </div>

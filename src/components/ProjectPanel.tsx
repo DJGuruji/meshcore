@@ -55,6 +55,7 @@ interface ProjectPanelProps {
   isLoading: boolean;
   isCreatingProject?: boolean;
   usageData?: UsageData | null;
+  isUsageLoading?: boolean;
   onOpenCreateModal?: () => void;
 }
 
@@ -69,6 +70,7 @@ export default function ProjectPanel({
   isLoading,
   isCreatingProject = false,
   usageData,
+  isUsageLoading = true,
   onOpenCreateModal
 }: ProjectPanelProps) {
   const PAGE_SIZE = 5;
@@ -197,6 +199,7 @@ export default function ProjectPanel({
                 requestsUsed={usageData.requestsUsed}
                 requestsLimit={usageData.requestsLimit}
                 accountType={usageData.accountType}
+                isLoading={isUsageLoading}
               />
             </div>
           )}

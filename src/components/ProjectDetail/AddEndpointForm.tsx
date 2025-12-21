@@ -75,6 +75,7 @@ interface AddEndpointFormProps {
   setValidationErrors: (errors: Record<string, boolean>) => void;
   handleAddEndpoint: () => void;
   setShowAddEndpoint: (show: boolean) => void;
+  accountType?: string;
 }
 
 const createEmptyFieldDefinition = (): EndpointField => ({
@@ -94,8 +95,14 @@ export default function AddEndpointForm({
   validationErrors, 
   setValidationErrors, 
   handleAddEndpoint, 
-  setShowAddEndpoint 
+  setShowAddEndpoint,
+  accountType = 'free'
 }: AddEndpointFormProps) {
+  // Helper function to check if file uploads are allowed
+  const canUseFileUploads = () => {
+    const tier = accountType.toLowerCase();
+    return tier !== 'free' && tier !== 'plus';
+  };
   // Add state for new field in the form
   const [newField, setNewField] = useState<EndpointField>(() => createEmptyFieldDefinition());  
   // Add state for new condition
@@ -424,10 +431,14 @@ export default function AddEndpointForm({
                   <option className={optionStyles} value="boolean">Boolean</option>
                   <option className={optionStyles} value="object">Object</option>
                   <option className={optionStyles} value="array">Array</option>
-                  <option className={optionStyles} value="image">Image Upload</option>
-                  <option className={optionStyles} value="video">Video Upload</option>
-                  <option className={optionStyles} value="audio">Audio Upload</option>
-                  <option className={optionStyles} value="file">File Upload</option>
+                  {canUseFileUploads() && (
+                    <>
+                      <option className={optionStyles} value="image">Image Upload</option>
+                      <option className={optionStyles} value="video">Video Upload</option>
+                      <option className={optionStyles} value="audio">Audio Upload</option>
+                      <option className={optionStyles} value="file">File Upload</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div>
@@ -471,6 +482,7 @@ export default function AddEndpointForm({
                 subtitle="Define keys that live inside this object"
                 fields={newField.nestedFields || []}
                 onChange={(nested) => setNewField({ ...newField, nestedFields: nested })}
+                accountType={accountType}
               />
             )}
 
@@ -495,10 +507,14 @@ export default function AddEndpointForm({
                     <option className={optionStyles} value="boolean">Boolean</option>
                     <option className={optionStyles} value="object">Object</option>
                     <option className={optionStyles} value="array">Array</option>
-                    <option className={optionStyles} value="image">Image Upload</option>
-                    <option className={optionStyles} value="video">Video Upload</option>
-                    <option className={optionStyles} value="audio">Audio Upload</option>
-                    <option className={optionStyles} value="file">File Upload</option>
+                    {canUseFileUploads() && (
+                      <>
+                        <option className={optionStyles} value="image">Image Upload</option>
+                        <option className={optionStyles} value="video">Video Upload</option>
+                        <option className={optionStyles} value="audio">Audio Upload</option>
+                        <option className={optionStyles} value="file">File Upload</option>
+                      </>
+                    )}
                   </select>
                   <p className="mt-2 text-xs text-slate-300">
                     Choose <span className="font-semibold text-indigo-200">Object</span> to build nested JSON (JSON 1) for each array item.
@@ -510,6 +526,7 @@ export default function AddEndpointForm({
                     subtitle="Fields that belong to every array item"
                     fields={newField.nestedFields || []}
                     onChange={(nested) => setNewField({ ...newField, nestedFields: nested })}
+                    accountType={accountType}
                   />
                 )}
               </div>
