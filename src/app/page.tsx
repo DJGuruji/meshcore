@@ -336,20 +336,6 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="mt-12 grid gap-4 text-left text-sm text-slate-400 sm:grid-cols-3">
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
-              <span className="relative z-10 transition-colors duration-300 group-hover:text-white">Unlimited workspaces</span>
-            </div>
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
-              <span className="relative z-10 transition-colors duration-300 group-hover:text-white">Collaboration ready</span>
-            </div>
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:bg-white/10 hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
-              <span className="relative z-10 transition-colors duration-300 group-hover:text-white">Free API Tester</span>
-            </div>
-          </div>
         </div>
 
         <SEOContent />
