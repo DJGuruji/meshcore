@@ -431,14 +431,20 @@ export default function AddEndpointForm({
                   <option className={optionStyles} value="boolean">Boolean</option>
                   <option className={optionStyles} value="object">Object</option>
                   <option className={optionStyles} value="array">Array</option>
-                  {canUseFileUploads() && (
-                    <>
-                      <option className={optionStyles} value="image">Image Upload</option>
-                      <option className={optionStyles} value="video">Video Upload</option>
-                      <option className={optionStyles} value="audio">Audio Upload</option>
-                      <option className={optionStyles} value="file">File Upload</option>
-                    </>
-                  )}
+                  <>
+                    <option className={optionStyles} value="image" disabled={!canUseFileUploads()}>
+                      {canUseFileUploads() ? 'Image Upload' : 'Image Upload (Upgrade Account)'}
+                    </option>
+                    <option className={optionStyles} value="video" disabled={!canUseFileUploads()}>
+                      {canUseFileUploads() ? 'Video Upload' : 'Video Upload (Upgrade Account)'}
+                    </option>
+                    <option className={optionStyles} value="audio" disabled={!canUseFileUploads()}>
+                      {canUseFileUploads() ? 'Audio Upload' : 'Audio Upload (Upgrade Account)'}
+                    </option>
+                    <option className={optionStyles} value="file" disabled={!canUseFileUploads()}>
+                      {canUseFileUploads() ? 'File Upload' : 'File Upload (Upgrade Account)'}
+                    </option>
+                  </>
                 </select>
               </div>
               <div>
@@ -507,14 +513,20 @@ export default function AddEndpointForm({
                     <option className={optionStyles} value="boolean">Boolean</option>
                     <option className={optionStyles} value="object">Object</option>
                     <option className={optionStyles} value="array">Array</option>
-                    {canUseFileUploads() && (
-                      <>
-                        <option className={optionStyles} value="image">Image Upload</option>
-                        <option className={optionStyles} value="video">Video Upload</option>
-                        <option className={optionStyles} value="audio">Audio Upload</option>
-                        <option className={optionStyles} value="file">File Upload</option>
-                      </>
-                    )}
+                    <>
+                      <option className={optionStyles} value="image" disabled={!canUseFileUploads()}>
+                        {canUseFileUploads() ? 'Image Upload' : 'Image Upload (Upgrade Account)'}
+                      </option>
+                      <option className={optionStyles} value="video" disabled={!canUseFileUploads()}>
+                        {canUseFileUploads() ? 'Video Upload' : 'Video Upload (Upgrade Account)'}
+                      </option>
+                      <option className={optionStyles} value="audio" disabled={!canUseFileUploads()}>
+                        {canUseFileUploads() ? 'Audio Upload' : 'Audio Upload (Upgrade Account)'}
+                      </option>
+                      <option className={optionStyles} value="file" disabled={!canUseFileUploads()}>
+                        {canUseFileUploads() ? 'File Upload' : 'File Upload (Upgrade Account)'}
+                      </option>
+                    </>
                   </select>
                   <p className="mt-2 text-xs text-slate-300">
                     Choose <span className="font-semibold text-indigo-200">Object</span> to build nested JSON (JSON 1) for each array item.
@@ -593,7 +605,7 @@ export default function AddEndpointForm({
                 className="group/gen relative overflow-hidden rounded-xl border border-indigo-400/30 bg-gradient-to-r from-slate-700/50 to-slate-600/50 px-4 py-2 text-sm font-semibold text-indigo-200 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/60 hover:from-slate-600/60 hover:to-slate-500/60 hover:text-white hover:shadow-lg hover:shadow-indigo-500/20 hover:scale-105"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover/gen:from-indigo-500/10 group-hover/gen:to-purple-500/10 group-hover/gen:opacity-100" />
-                <span className="relative z-10">Generate Response from Fields</span>
+                {/* <span className="relative z-10">Generate Response from Fields</span> */}
               </button>
             </div>
           </div>

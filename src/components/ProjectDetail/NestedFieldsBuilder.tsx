@@ -146,14 +146,20 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
             <option className={optionClasses} value="boolean">Boolean</option>
             <option className={optionClasses} value="object">Object</option>
             <option className={optionClasses} value="array">Array</option>
-            {canUseFileUploads() && (
-              <>
-                <option className={optionClasses} value="image">Image Upload</option>
-                <option className={optionClasses} value="video">Video Upload</option>
-                <option className={optionClasses} value="audio">Audio Upload</option>
-                <option className={optionClasses} value="file">File Upload</option>
-              </>
-            )}
+            <>
+              <option className={optionClasses} value="image" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'Image Upload' : 'Image Upload (Upgrade Account)'}
+              </option>
+              <option className={optionClasses} value="video" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'Video Upload' : 'Video Upload (Upgrade Account)'}
+              </option>
+              <option className={optionClasses} value="audio" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'Audio Upload' : 'Audio Upload (Upgrade Account)'}
+              </option>
+              <option className={optionClasses} value="file" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'File Upload' : 'File Upload (Upgrade Account)'}
+              </option>
+            </>
           </select>
         </div>
         <div>
@@ -203,14 +209,20 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
             <option className={optionClasses} value="boolean">Boolean</option>
             <option className={optionClasses} value="object">Object</option>
             <option className={optionClasses} value="array">Array</option>
-            {canUseFileUploads() && (
-              <>
-                <option className={optionClasses} value="image">Image Upload</option>
-                <option className={optionClasses} value="video">Video Upload</option>
-                <option className={optionClasses} value="audio">Audio Upload</option>
-                <option className={optionClasses} value="file">File Upload</option>
-              </>
-            )}
+            <>
+              <option className={optionClasses} value="image" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'Image Upload' : 'Image Upload (Upgrade Account)'}
+              </option>
+              <option className={optionClasses} value="video" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'Video Upload' : 'Video Upload (Upgrade Account)'}
+              </option>
+              <option className={optionClasses} value="audio" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'Audio Upload' : 'Audio Upload (Upgrade Account)'}
+              </option>
+              <option className={optionClasses} value="file" disabled={!canUseFileUploads()}>
+                {canUseFileUploads() ? 'File Upload' : 'File Upload (Upgrade Account)'}
+              </option>
+            </>
           </select>
           <p className="mt-1 text-[11px] text-slate-400">
             Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.
@@ -280,14 +292,20 @@ export default function NestedFieldsBuilder({ fields, onChange, depth = 0, title
                       <option className={optionClasses} value="boolean">Boolean</option>
                       <option className={optionClasses} value="object">Object</option>
                       <option className={optionClasses} value="array">Array</option>
-                      {canUseFileUploads() && (
-                        <>
-                          <option className={optionClasses} value="image">Image Upload</option>
-                          <option className={optionClasses} value="video">Video Upload</option>
-                          <option className={optionClasses} value="audio">Audio Upload</option>
-                          <option className={optionClasses} value="file">File Upload</option>
-                        </>
-                      )}
+                      <>
+                        <option className={optionClasses} value="image" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'Image Upload' : 'Image Upload (Upgrade Account)'}
+                        </option>
+                        <option className={optionClasses} value="video" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'Video Upload' : 'Video Upload (Upgrade Account)'}
+                        </option>
+                        <option className={optionClasses} value="audio" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'Audio Upload' : 'Audio Upload (Upgrade Account)'}
+                        </option>
+                        <option className={optionClasses} value="file" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'File Upload' : 'File Upload (Upgrade Account)'}
+                        </option>
+                      </>
                     </select>
                   </div>
                   {field.arrayItemType === 'object' && (

@@ -16,6 +16,7 @@ import { generateEndpointUrl } from '@/lib/urlUtils';
 import { generateReadableToken, formatAuthHeader } from '@/lib/tokenUtils';
 import { toast } from 'react-hot-toast';
 import AuthenticationSettings from './ProjectDetail/AuthenticationSettings';
+import EmailSettings from './ProjectDetail/EmailSettings';
 import AddEndpointForm from './ProjectDetail/AddEndpointForm';
 import EndpointListItem from './ProjectDetail/EndpointListItem';
 import EndpointList from './ProjectDetail/EndpointList';
@@ -30,6 +31,11 @@ interface ApiProject {
     token?: string | null;
     headerName?: string;
     tokenPrefix?: string;
+  };
+  emailConfig?: {
+    enabled: boolean;
+    email?: string;
+    appPassword?: string;
   };
   endpoints: Endpoint[];
   user: string;
@@ -853,14 +859,24 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
           </div>
         </div>
 
-        {/* Authentication Settings */}
-        <AuthenticationSettings 
-          project={project} 
-          onUpdateProject={onUpdateProject} 
-          showToken={showToken} 
-          setShowToken={setShowToken} 
-        />
 
+        {/* Authentication & Email Settings - Side by Side */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Authentication Settings */}
+          <AuthenticationSettings 
+            project={project} 
+            onUpdateProject={onUpdateProject} 
+            showToken={showToken} 
+            setShowToken={setShowToken} 
+          />
+
+          {/* Email Settings */}
+          <EmailSettings 
+            project={project} 
+            onUpdateProject={onUpdateProject} 
+            accountType={accountType}
+          />
+        </div>
         {/* Add Endpoint Form */}
         {showAddEndpoint && (
           <div className="mt-4 p-4 rounded-[28px] border border-white/10 bg-white/5">
@@ -1041,15 +1057,20 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
                       <option className={optionStyles} value="boolean">Boolean</option>
                       <option className={optionStyles} value="object">Object</option>
                       <option className={optionStyles} value="array">Array</option>
-                      {canUseFileUploads() && (
-                        <>
-                          <option className={optionStyles} value="image">Image Upload</option>
-                          <option className={optionStyles} value="video">Video Upload</option>
-                          <option className={optionStyles} value="audio">Audio Upload</option>
-                          <option className={optionStyles} value="file">File Upload</option>
-                        </>
-                      )}
-                    </select>                  </div>
+                      <>
+                        <option className={optionStyles} value="image" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'Image Upload' : 'Image Upload (Upgrade Account)'}
+                        </option>
+                        <option className={optionStyles} value="video" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'Video Upload' : 'Video Upload (Upgrade Account)'}
+                        </option>
+                        <option className={optionStyles} value="audio" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'Audio Upload' : 'Audio Upload (Upgrade Account)'}
+                        </option>
+                        <option className={optionStyles} value="file" disabled={!canUseFileUploads()}>
+                          {canUseFileUploads() ? 'File Upload' : 'File Upload (Upgrade Account)'}
+                        </option>
+                      </>                    </select>                  </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1">Required</label>
                     <select
@@ -1114,15 +1135,20 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
                         <option className={optionStyles} value="boolean">Boolean</option>
                         <option className={optionStyles} value="object">Object</option>
                         <option className={optionStyles} value="array">Array</option>
-                        {canUseFileUploads() && (
-                          <>
-                            <option className={optionStyles} value="image">Image Upload</option>
-                            <option className={optionStyles} value="video">Video Upload</option>
-                            <option className={optionStyles} value="audio">Audio Upload</option>
-                            <option className={optionStyles} value="file">File Upload</option>
-                          </>
-                        )}
-                      </select>                      <p className="mt-1 text-[11px] text-slate-400">
+                        <>
+                          <option className={optionStyles} value="image" disabled={!canUseFileUploads()}>
+                            {canUseFileUploads() ? 'Image Upload' : 'Image Upload (Upgrade Account)'}
+                          </option>
+                          <option className={optionStyles} value="video" disabled={!canUseFileUploads()}>
+                            {canUseFileUploads() ? 'Video Upload' : 'Video Upload (Upgrade Account)'}
+                          </option>
+                          <option className={optionStyles} value="audio" disabled={!canUseFileUploads()}>
+                            {canUseFileUploads() ? 'Audio Upload' : 'Audio Upload (Upgrade Account)'}
+                          </option>
+                          <option className={optionStyles} value="file" disabled={!canUseFileUploads()}>
+                            {canUseFileUploads() ? 'File Upload' : 'File Upload (Upgrade Account)'}
+                          </option>
+                        </>                      </select>                      <p className="mt-1 text-[11px] text-slate-400">
                         Choose <span className="font-semibold text-slate-200">Object</span> to build nested JSON (JSON 1) for each array item.
                       </p>
                     </div>
@@ -1184,7 +1210,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
                 )}
                 
                 {/* Auto-generate response body button */}
-                <div className="flex justify-end">
+                {/* <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={() => {
@@ -1193,9 +1219,9 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
                     }}
                     className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-sm"
                   >
-                    Generate Response from Fields
+                   <span className="relative z-10">Generate Response from Fields</span>
                   </button>
-                </div>
+                </div> */}
               </div>
             )}
 
