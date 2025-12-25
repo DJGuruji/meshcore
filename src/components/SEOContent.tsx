@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-const seoPillStyles = 'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 uppercase tracking-[0.25em] transition-all duration-300 hover:border-indigo-400/40 hover:bg-indigo-500/10 hover:text-indigo-200 hover:scale-105';
+const seoPillStyles = 'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 uppercase tracking-[0.25em] transition-all duration-300 hover:border-indigo-400/50 hover:bg-indigo-500/10 hover:text-indigo-200';
 
 const headlineItems = [
   {
@@ -101,12 +101,13 @@ export default function SEOContent() {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
+
   return (
     <section className="relative z-10 mx-auto mt-20 w-full max-w-6xl space-y-16 px-4 pb-16 text-left text-white">
       {/* Hero SEO Section */}
-      <div className="group relative overflow-hidden space-y-6 rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-10 shadow-[0_30px_90px_rgba(2,6,23,0.65)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_40px_110px_rgba(2,6,23,0.85)] hover:scale-[1.01]">
-        {/* Animated gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-purple-500/0 to-orange-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/5 group-hover:via-purple-500/5 group-hover:to-orange-500/5 group-hover:opacity-100" />
+      <div className="group relative space-y-6 rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-10 shadow-[0_30px_90px_rgba(2,6,23,0.65)] backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:shadow-[0_35px_100px_rgba(99,102,241,0.25)]">
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-purple-500/0 to-orange-500/0 opacity-0 transition-opacity duration-300 group-hover:from-indigo-500/5 group-hover:via-purple-500/5 group-hover:to-orange-500/5 group-hover:opacity-100" />
         
         <div className="relative z-10">
           <div className="flex flex-wrap gap-2 mb-6">
@@ -140,8 +141,7 @@ export default function SEOContent() {
           </div>
         </div>
 
-        {/* Shine effect */}
-        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+
       </div>
 
       {/* Main Features Grid */}
@@ -149,7 +149,7 @@ export default function SEOContent() {
         {headlineItems.map((item, index) => (
           <article 
             key={item.title} 
-            className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#050915]/90 to-[#0a0f1e]/80 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)] hover:-translate-y-2 hover:scale-[1.02]"
+            className="group relative rounded-[28px] border border-white/10 bg-gradient-to-br from-[#050915]/90 to-[#0a0f1e]/80 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:shadow-[0_25px_60px_rgba(99,102,241,0.3)] hover:-translate-y-1"
           >
             {/* Gradient overlay on hover */}
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
@@ -180,8 +180,7 @@ export default function SEOContent() {
               </div>
             </div>
 
-            {/* Shine effect */}
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+
           </article>
         ))}
       </div>
@@ -192,7 +191,7 @@ export default function SEOContent() {
           <Link
             key={feature.title}
             href={feature.link}
-            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-xl transition-all duration-500 hover:border-indigo-400/40 hover:bg-white/10 hover:shadow-[0_20px_50px_rgba(99,102,241,0.2)] hover:-translate-y-2 hover:scale-105"
+            className="group relative rounded-2xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:bg-white/10 hover:shadow-[0_20px_50px_rgba(99,102,241,0.2)] hover:-translate-y-1"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
             
@@ -208,13 +207,13 @@ export default function SEOContent() {
               </p>
             </div>
 
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+
           </Link>
         ))}
       </div>
 
       {/* Why Developers Love Section */}
-      <div className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-r from-indigo-900/60 via-purple-900/50 to-slate-900/60 p-10 backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_30px_80px_rgba(99,102,241,0.3)] hover:scale-[1.01]">
+      <div className="group relative rounded-[32px] border border-white/10 bg-gradient-to-r from-indigo-900/60 via-purple-900/50 to-slate-900/60 p-10 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:shadow-[0_30px_80px_rgba(99,102,241,0.3)]">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
         
         <div className="relative z-10">
@@ -238,7 +237,7 @@ export default function SEOContent() {
             ].map((benefit) => (
               <li 
                 key={benefit.text} 
-                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:bg-white/10 hover:text-white hover:scale-105"
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:bg-white/10 hover:text-white"
               >
                 <span className="text-xl">{benefit.icon}</span>
                 <span>{benefit.text}</span>
@@ -247,18 +246,18 @@ export default function SEOContent() {
           </ul>
         </div>
 
-        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+
       </div>
 
       {/* FAQ Section */}
-      <div className="group rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-10 backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_30px_90px_rgba(2,6,23,0.75)]">
+      <div className="group rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-10 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:shadow-[0_30px_90px_rgba(99,102,241,0.25)]">
         <h3 className="text-3xl font-bold text-white mb-2">Frequently Asked Questions</h3>
         <p className="text-slate-300 mb-8">Everything you need to know about AnyTimeRequest</p>
         <div className="space-y-4">
           {faqs.map((faq, index) => (
             <div 
               key={index} 
-              className="group/faq relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:shadow-lg"
+              className="group/faq relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/30 hover:bg-white/10 hover:shadow-lg"
             >
               <button
                 className="flex w-full items-center justify-between p-6 text-left transition-all duration-300"
@@ -267,7 +266,7 @@ export default function SEOContent() {
               >
                 <h4 className="text-base font-semibold text-slate-100 pr-4 transition-colors duration-300 group-hover/faq:text-white">{faq.q}</h4>
                 <svg
-                  className={`h-5 w-5 flex-shrink-0 text-indigo-400 transition-all duration-300 ${openFaqIndex === index ? 'rotate-180 text-indigo-300' : ''} group-hover/faq:text-indigo-300 group-hover/faq:scale-110`}
+                  className={`h-5 w-5 flex-shrink-0 text-indigo-400 transition-all duration-300 ${openFaqIndex === index ? 'rotate-180 text-indigo-300' : ''} group-hover/faq:text-indigo-300`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -286,14 +285,14 @@ export default function SEOContent() {
                 </div>
               </div>
 
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover/faq:translate-x-full" />
+
             </div>
           ))}
         </div>
       </div>
 
       {/* Final CTA */}
-      <div className="group relative overflow-hidden rounded-[32px] border border-indigo-500/20 bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-orange-600/20 p-12 text-center backdrop-blur-xl transition-all duration-500 hover:border-indigo-500/40 hover:shadow-[0_30px_80px_rgba(99,102,241,0.4)] hover:scale-[1.01]">
+      <div className="group relative rounded-[32px] border border-indigo-500/20 bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-orange-600/20 p-12 text-center backdrop-blur-xl transition-all duration-300 hover:border-indigo-500/40 hover:shadow-[0_30px_80px_rgba(99,102,241,0.4)]">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/20 group-hover:to-purple-500/20 group-hover:opacity-100" />
         
         <div className="relative z-10">
@@ -304,7 +303,7 @@ export default function SEOContent() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/auth/register"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:from-blue-500 hover:to-indigo-600 hover:shadow-blue-500/50 hover:-translate-y-1 hover:scale-105"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:from-blue-500 hover:to-indigo-600 hover:shadow-blue-500/50 hover:-translate-y-1"
             >
               Get Started Free
               <svg className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -313,14 +312,14 @@ export default function SEOContent() {
             </Link>
             <Link
               href="/docs"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-base font-semibold text-white backdrop-blur-xl transition-all duration-300 hover:border-white/40 hover:bg-white/10 hover:-translate-y-1 hover:scale-105"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-base font-semibold text-white backdrop-blur-xl transition-all duration-300 hover:border-white/40 hover:bg-white/10 hover:-translate-y-1"
             >
               View Documentation
             </Link>
           </div>
         </div>
 
-        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+
       </div>
     </section>
   );

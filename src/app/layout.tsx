@@ -8,6 +8,8 @@ import Header from "@/components/Header";
 import PageLoader from "@/components/PageLoader";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 import StructuredData from "@/components/StructuredData";
+import ConditionalFooter from "@/components/ConditionalFooter";
+import GridBackground from "@/components/GridBackground";
 import { siteConfig, ogImage } from "@/lib/seoConfig";
 
 const inter = Inter({
@@ -75,6 +77,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased bg-gradient-to-br from-black min-h-screen text-yellow-400`}
       >
+        {/* Global Grid Background */}
+        <GridBackground />
+        
         <AuthProvider>
           <NavigationStateProvider>
             <AOSInitializer>
@@ -84,6 +89,7 @@ export default function RootLayout({
                 <main className="flex-grow">
                   {children}
                 </main>
+                <ConditionalFooter />
               </div>
             </AOSInitializer>
           </NavigationStateProvider>
