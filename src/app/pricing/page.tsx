@@ -57,6 +57,7 @@ const PricingPage = () => {
         '1 GB Storage',
         'Max 10 Projects',
         '20,000 Requests/Day',
+        'Image, Video, Audio and & File Upload',
       
       ],
       buttonText: 'Upgrade Now',
@@ -72,6 +73,7 @@ const PricingPage = () => {
         '5 GB Storage',
         'Unlimited Projects',
         '200,000 Requests/Day',
+        'Image, Video, Audio and & File Upload',
        
       ],
       buttonText: 'Upgrade Now',
@@ -87,6 +89,7 @@ const PricingPage = () => {
         'Unlimited Storage',
         'Unlimited Projects',
         'Custom Request Limits',
+        'Image, Video, Audio and & File Upload',
       
       ],
       buttonText: 'Contact Sales',
@@ -130,6 +133,13 @@ const PricingPage = () => {
     const currentUserLevel = accountHierarchy[userAccountType] || 0;
     const planLevel = accountHierarchy[planNameToAccountType(planName)] || 0;
     return planLevel < currentUserLevel;
+  };
+
+  // Check if this is the user's current plan
+  const isCurrentPlan = (planName: string) => {
+    if (!session || !session.user) return false;
+    const userAccountType = (session.user as any).accountType as string;
+    return userAccountType === planNameToAccountType(planName);
   };
 
   return (
@@ -192,12 +202,21 @@ const PricingPage = () => {
               key={plan.name}
               id={`plan-${index}`}
               className={`relative rounded-3xl border p-8 transition-all duration-300 hover:-translate-y-2 ${
-                plan.popular
+                isCurrentPlan(plan.name)
+                  ? 'border-emerald-400/60 bg-gradient-to-br from-emerald-500/10 via-white/5 to-emerald-500/5 shadow-[0_0_40px_rgba(16,185,129,0.3)] hover:shadow-[0_0_50px_rgba(16,185,129,0.4)] ring-2 ring-emerald-400/20'
+                  : plan.popular
                   ? 'border-indigo-400/50 bg-gradient-to-b from-white/5 to-white/2 shadow-[0_20px_50px_rgba(15,23,42,0.5)] hover:shadow-[0_25px_60px_rgba(15,23,42,0.7)]'
                   : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_20px_40px_rgba(15,23,42,0.4)]'
               }`}
             >
-              {plan.popular && (
+              {isCurrentPlan(plan.name) && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="whitespace-nowrap rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-1 text-xs font-bold text-white shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-400/30">
+                    ✓ Current Plan
+                  </span>
+                </div>
+              )}
+              {!isCurrentPlan(plan.name) && plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <span className="rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-4 py-1 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30">
                     Most Popular
@@ -206,7 +225,11 @@ const PricingPage = () => {
               )}
 
               <div className="text-center">
-                <h3 className="text-xl font-semibold text-white">{plan.name}</h3>
+                <h3 className={`text-xl font-semibold ${
+                  isCurrentPlan(plan.name) 
+                    ? 'text-emerald-300' 
+                    : 'text-white'
+                }`}>{plan.name}</h3>
                 <div className="mt-4">
                   <span className="text-4xl font-bold text-white">{plan.price}</span>
                   {plan.period && <span className="text-lg text-slate-300">{plan.period}</span>}

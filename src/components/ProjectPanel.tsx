@@ -55,6 +55,7 @@ interface ProjectPanelProps {
   isLoading: boolean;
   isCreatingProject?: boolean;
   usageData?: UsageData | null;
+  isUsageLoading?: boolean;
   onOpenCreateModal?: () => void;
 }
 
@@ -69,6 +70,7 @@ export default function ProjectPanel({
   isLoading,
   isCreatingProject = false,
   usageData,
+  isUsageLoading = true,
   onOpenCreateModal
 }: ProjectPanelProps) {
   const PAGE_SIZE = 5;
@@ -155,12 +157,13 @@ export default function ProjectPanel({
 
             <button
               onClick={onOpenCreateModal}
-              className="flex items-center space-x-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02]"
+              className="group/btn relative flex items-center space-x-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-orange-500 px-3 py-2 text-xs font-bold text-white shadow-xl shadow-indigo-500/40 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/60 hover:scale-105"
               data-aos="zoom-in"
               data-aos-delay="300"
             >
-              <PlusIcon className="h-4 w-4" />
-              <span>Create </span>
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full" />
+              <PlusIcon className="relative z-10 h-4 w-4" />
+              <span className="relative z-10">Create</span>
             </button>
           </div>
 
@@ -175,7 +178,7 @@ export default function ProjectPanel({
                 placeholder="Search servers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-white/5 py-2 pl-10 pr-3 text-sm text-slate-100 placeholder-slate-400 focus:border-indigo-400/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                className="w-full rounded-xl border border-white/20 bg-white/10 py-2 pl-10 pr-3 text-sm text-slate-100 placeholder-slate-400 backdrop-blur-xl transition-all duration-300 focus:border-indigo-400/60 focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 hover:border-white/30"
               />
               {searchQuery && (
                 <button
@@ -196,6 +199,7 @@ export default function ProjectPanel({
                 requestsUsed={usageData.requestsUsed}
                 requestsLimit={usageData.requestsLimit}
                 accountType={usageData.accountType}
+                isLoading={isUsageLoading}
               />
             </div>
           )}
@@ -224,9 +228,10 @@ export default function ProjectPanel({
                 {!searchQuery && (
                   <button
                     onClick={onOpenCreateModal}
-                    className="mt-3 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.01]"
+                    className="group/create relative mt-3 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-orange-500 px-4 py-2 text-sm font-bold text-white shadow-xl shadow-indigo-500/40 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/60 hover:scale-105"
                   >
-                    Create Server
+                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover/create:translate-x-full" />
+                    <span className="relative z-10">Create Server</span>
                   </button>
                 )}
               </div>
@@ -248,10 +253,11 @@ export default function ProjectPanel({
               {visibleProjects.map((project) => (
                 <div
                   key={project._id}
-                  className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-indigo-400/40 hover:bg-white/10"
+                  className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 to-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5"
                   onClick={() => onProjectClick(project)}
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-300 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 group-hover:opacity-100" />
+                  <div className="relative z-10 flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
                         <span className="h-2 w-2 rounded-full bg-green-400" />

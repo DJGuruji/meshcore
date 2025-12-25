@@ -73,11 +73,14 @@ const PageLoader = () => {
   if (!showLoader) return null;
 
   return (
-    <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-[100]">
+    <div className="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 z-[100] shadow-lg">
       <div 
-        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-75 ease-out"
+        className="h-full bg-gradient-to-r from-indigo-600 via-purple-600 to-orange-500 transition-all duration-75 ease-out shadow-lg shadow-indigo-500/50"
         style={{ width: `${progress}%` }}
-      ></div>
+      >
+        {/* Glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 via-purple-400 to-orange-400 blur-sm opacity-60" />
+      </div>
     </div>
   );
 };

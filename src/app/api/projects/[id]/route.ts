@@ -205,10 +205,15 @@ export async function PUT(
       updateData.authentication = data.authentication;
     }
     
+    // Handle emailConfig object explicitly
+    if (data.emailConfig !== undefined) {
+      updateData.emailConfig = data.emailConfig;
+    }
+    
     
     const project = await ApiProject.findOneAndUpdate(
       { _id: id, user: session.user.id },
-      updateData,
+      { $set: updateData },
       { new: true, runValidators: true }
     );
     
@@ -216,6 +221,12 @@ export async function PUT(
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+    
+    // Convert to plain object to ensure all fields are included
+    const projectData = project.toObject();
+    
+    // Debug: Log emailConfig to verify it's being saved
+    console.log('Updated project emailConfig:', projectData.emailConfig);
     
     // Update user's storage usage if project size changed
     if (sizeDifference !== 0) {
@@ -240,8 +251,9 @@ export async function PUT(
     } catch (cacheError) {
     }
     
-    return NextResponse.json(project);
+    return NextResponse.json(projectData);
   } catch (error) {
+    console.error('Project update error:', error);
     return NextResponse.json({ 
       error: 'Failed to update project',
       details: error instanceof Error ? error.message : 'Unknown error'

@@ -210,6 +210,21 @@ const ApiProjectSchema = new mongoose.Schema({
       default: 'Bearer'
     }
   },
+  // Email configuration settings
+  emailConfig: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    email: {
+      type: String,
+      default: ''
+    },
+    appPassword: {
+      type: String,
+      default: ''
+    }
+  },
   endpoints: [{
     _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
     path: {
@@ -354,6 +369,33 @@ const ApiProjectSchema = new mongoose.Schema({
   lastWeekReminderSent: { type: Boolean, default: false }, // Track if 1-week reminder was sent
   lastDayReminderSent: { type: Boolean, default: false } // Track if 1-day reminder was sent
 });
+
+// Hash app password before saving
+ApiProjectSchema.pre('save', async function(next) {
+  // Only hash if emailConfig.appPassword is modified and not empty
+  if (this.emailConfig && 
+      this.isModified('emailConfig.appPassword') && 
+      this.emailConfig.appPassword && 
+      this.emailConfig.appPassword.trim() !== '') {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.emailConfig.appPassword = await bcrypt.hash(this.emailConfig.appPassword, salt);
+      next();
+    } catch (error) {
+      next(error as Error);
+    }
+  } else {
+    next();
+  }
+});
+
+// Method to verify app password
+ApiProjectSchema.methods.verifyAppPassword = async function(enteredPassword: string) {
+  if (!this.emailConfig || !this.emailConfig.appPassword) {
+    return false;
+  }
+  return await bcrypt.compare(enteredPassword, this.emailConfig.appPassword);
+};
 
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
 export const ApiProject = mongoose.models.ApiProject || mongoose.model('ApiProject', ApiProjectSchema);

@@ -91,12 +91,53 @@ const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   );
 };
 
+// Loading skeleton component
+const UsageIndicatorSkeleton: React.FC = () => {
+  return (
+    <div className="flex flex-col items-center animate-pulse">
+      <div className="relative w-32 h-16">
+        <svg className="w-full h-full" viewBox="0 0 100 100">
+          {/* Background circle */}
+          <circle
+            cx="50"
+            cy="50"
+            r={40}
+            fill="none"
+            stroke="#1f2937"
+            strokeWidth="8"
+          />
+          {/* Animated circle */}
+          <circle
+            cx="50"
+            cy="50"
+            r={40}
+            fill="none"
+            stroke="#374151"
+            strokeWidth="8"
+            strokeDasharray="251.2"
+            strokeDashoffset="125.6"
+            strokeLinecap="round"
+            transform="rotate(-90 50 50)"
+            className="animate-spin"
+            style={{ transformOrigin: '50% 50%' }}
+          />
+        </svg>
+      </div>
+      <div className="mt-2 text-center space-y-2">
+        <div className="h-4 w-20 bg-white/10 rounded"></div>
+        <div className="h-3 w-16 bg-white/5 rounded mx-auto"></div>
+      </div>
+    </div>
+  );
+};
+
 interface UsageIndicatorsProps {
   storageUsed: number;
   storageLimit: number;
   requestsUsed: number;
   requestsLimit: number;
   accountType: string;
+  isLoading?: boolean;
 }
 
 const UsageIndicators: React.FC<UsageIndicatorsProps> = ({ 
@@ -104,7 +145,8 @@ const UsageIndicators: React.FC<UsageIndicatorsProps> = ({
   storageLimit,
   requestsUsed,
   requestsLimit,
-  accountType
+  accountType,
+  isLoading = false
 }) => {
   // For storage, we need to calculate the percentage using raw byte values
   // but display in MB for readability
@@ -118,28 +160,41 @@ const UsageIndicators: React.FC<UsageIndicatorsProps> = ({
     <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-white">Usage</h3>
-        <span className="text-xs px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-full capitalize">
-          {accountType}
-        </span>
+        {isLoading ? (
+          <div className="h-5 w-16 bg-white/10 rounded-full animate-pulse"></div>
+        ) : (
+          <span className="text-xs px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-full capitalize">
+            {accountType}
+          </span>
+        )}
       </div>
       
       <div className="grid grid-cols-2 gap-6">
-        <UsageIndicator
-          used={storageUsedMB} // Convert to MB for display
-          total={storageLimitMB} // Convert to MB for display
-          label="Storage Used"
-          color="#8b5cf6" // violet
-          unit="MB"
-        />
-        <UsageIndicator
-          used={requestsUsed} // Show actual requests used instead of remaining
-          total={requestsLimit} // Total request limit
-          label="Requests Used"
-          color="#10b981" // emerald
-        />
+        {isLoading ? (
+          <>
+            <UsageIndicatorSkeleton />
+            <UsageIndicatorSkeleton />
+          </>
+        ) : (
+          <>
+            <UsageIndicator
+              used={storageUsedMB} // Convert to MB for display
+              total={storageLimitMB} // Convert to MB for display
+              label="Storage Used"
+              color="#8b5cf6" // violet
+              unit="MB"
+            />
+            <UsageIndicator
+              used={requestsUsed} // Show actual requests used instead of remaining
+              total={requestsLimit} // Total request limit
+              label="Requests Used"
+              color="#10b981" // emerald
+            />
+          </>
+        )}
       </div>
       
-      {storageUsed > storageLimit && (
+      {!isLoading && storageUsed > storageLimit && (
         <div className="mt-4 p-2 bg-amber-900/30 border border-amber-700/50 rounded-lg">
           <p className="text-amber-200 text-xs text-center">
             Storage limit exceeded. You're in read-only mode.
