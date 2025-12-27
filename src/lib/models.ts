@@ -233,7 +233,7 @@ const ApiProjectSchema = new mongoose.Schema({
     },
     method: {
       type: String,
-      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'CRUD'],
       required: [true, 'HTTP method is required'],
       default: 'GET'
     },
@@ -355,6 +355,11 @@ const ApiProjectSchema = new mongoose.Schema({
         default: 100
       }
     },
+    isCrud: {
+      type: Boolean,
+      default: false
+    },
+    resourceName: String,
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   }],

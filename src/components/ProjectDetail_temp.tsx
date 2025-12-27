@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { 
@@ -21,7 +21,6 @@ import AddEndpointFormWrapper from './ProjectDetail/AddEndpointFormWrapper';
 import EndpointListItem from './ProjectDetail/EndpointListItem';
 import EndpointList from './ProjectDetail/EndpointList';
 import NestedFieldsBuilder from './ProjectDetail/NestedFieldsBuilder';
-import { generateCrudEndpoints } from '@/lib/crudGenerator';
 
 interface ApiProject {
   _id: string;
@@ -59,7 +58,7 @@ type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
 interface Endpoint {
   _id: string;
   path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   responseBody: string;
   statusCode: number;
   description?: string;
@@ -134,12 +133,8 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
       enabled: false,
       defaultLimit: 10,
       maxLimit: 100
-    },
-    // CRUD mode properties
-    apiMode: '' as 'static' | 'crud' | 'custom' | '',
-    resourceName: ''
+    }
   });
-
 
   const aggregatorOptions = [
     { value: 'count', label: 'Count' },
@@ -327,8 +322,6 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
     requiresAuth: endpoint.requiresAuth !== undefined ? endpoint.requiresAuth : null
   });
 
-
-
   const handleAddEndpoint = () => {
     // Reset validation errors
     setValidationErrors({});
@@ -336,83 +329,6 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
     // Validate required fields
     const errors: Record<string, boolean> = {};
     
-    // Check if this is CRUD mode
-    if (newEndpoint.apiMode === 'crud') {
-      // CRUD mode validation
-      if (!newEndpoint.resourceName || !newEndpoint.resourceName.trim()) {
-        errors.resourceName = true;
-      }
-      
-      if (!newEndpoint.fields || newEndpoint.fields.length === 0) {
-        errors.fields = true;
-      }
-      
-      // If there are validation errors, set them and return
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        return;
-      }
-      
-      // CRUD mode is valid, proceed with creation
-      try {
-        // Generate consolidated CRUD endpoint
-        const crudEndpoint = generateCrudEndpoints({
-          resourceName: newEndpoint.resourceName,
-          fields: newEndpoint.fields,
-          description: newEndpoint.description,
-          requiresAuth: newEndpoint.requiresAuth,
-          pagination: newEndpoint.pagination
-        });
-
-        const newEndpointWithId = {
-          ...crudEndpoint,
-          _id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        };
-        
-        const updatedProject = {
-          ...project,
-          endpoints: [...project.endpoints, newEndpointWithId]
-        };
-        
-        onUpdateProject(updatedProject);
-        toast.success('Successfully created CRUD API!');
-        
-        // Reset form
-        setNewEndpoint({
-          path: '',
-          method: 'GET' as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-          responseBody: '{"message": "Hello World"}',
-          statusCode: 200,
-          description: '',
-          requiresAuth: null as boolean | null,
-          fields: [] as EndpointField[],
-          dataSource: '',
-          dataSourceMode: 'full',
-          dataSourceField: '',
-          dataSourceFields: [],
-          aggregator: '',
-          conditions: [],
-          pagination: {
-            enabled: false,
-            defaultLimit: 10,
-            maxLimit: 100
-          },
-          apiMode: '' as 'static' | 'crud' | 'custom' | '',
-          resourceName: ''
-        });
-        
-        setNewField(createEmptyFieldDefinition());
-        setShowAddEndpoint(false);
-        
-        return;
-      } catch (error) {
-        console.error('Error creating CRUD endpoints:', error);
-        toast.error('Failed to create CRUD endpoints. Please try again.');
-        return;
-      }
-    }
-    
-    // Regular endpoint validation (non-CRUD)
     // Path is always required
     if (!newEndpoint.path.trim()) {
       errors.path = true;
@@ -541,10 +457,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
         enabled: false,
         defaultLimit: 10,
         maxLimit: 100
-      },
-      // CRUD mode properties
-      apiMode: '' as 'static' | 'crud' | 'custom' | '',
-      resourceName: ''
+      }
     });
     
     // Reset field form
@@ -685,7 +598,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
       
       let message = `Response (${response.status}):\n${JSON.stringify(responseData, null, 2)}`;
       if (requiresAuth) {
-        message = `🔒 Authenticated Request\n${message}`;
+        message = `ðŸ”’ Authenticated Request\n${message}`;
       }
       
       // Show alert with response details
@@ -922,9 +835,9 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
             </p>
             {project.authentication?.enabled && (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                <span className="rounded-full bg-green-500/10 px-3 py-1 text-green-200">🔒 Auth enabled</span>
+                <span className="rounded-full bg-green-500/10 px-3 py-1 text-green-200">ðŸ”’ Auth enabled</span>
                 <span className="font-mono">
-                  Token: {showToken ? project.authentication.token : '••••••••••••'}
+                  Token: {showToken ? project.authentication.token : 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'}
                 </span>
                 <button
                   onClick={() => setShowToken(!showToken)}
@@ -975,28 +888,8 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
           handleAddEndpoint={handleAddEndpoint}
           setShowAddEndpoint={setShowAddEndpoint}
         />
-      </div>
-
-      {/* Endpoints List */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <EndpointList
-          project={project}
-          expandedEndpoint={expandedEndpoint}
-          setExpandedEndpoint={setExpandedEndpoint}
-          handleUpdateEndpoint={handleUpdateEndpoint}
-          handleDeleteEndpoint={handleDeleteEndpoint}
-          testEndpoint={testEndpoint}
-          copyEndpointUrl={copyEndpointUrl}
-          editingConditions={editingConditions}
-          setEditingConditions={setEditingConditions}
-          newEditCondition={newEditCondition}
-          setNewEditCondition={setNewEditCondition}
-          handleAddEditCondition={handleAddEditCondition}
-          handleRemoveEditCondition={handleRemoveEditCondition}
-          handleSaveConditions={handleSaveConditions}
-          handleCancelEditConditions={handleCancelEditConditions}
-        />
-      </div>
-    </div>
-  );
-}
+          <div className="mt-4 p-4 rounded-[28px] border border-white/10 bg-white/5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelStyles}>Path</label>
+                <input

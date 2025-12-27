@@ -88,6 +88,16 @@ class InMemoryCacheClient implements CacheClient {
   }
 
   async del(key: string): Promise<number> {
+    if (key.endsWith('*')) {
+      const prefix = key.slice(0, -1);
+      let count = 0;
+      for (const k of this.cache.keys()) {
+        if (k.startsWith(prefix)) {
+          if (this.cache.delete(k)) count++;
+        }
+      }
+      return count;
+    }
     const result = this.cache.delete(key) ? 1 : 0;
     return result;
   }

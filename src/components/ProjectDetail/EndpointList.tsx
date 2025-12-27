@@ -19,7 +19,7 @@ type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
 interface Endpoint {
   _id: string;
   path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD';
   responseBody: string;
   statusCode: number;
   description?: string;
@@ -42,6 +42,8 @@ interface Endpoint {
     defaultLimit: number;
     maxLimit: number;
   };
+  isCrud?: boolean;
+  resourceName?: string;
 }
 
 interface ApiProject {

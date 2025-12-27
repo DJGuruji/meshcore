@@ -29,14 +29,13 @@ type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
 interface Endpoint {
   _id: string;
   path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD';
   responseBody: string;
   statusCode: number;
   description?: string;
   requiresAuth?: boolean | null;
-  fields?: EndpointField[]; // Add this for POST endpoint field definitions
-  // New properties for GET endpoints to reference POST data
-  dataSource?: string; // ID of the POST endpoint to get data from
+  fields?: EndpointField[];
+  dataSource?: string;
   dataSourceMode?: 'full' | 'field' | 'aggregator';
   dataSourceField?: string;
   dataSourceFields?: string[];
@@ -46,12 +45,13 @@ interface Endpoint {
     operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
     value: string | number | boolean;
   }[];
-  // Pagination settings
   pagination?: {
     enabled: boolean;
     defaultLimit: number;
     maxLimit: number;
   };
+  isCrud?: boolean;
+  resourceName?: string;
 }
 
 interface ApiProject {
@@ -163,13 +163,14 @@ export default function EndpointListItem({
                 endpoint.method === 'POST' ? 'bg-blue-900 text-blue-300' :
                 endpoint.method === 'PUT' ? 'bg-orange-900 text-orange-300' :
                 endpoint.method === 'PATCH' ? 'bg-purple-900 text-purple-300' :
+                endpoint.method === 'CRUD' ? 'bg-yellow-900 text-yellow-300 border border-yellow-500/50' :
                 'bg-red-900 text-red-300'
               }`}>
                 {endpoint.method}
               </span>
             </div>
             <div>
-              <div className="font-mono text-white">{project.baseUrl}{endpoint.path}{(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') ? '/:id' : ''}</div>
+              <div className="font-mono text-white">{project.baseUrl}{endpoint.path}{(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') && !endpoint.isCrud ? '/:id' : ''}</div>
               {endpoint.description && (
                 <div className="text-sm text-slate-400 mt-1">{endpoint.description}</div>
               )}
@@ -290,6 +291,7 @@ export default function EndpointListItem({
                       <option className={optionStyles} value="PUT">PUT</option>
                       <option className={optionStyles} value="PATCH">PATCH</option>
                       <option className={optionStyles} value="DELETE">DELETE</option>
+                      <option className={optionStyles} value="CRUD">CRUD</option>
                     </select>
                   </div>
                   <div>
