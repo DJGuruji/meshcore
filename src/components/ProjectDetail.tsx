@@ -113,7 +113,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
   const [showToken, setShowToken] = useState(false);
   const [newEndpoint, setNewEndpoint] = useState({
     path: '',
-    method: 'GET' as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    method: 'GET' as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD',
     responseBody: '{"message": "Hello World"}',
     statusCode: 200,
     description: '',
@@ -428,8 +428,8 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
       // Data source is selected, no additional validation needed
     }
     
-    // For POST endpoints, if fields are defined, validate them
-    if (newEndpoint.method === 'POST' && newEndpoint.fields.length > 0) {
+    // For POST/CRUD endpoints, if fields are defined, validate them
+    if ((newEndpoint.method === 'POST' || newEndpoint.method === 'CRUD') && newEndpoint.fields.length > 0) {
       // Validate that fields have names
       for (let i = 0; i < newEndpoint.fields.length; i++) {
         const field = newEndpoint.fields[i];
@@ -480,8 +480,8 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
       }
     }
 
-    // For POST endpoints, validate that required fields are defined if any fields exist
-    if (newEndpoint.method === 'POST' && newEndpoint.fields && newEndpoint.fields.length > 0) {
+    // For POST/CRUD endpoints, validate that required fields are defined if any fields exist
+    if ((newEndpoint.method === 'POST' || newEndpoint.method === 'CRUD') && newEndpoint.fields && newEndpoint.fields.length > 0) {
       const requiredFields = newEndpoint.fields.filter(field => field.required);
       if (requiredFields.length > 0) {
         // We'll validate request body when the endpoint is actually used
@@ -524,7 +524,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
     // Reset form
     setNewEndpoint({
       path: '',
-      method: 'GET' as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+      method: 'GET' as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD',
       responseBody: '{"message": "Hello World"}',
       statusCode: 200,
       description: '',
@@ -643,7 +643,7 @@ export default function ProjectDetail({ project, onUpdateProject, refreshUsage, 
     try {
       // For POST, PUT, PATCH endpoints with defined fields, we can show a form to test
       let body = undefined;
-      if ((endpoint.method === 'POST' || endpoint.method === 'PUT' || endpoint.method === 'PATCH') && endpoint.fields && endpoint.fields.length > 0) {
+      if ((endpoint.method === 'POST' || endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'CRUD') && endpoint.fields && endpoint.fields.length > 0) {
         // Show a prompt to let user enter data for testing
         const userResponse = prompt(`Enter JSON data for ${endpoint.method} request (or leave empty for sample data):`, '');
         

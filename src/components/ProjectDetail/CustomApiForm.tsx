@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { XMarkIcon, ArrowLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
+import ArrowLeftIcon from '@heroicons/react/24/outline/ArrowLeftIcon';
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import CustomApiOptions from './CustomApiOptions';
 
 interface Endpoint {
   _id: string;
   path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD';
+  description?: string;
   fields?: any[];
 }
 
@@ -179,7 +181,7 @@ export default function CustomApiForm({
               <h3 className="text-sm font-medium text-slate-300 mb-3">Data Source *</h3>
               
               <div className="mb-4">
-                <label className="block text-xs font-medium text-slate-400 mb-1">Source POST Endpoint</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Source Resource/CRUD Endpoint</label>
                 <select
                   value={newEndpoint.dataSource || ''}
                   onChange={(e) => setNewEndpoint({
@@ -192,18 +194,18 @@ export default function CustomApiForm({
                   })}
                   className={inputStyles}
                 >
-                  <option className={optionStyles} value="">Select a POST endpoint...</option>
+                  <option className={optionStyles} value="">Select a Resource/POST endpoint...</option>
                   {project.endpoints
-                    .filter((ep: Endpoint) => ep.method === 'POST')
+                    .filter((ep: Endpoint) => ep.method === 'POST' || (ep as any).method === 'CRUD')
                     .map((ep: Endpoint) => (
                       <option className={optionStyles} key={ep._id} value={ep._id}>
-                        {ep.path}
+                        {ep.path} ({(ep as any).method === 'CRUD' ? 'Full Resource' : ep.description || 'POST Endpoint'})
                       </option>
                     ))}
                 </select>
                 {!newEndpoint.dataSource && (
                   <p className="mt-1 text-xs text-amber-400">
-                    ⚠️ You need to create a POST endpoint first using CRUD API mode
+                    ⚠️ You need to create a POST endpoint or CRUD resource first
                   </p>
                 )}
               </div>
