@@ -1,9 +1,9 @@
 'use client';
 
+import Cog6ToothIcon from '@heroicons/react/24/outline/Cog6ToothIcon';
 import { 
   DocumentTextIcon, 
   ServerStackIcon, 
-  CogIcon,
   XMarkIcon 
 } from '@heroicons/react/24/outline';
 
@@ -44,7 +44,7 @@ const API_MODES: ApiMode[] = [
     id: 'custom',
     title: 'Custom API',
     description: 'Advanced endpoint with data source and transformations',
-    icon: CogIcon,
+    icon: Cog6ToothIcon,
     features: [
       'Link to existing POST endpoint',
       'Select specific fields',

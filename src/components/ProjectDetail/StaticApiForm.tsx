@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { XMarkIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import ArrowLeftIcon from '@heroicons/react/24/outline/ArrowLeftIcon';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { defaultJsonTemplates, generateRandomJson } from '@/lib/jsonGenerator';
 
 interface StaticApiFormProps {

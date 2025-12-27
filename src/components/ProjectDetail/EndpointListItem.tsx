@@ -174,6 +174,21 @@ export default function EndpointListItem({
               {endpoint.description && (
                 <div className="text-sm text-slate-400 mt-1">{endpoint.description}</div>
               )}
+              {endpoint.method === 'CRUD' && endpoint.fields && endpoint.fields.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {endpoint.fields.map((field, idx) => (
+                    <span 
+                      key={idx} 
+                      className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300"
+                    >
+                      <span className="text-indigo-300 font-mono">{field.name}</span>
+                      <span className="text-slate-500 mx-1">:</span>
+                      <span className="text-slate-400">{field.type}</span>
+                      {field.required && <span className="text-red-400/80 ml-1 font-bold">*</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
               {endpoint.dataSource && endpointMode !== 'full' && (
                 <div className="text-[11px] text-slate-400 mt-1">
                   {endpointMode === 'field'
@@ -377,8 +392,8 @@ export default function EndpointListItem({
             </div>
           </div>
           
-          {/* Fields section for POST endpoints in edit mode */}
-          {endpoint.method === 'POST' && endpoint.fields && endpoint.fields.length > 0 && (
+          {/* Fields section for POST/CRUD endpoints in edit mode */}
+          {(endpoint.method === 'POST' || endpoint.method === 'CRUD') && endpoint.fields && endpoint.fields.length > 0 && (
             <div className="mt-4 p-3 rounded-[24px] border border-white/10 bg-white/5">
               <h4 className="text-sm font-medium text-slate-300 mb-2">Request Body Fields</h4>
               <div className="space-y-2 max-h-32 overflow-y-auto">
