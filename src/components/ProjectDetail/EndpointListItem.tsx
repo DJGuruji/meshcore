@@ -29,14 +29,13 @@ type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
 interface Endpoint {
   _id: string;
   path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD';
   responseBody: string;
   statusCode: number;
   description?: string;
   requiresAuth?: boolean | null;
-  fields?: EndpointField[]; // Add this for POST endpoint field definitions
-  // New properties for GET endpoints to reference POST data
-  dataSource?: string; // ID of the POST endpoint to get data from
+  fields?: EndpointField[];
+  dataSource?: string;
   dataSourceMode?: 'full' | 'field' | 'aggregator';
   dataSourceField?: string;
   dataSourceFields?: string[];
@@ -46,12 +45,13 @@ interface Endpoint {
     operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith';
     value: string | number | boolean;
   }[];
-  // Pagination settings
   pagination?: {
     enabled: boolean;
     defaultLimit: number;
     maxLimit: number;
   };
+  isCrud?: boolean;
+  resourceName?: string;
 }
 
 interface ApiProject {
@@ -163,15 +163,31 @@ export default function EndpointListItem({
                 endpoint.method === 'POST' ? 'bg-blue-900 text-blue-300' :
                 endpoint.method === 'PUT' ? 'bg-orange-900 text-orange-300' :
                 endpoint.method === 'PATCH' ? 'bg-purple-900 text-purple-300' :
+                endpoint.method === 'CRUD' ? 'bg-yellow-900 text-yellow-300 border border-yellow-500/50' :
                 'bg-red-900 text-red-300'
               }`}>
                 {endpoint.method}
               </span>
             </div>
             <div>
-              <div className="font-mono text-white">{project.baseUrl}{endpoint.path}{(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') ? '/:id' : ''}</div>
+              <div className="font-mono text-white">{project.baseUrl}{endpoint.path}{(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') && !endpoint.isCrud ? '/:id' : ''}</div>
               {endpoint.description && (
                 <div className="text-sm text-slate-400 mt-1">{endpoint.description}</div>
+              )}
+              {endpoint.method === 'CRUD' && endpoint.fields && endpoint.fields.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {endpoint.fields.map((field, idx) => (
+                    <span 
+                      key={idx} 
+                      className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300"
+                    >
+                      <span className="text-indigo-300 font-mono">{field.name}</span>
+                      <span className="text-slate-500 mx-1">:</span>
+                      <span className="text-slate-400">{field.type}</span>
+                      {field.required && <span className="text-red-400/80 ml-1 font-bold">*</span>}
+                    </span>
+                  ))}
+                </div>
               )}
               {endpoint.dataSource && endpointMode !== 'full' && (
                 <div className="text-[11px] text-slate-400 mt-1">
@@ -280,17 +296,16 @@ export default function EndpointListItem({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1">Method</label>
-                    <select
-                      value={endpoint.method}
-                      onChange={(e) => handleUpdateEndpoint(endpoint._id, { method: e.target.value as any })}
-                      className={inputStyles}
-                    >
-                      <option className={optionStyles} value="GET">GET</option>
-                      <option className={optionStyles} value="POST">POST</option>
-                      <option className={optionStyles} value="PUT">PUT</option>
-                      <option className={optionStyles} value="PATCH">PATCH</option>
-                      <option className={optionStyles} value="DELETE">DELETE</option>
-                    </select>
+                    <div className={`px-3 py-2 rounded-2xl border border-white/10 bg-white/5 text-sm font-mono font-medium ${
+                      endpoint.method === 'GET' ? 'text-green-300' :
+                      endpoint.method === 'POST' ? 'text-blue-300' :
+                      endpoint.method === 'PUT' ? 'text-orange-300' :
+                      endpoint.method === 'PATCH' ? 'text-purple-300' :
+                      endpoint.method === 'CRUD' ? 'text-yellow-300' :
+                      'text-red-300'
+                    }`}>
+                      {endpoint.method}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1">Status Code</label>
@@ -377,8 +392,8 @@ export default function EndpointListItem({
             </div>
           </div>
           
-          {/* Fields section for POST endpoints in edit mode */}
-          {endpoint.method === 'POST' && endpoint.fields && endpoint.fields.length > 0 && (
+          {/* Fields section for POST/CRUD endpoints in edit mode */}
+          {(endpoint.method === 'POST' || endpoint.method === 'CRUD') && endpoint.fields && endpoint.fields.length > 0 && (
             <div className="mt-4 p-3 rounded-[24px] border border-white/10 bg-white/5">
               <h4 className="text-sm font-medium text-slate-300 mb-2">Request Body Fields</h4>
               <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -428,10 +443,10 @@ export default function EndpointListItem({
                 >
                   <option className={optionStyles} value="">Use custom response body</option>
                   {project.endpoints
-                    .filter(ep => ep.method === 'POST')
+                    .filter(ep => ep.method === 'POST' || (ep as any).method === 'CRUD')
                     .map(ep => (
                       <option className={optionStyles} key={ep._id} value={ep._id}>
-                        {ep.path} ({ep.description || 'No description'})
+                        {ep.path} ({(ep as any).method === 'CRUD' ? 'Full Resource' : ep.description || 'POST Endpoint'})
                       </option>
                     ))}
                 </select>

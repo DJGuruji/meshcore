@@ -7,10 +7,7 @@ import { sendRequestLimitNotification, sendStorageLimitNotification } from '@/li
 import { uploadFileToCloudinary } from '@/lib/cloudinary';
 
 // Helper function to match endpoint path with project name
-function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string): boolean {
-  // The requestPath is what comes after /api/mockserver/projectName
-  // We need to match it against baseUrl + endpointPath
-  
+function matchEndpoint(requestPath: string, projectName: string, baseUrl: string, endpointPath: string, method: string, isCrud: boolean = false): boolean {
   // Ensure paths start with /
   const cleanBaseUrl = baseUrl.startsWith('/') ? baseUrl : `/${baseUrl}`;
   const cleanEndpointPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
@@ -18,11 +15,22 @@ function matchEndpoint(requestPath: string, projectName: string, baseUrl: string
   // The expected combined path for this endpoint
   const expectedCombinedPath = `${cleanBaseUrl}${cleanEndpointPath}`;
 
+  // If it's a CRUD endpoint, it matches the base path or the base path with an alphanumeric ID
+  if (isCrud) {
+    // Exact match for list/create
+    if (requestPath === expectedCombinedPath) return true;
+    
+    // Match path with any alphanumeric ID (supports UUID, custom strings, etc)
+    const pathWithIdPattern = new RegExp(`^${expectedCombinedPath}/[a-zA-Z0-9_-]+$`);
+    return pathWithIdPattern.test(requestPath);
+  }
 
+  // Regular endpoint logic
   // For GET, PUT, PATCH, DELETE methods, the path might include an ID parameter at the end
   if (method === 'GET' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
     // Check if the request path matches the expected path with an ID at the end
-    const pathWithIdPattern = new RegExp(`^${expectedCombinedPath}/[0-9a-fA-F]{24}$`);
+    // Updated to support alphanumeric IDs
+    const pathWithIdPattern = new RegExp(`^${expectedCombinedPath}/[a-zA-Z0-9_-]+$`);
     if (pathWithIdPattern.test(requestPath)) {
       return true;
     }
@@ -809,7 +817,15 @@ async function handleRequest(request: NextRequest, method: string) {
       
       if (generatedSlug === projectSlug) {
         for (const endpoint of project.endpoints) {
-          if (matchEndpoint(remainingPath, project.name, project.baseUrl, endpoint.path, method) && endpoint.method === method) {
+          const isCrud = (endpoint as any).isCrud || false;
+          if (matchEndpoint(remainingPath, project.name, project.baseUrl, endpoint.path, method, isCrud) && 
+              (isCrud || endpoint.method === method)) {
+            
+            // If it's a CRUD endpoint, it acts as its own data source for GET/PUT/DELETE
+            if (isCrud) {
+              (endpoint as any).dataSource = endpoint._id;
+              (endpoint as any).dataSourceMode = (endpoint as any).dataSourceMode || 'full';
+            }
             // Check daily request limit
             const requestLimitCheck = await checkDailyRequestLimit(project);
             if (!requestLimitCheck.allowed) {
@@ -1020,12 +1036,17 @@ async function handleRequest(request: NextRequest, method: string) {
             if ((method === 'PUT' || method === 'PATCH' || method === 'DELETE') && endpoint.dataSource) {
               try {
                 // Extract ID from path if present
-                const pathParts = fullPath.split('/');
-                const id = pathParts[pathParts.length - 1];
-                const basePath = pathParts.slice(0, -1).join('/');
+                // Check if the ID is provided (if path is longer than base path)
+                const cleanBaseUrl = project.baseUrl.startsWith('/') ? project.baseUrl : `/${project.baseUrl}`;
+                const cleanEndpointPath = endpoint.path.startsWith('/') ? endpoint.path : `/${endpoint.path}`;
+                const fullBase = `${cleanBaseUrl}${cleanEndpointPath}`;
                 
-                // Check if the ID is a valid MongoDB ObjectId format
-                const isValidId = /^[0-9a-fA-F]{24}$/.test(id);
+                // Normalize paths to remove trailing slashes for comparison
+                const normalizedRemainingPath = remainingPath.endsWith('/') ? remainingPath.slice(0, -1) : remainingPath;
+                const normalizedFullBase = fullBase.endsWith('/') ? fullBase.slice(0, -1) : fullBase;
+                
+                const isValidId = normalizedRemainingPath.length > normalizedFullBase.length;
+                const id = isValidId ? normalizedRemainingPath.substring(normalizedFullBase.length + 1) : null;
                 
                 // Find the source endpoint
                 const sourceEndpoint = project.endpoints.find((ep: typeof endpoint) => 
@@ -1324,12 +1345,17 @@ async function handleRequest(request: NextRequest, method: string) {
                 ep._id.toString() === endpoint.dataSource.toString());
               if (sourceEndpoint) {
                 try {
-                  // Extract ID from path if present
-                  const pathParts = fullPath.split('/');
-                  const potentialId = pathParts[pathParts.length - 1];
+                  // Check if the ID is provided (if path is longer than base path)
+                  const cleanBaseUrl = project.baseUrl.startsWith('/') ? project.baseUrl : `/${project.baseUrl}`;
+                  const cleanEndpointPath = endpoint.path.startsWith('/') ? endpoint.path : `/${endpoint.path}`;
+                  const fullBase = `${cleanBaseUrl}${cleanEndpointPath}`;
                   
-                  // Check if the last part of the path is a valid MongoDB ObjectId
-                  const isValidId = /^[0-9a-fA-F]{24}$/.test(potentialId);
+                  // Normalize paths to remove trailing slashes for comparison
+                  const normalizedRemainingPath = remainingPath.endsWith('/') ? remainingPath.slice(0, -1) : remainingPath;
+                  const normalizedFullBase = fullBase.endsWith('/') ? fullBase.slice(0, -1) : fullBase;
+                  
+                  const isValidId = normalizedRemainingPath.length > normalizedFullBase.length;
+                  const potentialId = isValidId ? normalizedRemainingPath.substring(normalizedFullBase.length + 1) : null;
                   
                   let query: any = { 
                     endpointId: sourceEndpoint._id,
@@ -1394,7 +1420,23 @@ async function handleRequest(request: NextRequest, method: string) {
                     // If no data is stored, fall back to the original response body
                     if (!isValidId) {
                       // Only fall back for general GET requests, not specific ID requests
-                      sourceData = JSON.parse(sourceEndpoint.responseBody);
+                      // For CRUD endpoints, if the collection is empty, return an empty array
+                      // instead of the original mock body if that body was also an array.
+                      // This avoids showing starting mock data once the user has started using the API.
+                      if ((endpoint as any).isCrud) {
+                        try {
+                           const originalBody = JSON.parse(sourceEndpoint.responseBody);
+                           if (Array.isArray(originalBody)) {
+                             sourceData = [];
+                           } else {
+                             sourceData = originalBody;
+                           }
+                        } catch (e) {
+                           sourceData = [];
+                        }
+                      } else {
+                        sourceData = JSON.parse(sourceEndpoint.responseBody);
+                      }
                     } else {
                       // If specific ID requested but no data found, return 404
                       const notFoundResponse = NextResponse.json({ 

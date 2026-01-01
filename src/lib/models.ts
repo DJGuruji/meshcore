@@ -74,6 +74,7 @@ const UserSchema = new mongoose.Schema({
   resetToken: {
     type: String,
     select: false, // Don't include in query results by default
+    index: true,
   },
   resetTokenExpiry: {
     type: Date,
@@ -233,7 +234,7 @@ const ApiProjectSchema = new mongoose.Schema({
     },
     method: {
       type: String,
-      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'CRUD'],
       required: [true, 'HTTP method is required'],
       default: 'GET'
     },
@@ -355,17 +356,23 @@ const ApiProjectSchema = new mongoose.Schema({
         default: 100
       }
     },
+    isCrud: {
+      type: Boolean,
+      default: false
+    },
+    resourceName: String,
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   }],
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, default: null }, // Expiration date for auto-deletion
+  expiresAt: { type: Date, default: null, index: true }, // Expiration date for auto-deletion
   lastWeekReminderSent: { type: Boolean, default: false }, // Track if 1-week reminder was sent
   lastDayReminderSent: { type: Boolean, default: false } // Track if 1-day reminder was sent
 });
@@ -467,7 +474,8 @@ const ApiTesterCollectionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -492,7 +500,8 @@ const ApiTesterEnvironmentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -510,7 +519,8 @@ const ApiTesterHistorySchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   requestData: {
     headers: [{
@@ -574,6 +584,9 @@ const MockServerDataSchema = new mongoose.Schema({
 
 export const MockServerData = mongoose.models.MockServerData || mongoose.model('MockServerData', MockServerDataSchema);
 
+// Add compound index for MockServerData
+MockServerDataSchema.index({ endpointId: 1, projectId: 1, createdAt: -1 });
+
 // GraphQL Tester Collection Schema
 const GraphQLTesterCollectionSchema = new mongoose.Schema({
   name: {
@@ -606,7 +619,8 @@ const GraphQLTesterCollectionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -631,7 +645,8 @@ const GraphQLTesterEnvironmentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -660,7 +675,8 @@ const GraphQLTesterHistorySchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   }
 });
 
@@ -700,7 +716,8 @@ const PaymentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   plan: {
     type: String,

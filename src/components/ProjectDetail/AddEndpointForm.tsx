@@ -26,7 +26,7 @@ type AggregatorType = '' | 'count' | 'sum' | 'avg' | 'min' | 'max' | 'total';
 interface Endpoint {
   _id: string;
   path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CRUD';
   responseBody: string;
   statusCode: number;
   description?: string;
@@ -272,18 +272,17 @@ export default function AddEndpointForm({
             )}
           </div>
           <div>
-            <label className={labelStyles}>Method</label>
-            <select
-              value={newEndpoint.method}
-              onChange={(e) => setNewEndpoint({ ...newEndpoint, method: e.target.value as any })}
-              className={inputStyles}
-            >
-              <option className={optionStyles} value="GET">GET</option>
-              <option className={optionStyles} value="POST">POST</option>
-              <option className={optionStyles} value="PUT">PUT</option>
-              <option className={optionStyles} value="PATCH">PATCH</option>
-              <option className={optionStyles} value="DELETE">DELETE</option>
-            </select>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Method</label>
+            <div className={`px-3 py-2 rounded-2xl border border-white/10 bg-white/5 text-sm font-mono font-medium ${
+              newEndpoint.method === 'GET' ? 'text-green-300' :
+              newEndpoint.method === 'POST' ? 'text-blue-300' :
+              newEndpoint.method === 'PUT' ? 'text-orange-300' :
+              newEndpoint.method === 'PATCH' ? 'text-purple-300' :
+              newEndpoint.method === 'CRUD' ? 'text-yellow-300' :
+              'text-red-300'
+            }`}>
+              {newEndpoint.method}
+            </div>
           </div>
           <div>
             <label className={labelStyles}>Status Code</label>
@@ -626,7 +625,7 @@ export default function AddEndpointForm({
             
             {/* Data source selection */}
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-indigo-200 mb-1.5">Source POST Endpoint (optional)</label>
+              <label className="block text-xs font-semibold text-indigo-200 mb-1.5">Source Resource/CRUD Endpoint (optional)</label>
               <select
                 value={newEndpoint.dataSource}
                 onChange={(e) => setNewEndpoint({
@@ -641,10 +640,10 @@ export default function AddEndpointForm({
               >
                 <option className={optionStyles} value="">Use custom response body</option>
                 {project.endpoints
-                  .filter((ep: Endpoint) => ep.method === 'POST')
-                  .map((ep: Endpoint) => (
+                  .filter(ep => ep.method === 'POST' || (ep as any).method === 'CRUD')
+                  .map(ep => (
                     <option className={optionStyles} key={ep._id} value={ep._id}>
-                      {ep.path} ({ep.description || 'No description'})
+                      {ep.path} ({(ep as any).method === 'CRUD' ? 'Full Resource' : ep.description || 'POST Endpoint'})
                     </option>
                   ))}
               </select>
