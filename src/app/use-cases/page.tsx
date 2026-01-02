@@ -1,12 +1,24 @@
 'use client';
 
 import Link from 'next/link';
+import BoltIcon from '@heroicons/react/24/outline/BoltIcon';
+import BeakerIcon from '@heroicons/react/24/outline/BeakerIcon';
+import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon';
+import GlobeAltIcon from '@heroicons/react/24/outline/GlobeAltIcon';
+import DevicePhoneMobileIcon from '@heroicons/react/24/outline/DevicePhoneMobileIcon';
+import LinkIcon from '@heroicons/react/24/outline/LinkIcon';
+import BookOpenIcon from '@heroicons/react/24/outline/BookOpenIcon';
+import ServerStackIcon from '@heroicons/react/24/outline/ServerStackIcon';
+import AcademicCapIcon from '@heroicons/react/24/outline/AcademicCapIcon';
+import RocketLaunchIcon from '@heroicons/react/24/outline/RocketLaunchIcon';
+import LockClosedIcon from '@heroicons/react/24/outline/LockClosedIcon';
+import SparklesIcon from '@heroicons/react/24/outline/SparklesIcon';
 
 interface UseCase {
   id: string;
   title: string;
   description: string;
-  icon: string;
+  icon: React.ElementType;
   benefits: string[];
   stats: {
     label: string;
@@ -20,7 +32,7 @@ const useCases: UseCase[] = [
     id: 'frontend-development',
     title: 'Frontend Development Without Backend Delays',
     description: 'Build and test your frontend applications without waiting for backend APIs to be ready. Create realistic mock endpoints that match your API contracts perfectly.',
-    icon: '⚡',
+    icon: BoltIcon,
     benefits: [
       'Start frontend development immediately',
       'No dependency on backend team schedules',
@@ -37,7 +49,7 @@ const useCases: UseCase[] = [
     id: 'api-testing',
     title: 'Comprehensive API Testing & Validation',
     description: 'Test your APIs thoroughly with our powerful testing playground. Send requests, inspect responses, validate schemas, and ensure your APIs work perfectly.',
-    icon: '🧪',
+    icon: BeakerIcon,
     benefits: [
       'Test all HTTP methods and headers',
       'Validate response schemas automatically',
@@ -54,7 +66,7 @@ const useCases: UseCase[] = [
     id: 'team-collaboration',
     title: 'Seamless Team Collaboration',
     description: 'Enable your entire team to work in parallel. Share mock APIs, test collections, and API documentation instantly with teammates across different time zones.',
-    icon: '👥',
+    icon: UserGroupIcon,
     benefits: [
       'Share working endpoints instantly',
       'Collaborate on API design in real-time',
@@ -71,7 +83,7 @@ const useCases: UseCase[] = [
     id: 'graphql-development',
     title: 'GraphQL Query Testing & Development',
     description: 'Explore GraphQL APIs with schema introspection, run queries and mutations, test with variables, and see real-time results in an intuitive interface.',
-    icon: '🔷',
+    icon: GlobeAltIcon,
     benefits: [
       'Automatic schema introspection',
       'Test queries with variables',
@@ -88,7 +100,7 @@ const useCases: UseCase[] = [
     id: 'mobile-app-development',
     title: 'Mobile App Backend Prototyping',
     description: 'Build mobile apps faster by creating mock backends that your iOS and Android apps can consume immediately. Test offline scenarios and edge cases.',
-    icon: '📱',
+    icon: DevicePhoneMobileIcon,
     benefits: [
       'Develop mobile apps without backend',
       'Test offline and error scenarios',
@@ -105,7 +117,7 @@ const useCases: UseCase[] = [
     id: 'integration-testing',
     title: 'Third-Party API Integration Testing',
     description: 'Test integrations with external APIs safely. Create mock versions of third-party services to develop and test without hitting rate limits or incurring costs.',
-    icon: '🔗',
+    icon: LinkIcon,
     benefits: [
       'Avoid third-party API rate limits',
       'Test without production costs',
@@ -122,7 +134,7 @@ const useCases: UseCase[] = [
     id: 'api-documentation',
     title: 'Interactive API Documentation',
     description: 'Create living documentation for your APIs. Let developers test endpoints directly from the docs, see real responses, and understand your API faster.',
-    icon: '📚',
+    icon: BookOpenIcon,
     benefits: [
       'Generate interactive documentation',
       'Let users test APIs in-browser',
@@ -139,7 +151,7 @@ const useCases: UseCase[] = [
     id: 'microservices',
     title: 'Microservices Development & Testing',
     description: 'Develop and test microservices independently. Mock dependencies, test service interactions, and ensure your distributed system works seamlessly.',
-    icon: '🏗️',
+    icon: ServerStackIcon,
     benefits: [
       'Develop services independently',
       'Mock service dependencies',
@@ -156,7 +168,7 @@ const useCases: UseCase[] = [
     id: 'education',
     title: 'Teaching & Learning API Development',
     description: 'Perfect for educators and students learning API development. Create safe environments to experiment, learn HTTP concepts, and practice API design.',
-    icon: '🎓',
+    icon: AcademicCapIcon,
     benefits: [
       'Safe learning environment',
       'Hands-on API practice',
@@ -211,8 +223,8 @@ export default function UseCasesPage() {
               
               <div className="relative z-10">
                 {/* Icon */}
-                <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-4xl backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 group-hover:ring-white/20">
-                  {useCase.icon}
+                <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-indigo-400 backdrop-blur-xl ring-1 ring-white/10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 group-hover:ring-white/20">
+                  <useCase.icon className="h-8 w-8" />
                 </div>
 
                 {/* Title */}
@@ -308,18 +320,24 @@ export default function UseCasesPage() {
         <div className="mt-16 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_90px_rgba(2,6,23,0.65)] backdrop-blur">
           <h3 className="text-2xl font-bold text-white mb-6">Why Choose AnyTimeRequest?</h3>
           <div className="grid gap-6 md:grid-cols-3">
-            <div className="space-y-2">
-              <div className="text-3xl">🚀</div>
+            <div className="space-y-4">
+              <div className="text-indigo-400">
+                <RocketLaunchIcon className="h-10 w-10" />
+              </div>
               <h4 className="text-lg font-semibold text-white">Lightning Fast</h4>
               <p className="text-sm text-slate-300">Create mock APIs in seconds, not hours. Start testing immediately without complex setup.</p>
             </div>
-            <div className="space-y-2">
-              <div className="text-3xl">🔒</div>
+            <div className="space-y-4">
+              <div className="text-indigo-400">
+                <LockClosedIcon className="h-10 w-10" />
+              </div>
               <h4 className="text-lg font-semibold text-white">Enterprise Security</h4>
               <p className="text-sm text-slate-300">Bank-level encryption, SOC 2 compliance, and advanced authentication options.</p>
             </div>
-            <div className="space-y-2">
-              <div className="text-3xl">💎</div>
+            <div className="space-y-4">
+              <div className="text-indigo-400">
+                <SparklesIcon className="h-10 w-10" />
+              </div>
               <h4 className="text-lg font-semibold text-white">Premium Support</h4>
               <p className="text-sm text-slate-300">Get help when you need it with our dedicated support team and comprehensive documentation.</p>
             </div>

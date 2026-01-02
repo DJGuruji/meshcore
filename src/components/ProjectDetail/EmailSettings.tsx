@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { EyeIcon, EyeSlashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import EnvelopeIcon from '@heroicons/react/24/outline/EnvelopeIcon';
+import LockClosedIcon from '@heroicons/react/24/outline/LockClosedIcon';
+import LightBulbIcon from '@heroicons/react/24/outline/LightBulbIcon';
 import { toast } from 'react-hot-toast';
 
 interface ApiProject {
@@ -149,7 +152,7 @@ export default function EmailSettings({
                 ? 'bg-emerald-500/20 text-emerald-300 group-hover:bg-emerald-500/30'
                 : 'bg-indigo-500/20 text-indigo-300 group-hover:bg-indigo-500/30'
             }`}>
-              <span className="text-xl">📧</span>
+              <EnvelopeIcon className="h-5 w-5" />
             </div>
             
             {/* Text */}
@@ -184,8 +187,9 @@ export default function EmailSettings({
                 Configured
               </span>
             ) : !canUseEmailSettings() ? (
-              <span className="text-xs text-red-300 group-hover:text-red-200 transition-colors">
-                🔒 Pro Feature
+              <span className="flex items-center gap-1 text-xs text-red-300 group-hover:text-red-200 transition-colors">
+                <LockClosedIcon className="h-3 w-3" />
+                Pro Feature
               </span>
             ) : (
               <span className="text-xs text-slate-400 group-hover:text-indigo-300 transition-colors">
@@ -277,12 +281,15 @@ export default function EmailSettings({
 
               {/* Help Text */}
               <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3">
-                <p className="text-xs text-blue-200">
-                  <span className="font-semibold">💡 How to get an App Password:</span>
-                  <br />
-                  <span className="font-semibold">Gmail:</span> Google Account → Security → 2-Step Verification → App passwords
-                  <br />
-                  <span className="font-semibold">Outlook:</span> Account Settings → Security → App passwords
+                <p className="text-xs text-blue-200 flex gap-2">
+                  <LightBulbIcon className="h-4 w-4 text-blue-400 shrink-0" />
+                  <span>
+                    <span className="font-semibold">How to get an App Password:</span>
+                    <br />
+                    <span className="font-semibold">Gmail:</span> Google Account → Security → 2-Step Verification → App passwords
+                    <br />
+                    <span className="font-semibold">Outlook:</span> Account Settings → Security → App passwords
+                  </span>
                 </p>
               </div>
             </div>

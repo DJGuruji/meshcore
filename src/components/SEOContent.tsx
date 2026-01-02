@@ -2,6 +2,22 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import BoltIcon from '@heroicons/react/24/outline/BoltIcon';
+import BeakerIcon from '@heroicons/react/24/outline/BeakerIcon';
+import RocketLaunchIcon from '@heroicons/react/24/outline/RocketLaunchIcon';
+import GlobeAltIcon from '@heroicons/react/24/outline/GlobeAltIcon';
+import LockClosedIcon from '@heroicons/react/24/outline/LockClosedIcon';
+import BookOpenIcon from '@heroicons/react/24/outline/BookOpenIcon';
+import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon';
+import SparklesIcon from '@heroicons/react/24/outline/SparklesIcon';
+import BugAntIcon from '@heroicons/react/24/outline/BugAntIcon';
+import LinkIcon from '@heroicons/react/24/outline/LinkIcon';
+import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon';
+import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon';
+import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon';
+import ForwardIcon from '@heroicons/react/24/outline/ForwardIcon';
+import CubeIcon from '@heroicons/react/24/outline/CubeIcon';
+
 
 const seoPillStyles = 'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 uppercase tracking-[0.25em] transition-all duration-300 hover:border-indigo-400/50 hover:bg-indigo-500/10 hover:text-indigo-200';
 
@@ -11,7 +27,7 @@ const headlineItems = [
     description:
       'Create realistic mock servers with custom endpoints, authentication, and JSON responses in seconds. Perfect for frontend developers who want to move fast without waiting for backend teams. Support for REST, GraphQL, and custom response formats.',
     keywords: ['mock server online', 'fake API generator', 'generate dummy API', 'JSON API generator'],
-    icon: '⚡',
+    icon: BoltIcon,
     stats: { label: 'Setup Time', value: '< 30 sec' }
   },
   {
@@ -19,7 +35,7 @@ const headlineItems = [
     description:
       'Send real HTTP requests, inspect responses, and debug issues with our powerful API testing playground. Supports all HTTP methods, custom headers, authentication flows, and advanced response validation with schema testing.',
     keywords: ['API playground', 'HTTP testing tool', 'request builder tool', 'REST API tester'],
-    icon: '🧪',
+    icon: BeakerIcon,
     stats: { label: 'Test Coverage', value: '95%+' }
   },
   {
@@ -27,7 +43,7 @@ const headlineItems = [
     description:
       'Share working API endpoints with teammates instantly. Collaborate on API design, test together, and iterate without deploying anything to production. Real-time collaboration features keep everyone in sync.',
     keywords: ['JSON response tester', 'fake JSON API', 'backend-less API tool', 'API testing tool'],
-    icon: '🚀',
+    icon: RocketLaunchIcon,
     stats: { label: 'Team Speed', value: '3x faster' }
   },
 ];
@@ -36,25 +52,25 @@ const additionalFeatures = [
   {
     title: 'GraphQL Testing Made Simple',
     description: 'Explore GraphQL APIs with automatic schema introspection, query validation, and real-time results.',
-    icon: '🔷',
+    icon: GlobeAltIcon,
     link: '/graphql-tester'
   },
   {
     title: 'Enterprise-Grade Security',
     description: 'JWT authentication, API key management, and role-based access control built-in.',
-    icon: '🔒',
+    icon: LockClosedIcon,
     link: '/docs'
   },
   {
     title: 'Comprehensive Documentation',
     description: 'Step-by-step guides, API references, and video tutorials to get you started quickly.',
-    icon: '📚',
+    icon: BookOpenIcon,
     link: '/docs'
   },
   {
     title: 'Real-World Use Cases',
     description: 'See how teams use AnyTimeRequest for mobile development, microservices, and more.',
-    icon: '💼',
+    icon: BriefcaseIcon,
     link: '/use-cases'
   }
 ];
@@ -156,8 +172,8 @@ export default function SEOContent() {
             
             <div className="relative z-10">
               {/* Icon */}
-              <div className="mb-4 text-4xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6">
-                {item.icon}
+              <div className="mb-4 text-indigo-400 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6">
+                <item.icon className="h-10 w-10" />
               </div>
               
               {/* Stat Badge */}
@@ -196,8 +212,8 @@ export default function SEOContent() {
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 opacity-0 transition-opacity duration-500 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
             
             <div className="relative z-10">
-              <div className="mb-3 text-3xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">
-                {feature.icon}
+              <div className="mb-3 flex justify-center text-indigo-400 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">
+                <feature.icon className="h-8 w-8" />
               </div>
               <h4 className="text-sm font-bold text-white mb-2 transition-colors duration-300 group-hover:text-indigo-200">
                 {feature.title}
@@ -225,21 +241,21 @@ export default function SEOContent() {
           </p>
           <ul className="grid gap-4 text-sm text-slate-200 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { text: 'Create mock APIs in seconds', icon: '⚡' },
-              { text: 'Test HTTP requests easily', icon: '🧪' },
-              { text: 'Share endpoints with teammates', icon: '🔗' },
-              { text: 'Debug JSON responses', icon: '🔍' },
-              { text: 'Prototype without backend', icon: '🚀' },
-              { text: 'Collaborate on API design', icon: '👥' },
-              { text: 'Validate API contracts', icon: '✅' },
-              { text: 'Move fast as a team', icon: '⚡' },
-              { text: 'GraphQL support built-in', icon: '🔷' }
+              { text: 'Create mock APIs in seconds', icon: SparklesIcon },
+              { text: 'Test HTTP requests easily', icon: BugAntIcon },
+              { text: 'Share endpoints with teammates', icon: LinkIcon },
+              { text: 'Debug JSON responses', icon: MagnifyingGlassIcon },
+              { text: 'Prototype without backend', icon: RocketLaunchIcon },
+              { text: 'Collaborate on API design', icon: UserGroupIcon },
+              { text: 'Validate API contracts', icon: ShieldCheckIcon },
+              { text: 'Move fast as a team', icon: ForwardIcon },
+              { text: 'GraphQL support built-in', icon: CubeIcon }
             ].map((benefit) => (
               <li 
                 key={benefit.text} 
                 className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl transition-all duration-300 hover:border-indigo-400/40 hover:bg-white/10 hover:text-white"
               >
-                <span className="text-xl">{benefit.icon}</span>
+                <benefit.icon className="h-5 w-5 text-indigo-400" />
                 <span>{benefit.text}</span>
               </li>
             ))}
