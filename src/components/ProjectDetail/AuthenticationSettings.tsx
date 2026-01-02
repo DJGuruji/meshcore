@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { EyeIcon, EyeSlashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import LockClosedIcon from '@heroicons/react/24/outline/LockClosedIcon';
+import LightBulbIcon from '@heroicons/react/24/outline/LightBulbIcon';
 import { generateReadableToken } from '@/lib/tokenUtils';
 import { toast } from 'react-hot-toast';
 
@@ -159,7 +161,7 @@ export default function AuthenticationSettings({
                 ? 'bg-indigo-500/20 text-indigo-300 group-hover:bg-indigo-500/30'
                 : 'bg-slate-500/20 text-slate-300 group-hover:bg-slate-500/30'
             }`}>
-              <span className="text-xl">🔐</span>
+              <LockClosedIcon className="h-5 w-5" />
             </div>
             
             {/* Text */}
@@ -317,10 +319,13 @@ export default function AuthenticationSettings({
 
                   {/* Help Text */}
                   <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3">
-                    <p className="text-xs text-blue-200">
-                      <span className="font-semibold">💡 How to use:</span>
-                      <br />
-                      Include the token in your API requests as: <code className="font-mono text-blue-100">{headerName}: {tokenPrefix} {token.substring(0, 8)}...</code>
+                    <p className="text-xs text-blue-200 flex gap-2">
+                      <LightBulbIcon className="h-4 w-4 text-blue-400 shrink-0" />
+                      <span>
+                        <span className="font-semibold">How to use:</span>
+                        <br />
+                        Include the token in your API requests as: <code className="font-mono text-blue-100">{headerName}: {tokenPrefix} {token.substring(0, 8)}...</code>
+                      </span>
                     </p>
                   </div>
                 </>

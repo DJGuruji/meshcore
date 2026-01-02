@@ -8,6 +8,8 @@ import {
   TrashIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
+import LockClosedIcon from '@heroicons/react/24/outline/LockClosedIcon';
+import LockOpenIcon from '@heroicons/react/24/outline/LockOpenIcon';
 import { generateEndpointUrl } from '@/lib/urlUtils';
 import { formatAuthHeader } from '@/lib/tokenUtils';
 import { defaultJsonTemplates, generateRandomJson, getTemplateByName, generateJsonFromFields } from '@/lib/jsonGenerator';
@@ -211,14 +213,16 @@ export default function EndpointListItem({
               
               if (requiresAuth) {
                 return (
-                  <span className="text-xs px-2 py-1 bg-green-900 text-green-300 rounded" title="Authentication required">
-                    🔒 Auth
+                  <span className="flex items-center gap-1 text-xs px-2 py-1 bg-green-900/30 text-green-400 border border-green-500/20 rounded-lg shadow-sm" title="Authentication required">
+                    <LockClosedIcon className="h-3 w-3" />
+                    Auth
                   </span>
                 );
               } else {
                 return (
-                  <span className="text-xs px-2 py-1 bg-slate-700 text-slate-400 rounded" title="No authentication required">
-                    🔓 No Auth
+                  <span className="flex items-center gap-1 text-xs px-2 py-1 bg-slate-800 text-slate-400 border border-white/5 rounded-lg" title="No authentication required">
+                    <LockOpenIcon className="h-3 w-3" />
+                    No Auth
                   </span>
                 );
               }
