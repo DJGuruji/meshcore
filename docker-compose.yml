@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Build-time variables (Baked into JS)
+        - NEXT_PUBLIC_BASE_URL=${BASE_URL}
+        - NEXT_PUBLIC_RELAY_SERVER_URL=${NEXT_PUBLIC_RELAY_SERVER_URL}
+        - NEXT_PUBLIC_CACHE_API_URL=${NEXT_PUBLIC_CACHE_API_URL}
+        - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+        - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+        - NEXT_PUBLIC_SITE_URL=${BASE_URL}
+    container_name: meshcore-app
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # Explicit overrides/mappings if needed
+      - NEXT_PUBLIC_BASE_URL=${BASE_URL}
+      - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+    depends_on:
+      - mongodb
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    container_name: meshcore-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+
+volumes:
+  mongodb_data:
