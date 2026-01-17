@@ -4,10 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        # Build-time variables (Baked into JS)
         - NEXT_PUBLIC_BASE_URL=${BASE_URL}
         - NEXT_PUBLIC_RELAY_SERVER_URL=${NEXT_PUBLIC_RELAY_SERVER_URL}
         - NEXT_PUBLIC_CACHE_API_URL=${NEXT_PUBLIC_CACHE_API_URL}
         - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+        - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+        - NEXT_PUBLIC_SITE_URL=${BASE_URL}
     container_name: meshcore-app
     ports:
       - "${PORT:-3000}:3000"
@@ -15,9 +18,9 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      # Override MONGODB_URI to use the container name if running inside docker
-      - MONGODB_URI=${MONGODB_URI}
+      # Explicit overrides/mappings if needed
       - NEXT_PUBLIC_BASE_URL=${BASE_URL}
+      - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
     depends_on:
       - mongodb
     restart: always
