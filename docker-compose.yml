@@ -1,0 +1,35 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_BASE_URL=${BASE_URL}
+        - NEXT_PUBLIC_RELAY_SERVER_URL=${NEXT_PUBLIC_RELAY_SERVER_URL}
+        - NEXT_PUBLIC_CACHE_API_URL=${NEXT_PUBLIC_CACHE_API_URL}
+        - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+    container_name: meshcore-app
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # Override MONGODB_URI to use the container name if running inside docker
+      - MONGODB_URI=${MONGODB_URI}
+      - NEXT_PUBLIC_BASE_URL=${BASE_URL}
+    depends_on:
+      - mongodb
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    container_name: meshcore-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+
+volumes:
+  mongodb_data:
