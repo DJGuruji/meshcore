@@ -172,7 +172,10 @@ export default function EndpointListItem({
               </span>
             </div>
             <div>
-              <div className="font-mono text-white">{project.baseUrl}{endpoint.path}{(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') && !endpoint.isCrud ? '/:id' : ''}</div>
+              <div className="font-mono text-white text-xs break-all">
+                {generateEndpointUrl(project.name, project.baseUrl, endpoint.path)}
+                {(endpoint.method === 'PUT' || endpoint.method === 'PATCH' || endpoint.method === 'DELETE') && !endpoint.isCrud ? '/:id' : ''}
+              </div>
               {endpoint.description && (
                 <div className="text-sm text-slate-400 mt-1">{endpoint.description}</div>
               )}
