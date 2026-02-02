@@ -4,8 +4,12 @@ export function generateProjectSlug(projectName: string): string {
   return projectName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 }
 
+export function getBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+}
+
 export function generateEndpointUrl(projectName: string, baseUrl: string, endpointPath: string): string {
-  const baseUrlFromEnv = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  const baseUrlFromEnv = getBaseUrl();
   const projectSlug = generateProjectSlug(projectName);
   
   // Ensure paths start with /
