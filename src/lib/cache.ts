@@ -10,53 +10,115 @@ interface CacheClient {
   set: (key: string, value: any, options?: CacheOptions) => Promise<boolean>;
   del: (key: string) => Promise<number>;
   exists: (key: string) => Promise<boolean>;
+  incr: (key: string) => Promise<number>;
+  pexpire: (key: string, milliseconds: number) => Promise<boolean>;
   quit: () => Promise<void>;
 }
 
-// Create Redis client for frontend
+// Create Redis client for backend
 class RedisCacheClient implements CacheClient {
   private client: RedisClientType | null = null;
   private isConnected = false;
 
-  async connect(): Promise<void> {
-    if (this.isConnected) return;
+  async connect(): Promise<RedisClientType> {
+    if (this.client && this.isConnected) return this.client;
+
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    
+    this.client = createClient({
+      url: redisUrl
+    });
+
+    this.client.on('error', (err) => {
+      this.isConnected = false;
+    });
 
     try {
-      // In a frontend environment, we typically won't connect directly to Redis
-      // Instead, we'll use a backend API endpoint for caching
+      await this.client.connect();
       this.isConnected = true;
+      return this.client;
     } catch (error) {
       this.isConnected = false;
+      throw error;
     }
   }
 
   async get(key: string): Promise<any> {
-    // In frontend, we don't directly connect to Redis for security reasons
-    // This is a no-op implementation
-    return null;
+    try {
+      const client = await this.connect();
+      const value = await client.get(key);
+      return value ? JSON.parse(value) : null;
+    } catch (error) {
+      return null;
+    }
   }
 
   async set(key: string, value: any, options?: CacheOptions): Promise<boolean> {
-    // In frontend, we don't directly connect to Redis for security reasons
-    // This is a no-op implementation
-    return true;
+    try {
+      const client = await this.connect();
+      const stringValue = JSON.stringify(value);
+      if (options?.ttl) {
+        await client.setEx(key, options.ttl, stringValue);
+      } else {
+        await client.set(key, stringValue);
+      }
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   async del(key: string): Promise<number> {
-    // In frontend, we don't directly connect to Redis for security reasons
-    // This is a no-op implementation
-    return 0;
+    try {
+      const client = await this.connect();
+      if (key.endsWith('*')) {
+        const pattern = key;
+        const keys = await client.keys(pattern);
+        if (keys.length > 0) {
+          return await client.del(keys);
+        }
+        return 0;
+      }
+      return await client.del(key);
+    } catch (error) {
+      return 0;
+    }
   }
 
   async exists(key: string): Promise<boolean> {
-    // In frontend, we don't directly connect to Redis for security reasons
-    // This is a no-op implementation
-    return false;
+    try {
+      const client = await this.connect();
+      const result = await client.exists(key);
+      return result === 1;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async incr(key: string): Promise<number> {
+    try {
+      const client = await this.connect();
+      return await client.incr(key);
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  async pexpire(key: string, milliseconds: number): Promise<boolean> {
+    try {
+      const client = await this.connect();
+      const result = await client.pExpire(key, milliseconds);
+      return result;
+    } catch (error) {
+      return false;
+    }
   }
 
   async quit(): Promise<void> {
-    // In frontend, we don't directly connect to Redis for security reasons
-    // This is a no-op implementation
+    if (this.client) {
+      await this.client.quit();
+      this.isConnected = false;
+    }
   }
 }
 
@@ -115,6 +177,25 @@ class InMemoryCacheClient implements CacheClient {
     return true;
   }
 
+  async incr(key: string): Promise<number> {
+    const item = this.cache.get(key);
+    let newValue = 1;
+    if (item) {
+      newValue = (Number(item.value) || 0) + 1;
+      this.cache.set(key, { ...item, value: newValue });
+    } else {
+      this.cache.set(key, { value: newValue, expiry: null });
+    }
+    return newValue;
+  }
+
+  async pexpire(key: string, milliseconds: number): Promise<boolean> {
+    const item = this.cache.get(key);
+    if (!item) return false;
+    this.cache.set(key, { ...item, expiry: Date.now() + milliseconds });
+    return true;
+  }
+
   async quit(): Promise<void> {
     this.cache.clear();
   }
@@ -137,8 +218,12 @@ export const withCache = (ttl: number = 300) => {
 
 // Create cache instance
 const createCacheClient = (): CacheClient => {
-  // In production, you might want to use Redis through a backend API
-  // For now, we'll use in-memory cache
+  // In production or if REDIS_URL is provided, use Redis
+  if (process.env.REDIS_URL || process.env.NODE_ENV === 'production') {
+    return new RedisCacheClient();
+  }
+  
+  // Fallback to in-memory cache for local development without Redis
   return new InMemoryCacheClient();
 };
 
@@ -173,6 +258,20 @@ export const cache = {
    */
   exists: async (key: string): Promise<boolean> => {
     return cacheClient.exists(key);
+  },
+
+  /**
+   * Atomic increment
+   */
+  incr: async (key: string): Promise<number> => {
+    return cacheClient.incr(key);
+  },
+
+  /**
+   * Set expiration in milliseconds
+   */
+  pexpire: async (key: string, milliseconds: number): Promise<boolean> => {
+    return cacheClient.pexpire(key, milliseconds);
   },
 
   /**

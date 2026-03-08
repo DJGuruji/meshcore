@@ -5,7 +5,7 @@ export default function Footer() {
 
   const footerLinks = {
     product: [
-      { name: 'Mock Server', href: '/' },
+      { name: 'Mock Server', href: '/mockserver' },
       { name: 'API Tester', href: '/api-tester' },
       { name: 'GraphQL Tester', href: '/graphql-tester' },
       { name: 'Pricing', href: '/pricing' },
@@ -26,7 +26,7 @@ export default function Footer() {
       { name: 'Terms of Service', href: '/terms' },
     ],
     community: [
-      { name: 'GitHub', href: 'https://github.com', external: true },
+      { name: 'GitHub', href: 'https://github.com/DJGuruji', external: true },
       { name: 'Discord', href: 'https://discord.gg', external: true },
       { name: 'Twitter', href: 'https://twitter.com', external: true },
       { name: 'LinkedIn', href: 'https://linkedin.com', external: true },

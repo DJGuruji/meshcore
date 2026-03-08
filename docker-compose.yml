@@ -23,3 +23,17 @@ services:
       - NEXT_PUBLIC_BASE_URL=${BASE_URL}
       - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
     restart: always
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:alpine
+    container_name: anytimerequest-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+volumes:
+  redis_data:

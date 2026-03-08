@@ -19,7 +19,7 @@ export default function ForgotPassword() {
   // Redirect authenticated users to home page
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/');
+      router.push('/mockserver');
     }
   }, [status, router]);
 

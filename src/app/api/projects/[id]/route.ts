@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import connectDB from '@/lib/db';
-import { ApiProject } from '@/lib/models';
-import { User } from '@/lib/models';
+import { ApiProject, MockServerData, User } from '@/lib/models';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
 import axios from 'axios';
@@ -228,14 +227,13 @@ export async function PUT(
     // Debug: Log emailConfig to verify it's being saved
     console.log('Updated project emailConfig:', projectData.emailConfig);
     
-    // Update user's storage usage if project size changed
+    // Update user's storage usage atomically if project size changed
     if (sizeDifference !== 0) {
       try {
-        const currentUsage = user.storageUsage || 0;
-        const newUsage = Math.max(0, currentUsage + sizeDifference);
-        await User.findByIdAndUpdate(session.user.id, { 
-          storageUsage: newUsage 
-        });
+        await User.updateOne(
+          { _id: session.user.id }, 
+          { $inc: { storageUsage: sizeDifference } }
+        );
       } catch (storageError) {
       }
     }
@@ -300,15 +298,21 @@ export async function DELETE(
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+
+    // Cascading delete: Remove all mock data associated with this project
+    try {
+      await MockServerData.deleteMany({ projectId: id });
+    } catch (mockDeleteError) {
+      console.error('Failed to delete associated mock data:', mockDeleteError);
+    }
     
-    // Update user's storage usage to subtract the project definition size
+    // Update user's storage usage atomically to subtract the project definition size
     try {
       const projectSize = Buffer.byteLength(JSON.stringify(project), 'utf8');
-      const currentUsage = userDoc.storageUsage || 0;
-      const newUsage = Math.max(0, currentUsage - projectSize);
-      await User.findByIdAndUpdate(session.user.id, { 
-        storageUsage: newUsage 
-      });
+      await User.updateOne(
+        { _id: session.user.id }, 
+        { $inc: { storageUsage: -projectSize } }
+      );
     } catch (storageError) {
     }
     

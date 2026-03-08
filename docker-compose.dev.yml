@@ -1,33 +1,14 @@
-services:
-  app:
-    image: node:20-alpine
-    container_name: meshcore-app-dev
-    working_dir: /app
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=development
-      # Map variables that might have different names in .env vs JS code
-      - NEXT_PUBLIC_BASE_URL=${BASE_URL}
-      - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
-    command: >
-      sh -c "npm install && npm run dev"
-    depends_on:
-      - mongodb
+version: "3.8"
 
-  mongodb:
-    image: mongo:latest
-    container_name: meshcore-mongodb-dev
+services:
+  redis:
+    image: redis:alpine
+    container_name: anytimerequest-redis-dev
     ports:
-      - "27017:27017"
+      - "6379:6379"
     volumes:
-      - mongodb_data_dev:/data/db
+      - redis_dev_data:/data
+    restart: always
 
 volumes:
-  mongodb_data_dev:
+  redis_dev_data:
