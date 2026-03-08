@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import { User } from '@/lib/models';
+import { User, Subscription } from '@/lib/models';
 import { validateTurnstileToken } from '@/lib/turnstile';
 import { sendEmail } from '@/lib/email';
 import { generateSecureToken } from '@/lib/tokenUtils';
@@ -46,10 +46,18 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password,
-      role: 'user', // Default role
-      accountType: 'free', // Default account type
+      role: 'user', 
+      accountType: 'free', 
       emailVerificationToken,
       emailVerificationTokenExpiry
+    });
+
+    // Create default subscription for the new user
+    await Subscription.create({
+      user: user._id,
+      plan: 'free',
+      status: 'active',
+      expiresAt: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000) // 100 years for free tier
     });
     
     // Send verification email

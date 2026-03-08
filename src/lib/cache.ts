@@ -108,7 +108,7 @@ class RedisCacheClient implements CacheClient {
     try {
       const client = await this.connect();
       const result = await client.pExpire(key, milliseconds);
-      return result;
+      return result === 1;
     } catch (error) {
       return false;
     }

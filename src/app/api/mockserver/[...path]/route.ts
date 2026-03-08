@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import { ApiProject, MockServerData, User } from '@/lib/models';
+import { ApiProject, ApiEndpoint, MockServerData, User, Subscription } from '@/lib/models';
 import { extractTokenFromHeader } from '@/lib/tokenUtils';
 import cache from '@/lib/cache';
 import { sendRequestLimitNotification, sendStorageLimitNotification } from '@/lib/email';
@@ -527,9 +527,13 @@ async function checkRateLimit(project: any): Promise<{ allowed: boolean; message
       return { allowed: false, message: 'User not found' };
     }
     
-    // Calculate rate limits based on account type
-    let maxRequestsPerSecond = 5; // Default to 5 r/s for free tier
-    switch (user.accountType) {
+    // Fetch subscription for the user (source of truth)
+    const subscription = await Subscription.findOne({ user: user._id }).select('plan');
+    const currentPlan = subscription?.plan || user.accountType || 'free';
+    
+    // Calculate rate limits based on current plan
+    let maxRequestsPerSecond = 5; 
+    switch (currentPlan) {
       case 'free':
         maxRequestsPerSecond = 5;
         break;
@@ -596,10 +600,14 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
     }
 
     // 2. Get the user (from DB for source of truth)
-    const user = await User.findById(userId).select('accountType lastRequestReset dailyRequests email lastRequestLimitEmailSent');
+    const user = await User.findById(userId).select('lastRequestReset dailyRequests email lastRequestLimitEmailSent');
     if (!user) {
       return { allowed: false, message: 'User not found' };
     }
+
+    // Get subscription for the plan
+    const subscription = await Subscription.findOne({ user: userId }).select('plan');
+    const currentPlan = subscription?.plan || 'free';
     
     // 3. Handle Reset Logic
     if (!user.lastRequestReset) {
@@ -625,7 +633,7 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
     
     // 4. Calculate limits
     let maxRequests = 300; 
-    switch (user.accountType) {
+    switch (currentPlan) {
       case 'free': maxRequests = 300; break;
       case 'plus': maxRequests = 3000; break;
       case 'pro': maxRequests = 20000; break;
@@ -654,7 +662,7 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
         (now.getTime() - new Date(user.lastRequestLimitEmailSent).getTime()) > (24 * 60 * 60 * 1000);
       
       if (shouldEmail) {
-        sendRequestLimitNotification(user.email, user.accountType, currentRequests, maxRequests, renewalTime)
+        sendRequestLimitNotification(user.email, currentPlan, currentRequests, maxRequests, renewalTime)
           .then(() => User.updateOne({ _id: userId }, { $set: { lastRequestLimitEmailSent: now } }))
           .catch(() => {});
       }
@@ -682,15 +690,19 @@ async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean;
 // Helper function to check storage limits
 async function checkStorageLimit(project: any, dataSize: number, isWriteOperation: boolean = true): Promise<{ allowed: boolean; message?: string }> {
   try {
-    // Get the user associated with the project
-    const user = await User.findById(project.user);
+    // Get the user
+    const user = await User.findById(project.user).select('storageUsage email lastStorageLimitEmailSent');
     if (!user) {
       return { allowed: false, message: 'User not found' };
     }
+
+    // Get subscription for the plan
+    const subscription = await Subscription.findOne({ user: project.user }).select('plan');
+    const currentPlan = subscription?.plan || 'free';
     
-    // Calculate storage limits based on account type
-    let maxStorage = 10 * 1024 * 1024; // Default to 10 MB for free tier
-    switch (user.accountType) {
+    // Check storage limit based on current plan
+    let maxStorage = 10 * 1024 * 1024; // Default to free tier
+    switch (currentPlan) {
       case 'free':
         maxStorage = 10 * 1024 * 1024; // 10 MB
         break;
@@ -721,14 +733,16 @@ async function checkStorageLimit(project: any, dataSize: number, isWriteOperatio
           try {
             await sendStorageLimitNotification(
               user.email,
-              user.accountType,
+              currentPlan,
               currentUsage,
               maxStorage
             );
             
-            // Update the last email sent time
-            user.lastStorageLimitEmailSent = now;
-            await user.save();
+            // Update the last email sent time atomically
+            await User.updateOne(
+              { _id: user._id },
+              { $set: { lastStorageLimitEmailSent: now } }
+            );
           } catch (emailError: any) {
           }
         }
@@ -803,24 +817,39 @@ async function handleRequest(request: NextRequest, method: string) {
     const projectSlug = pathParts[0];
     const remainingPath = '/' + pathParts.slice(1).join('/');
     
-    // Find all projects and check their endpoints
-    const projects = await ApiProject.find({});
-    
-    for (const project of projects) {
-      // Generate the project slug and compare
+    // Find the project matching the slug
+    // Optimization: Only fetch projects to match slug, then fetch endpoints for that project
+    const allProjects = await ApiProject.find({}).select('name baseUrl authentication user');
+    let targetProject = null;
+
+    for (const project of allProjects) {
       const generatedSlug = project.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      
       if (generatedSlug === projectSlug) {
-        for (const endpoint of project.endpoints) {
-          const isCrud = (endpoint as any).isCrud || false;
-          if (matchEndpoint(remainingPath, project.name, project.baseUrl, endpoint.path, method, isCrud) && 
-              (isCrud || endpoint.method === method)) {
-            
-            // If it's a CRUD endpoint, it acts as its own data source for GET/PUT/DELETE
-            if (isCrud) {
-              (endpoint as any).dataSource = endpoint._id;
-              (endpoint as any).dataSourceMode = (endpoint as any).dataSourceMode || 'full';
-            }
+        targetProject = project;
+        break;
+      }
+    }
+
+    if (!targetProject) {
+      const response = NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return addCorsHeaders(response);
+    }
+
+    // Fetch endpoints for this specific project (Enterprise Scale)
+    const endpoints = await ApiEndpoint.find({ projectId: targetProject._id });
+    
+    for (const endpoint of endpoints) {
+      const isCrud = (endpoint as any).isCrud || false;
+      if (matchEndpoint(remainingPath, targetProject.name, targetProject.baseUrl, endpoint.path, method, isCrud) && 
+          (isCrud || endpoint.method === method)) {
+        
+        // If it's a CRUD endpoint, it acts as its own data source for GET/PUT/DELETE
+        if (isCrud) {
+          (endpoint as any).dataSource = endpoint._id;
+          (endpoint as any).dataSourceMode = (endpoint as any).dataSourceMode || 'full';
+        }
+
+        const project = targetProject; // Alias for compatibility with existing code below
             // Check daily request limit
             const requestLimitCheck = await checkDailyRequestLimit(project);
             if (!requestLimitCheck.allowed) {
@@ -1038,8 +1067,8 @@ async function handleRequest(request: NextRequest, method: string) {
                 const isValidId = normalizedRemainingPath.length > normalizedFullBase.length;
                 const id = isValidId ? normalizedRemainingPath.substring(normalizedFullBase.length + 1) : null;
                 
-                // Find the source endpoint
-                const sourceEndpoint = project.endpoints.find((ep: typeof endpoint) => 
+                // Find the source endpoint (Enterprise Scale: look in local endpoints collection)
+                const sourceEndpoint = endpoints.find((ep: any) => 
                   ep._id && endpoint.dataSource && 
                   ep._id.toString() === endpoint.dataSource.toString());
                 
@@ -1326,8 +1355,8 @@ async function handleRequest(request: NextRequest, method: string) {
               }
               
               
-              // Find the source endpoint
-              const sourceEndpoint = project.endpoints.find((ep: typeof endpoint) => 
+              // Find the source endpoint (Enterprise Scale: look in local endpoints collection)
+              const sourceEndpoint = endpoints.find((ep: any) => 
                 ep._id && endpoint.dataSource && 
                 ep._id.toString() === endpoint.dataSource.toString());
               if (sourceEndpoint) {
@@ -1528,23 +1557,18 @@ async function handleRequest(request: NextRequest, method: string) {
                 headers: { 'Content-Type': 'text/plain' }
               });
               // Add read-only mode indicator if needed
-              if (!storageCheck.allowed) {
-                response.headers.set('X-Read-Only-Mode', 'true');
-              }
               return addCorsHeaders(response);
             }
           }
         }
-      }
-    }
-    
+
     const notFoundResponse = NextResponse.json({ 
       error: 'Endpoint not found',
       path: fullPath,
       method: method
     }, { status: 404 });
     return addCorsHeaders(notFoundResponse);
-    
+
   } catch (error: any) {
     const errorResponse = NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     return addCorsHeaders(errorResponse);
