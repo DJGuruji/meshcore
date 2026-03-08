@@ -97,8 +97,7 @@ const UserSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-// Indexes for performance
-UserSchema.index({ email: 1 });
+// Indexes for performance (email already unique)
 UserSchema.index({ role: 1 });
 UserSchema.index({ accountType: 1 });
 UserSchema.index({ blocked: 1 });
@@ -239,8 +238,7 @@ const ApiProjectSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   expiresAt: { type: Date, default: null, index: true }, 
   lastWeekReminderSent: { type: Boolean, default: false }, 
@@ -379,8 +377,7 @@ const SubscriptionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   plan: {
     type: String,
@@ -486,8 +483,7 @@ const ApiTesterCollectionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
 }, { 
   timestamps: true 
@@ -514,14 +510,13 @@ const ApiTesterEnvironmentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
 }, { 
   timestamps: true 
 });
 
-ApiTesterEnvironmentSchema.index({ user: 1 });
+// index on user already created via field-level index: true
 
 // API Tester Request History Schema
 const ApiTesterHistorySchema = new mongoose.Schema({
@@ -534,8 +529,7 @@ const ApiTesterHistorySchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   requestData: {
     headers: [{
@@ -638,8 +632,7 @@ const GraphQLTesterCollectionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
 }, { 
   timestamps: true 
@@ -666,14 +659,13 @@ const GraphQLTesterEnvironmentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
 }, { 
   timestamps: true 
 });
 
-GraphQLTesterEnvironmentSchema.index({ user: 1 });
+// index on user already created via field-level index: true
 
 // GraphQL Tester Request History Schema
 const GraphQLTesterHistorySchema = new mongoose.Schema({
@@ -696,8 +688,7 @@ const GraphQLTesterHistorySchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   }
 }, { 
   timestamps: true 
@@ -741,8 +732,7 @@ const PaymentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   plan: {
     type: String,
@@ -791,7 +781,6 @@ const PaymentSchema = new mongoose.Schema({
 
 // Critical Payment Indexes
 PaymentSchema.index({ user: 1, createdAt: -1 });
-PaymentSchema.index({ razorpayOrderId: 1 });
 PaymentSchema.index({ razorpayPaymentId: 1 });
 PaymentSchema.index({ status: 1 });
 PaymentSchema.index({ expiresAt: 1 });
