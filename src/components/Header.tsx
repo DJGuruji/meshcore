@@ -27,7 +27,7 @@ import { toast } from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const navigation = [
-  { name: 'Mockserver', href: '/' },
+  { name: 'Mockserver', href: '/mockserver' },
   { name: 'Rest API Tester', href: '/api-tester' },
   { name: 'CodeQL', href: '/graphql-tester' },
 

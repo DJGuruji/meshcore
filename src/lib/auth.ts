@@ -2,7 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import connectDB from "./db";
-import { User } from "./models";
+import { User, Subscription } from "./models";
 import { validateTurnstileToken } from "./turnstile";
 
 export const authOptions: NextAuthOptions = {
@@ -52,14 +52,18 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Your account has been blocked. Please contact support.");
           }
 
-          // Return user without password
+          // Fetch subscription for the user
+          const subscription = await Subscription.findOne({ user: user._id });
+
+          // Return user with subscription info
           return {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
-            role: user.role, // Include user role
-            accountType: user.accountType, // Include account type
-            blocked: (user as any).blocked // Include blocked status
+            role: user.role,
+            accountType: subscription?.plan || user.accountType,
+            subscriptionStatus: subscription?.status || 'active',
+            blocked: (user as any).blocked
           };
         } catch (error: any) {
           // Re-throw with a more descriptive message
@@ -109,19 +113,32 @@ export const authOptions: NextAuthOptions = {
           });
         }
         
+        // Fetch or create subscription for OAuth user
+        let subscription = await Subscription.findOne({ user: existingUser._id });
+        if (!subscription) {
+          subscription = await Subscription.create({
+            user: existingUser._id,
+            plan: 'free',
+            status: 'active',
+            expiresAt: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000) // 100 years
+          });
+        }
+        
         // Update token with user info
         token.id = existingUser._id.toString();
-        token.role = existingUser.role || 'user'; // Default to 'user' role if not set
-        token.accountType = existingUser.accountType || 'free'; // Default to 'free' account type if not set
-        token.blocked = (existingUser as any).blocked || false; // Default to not blocked if not set
+        token.role = existingUser.role || 'user';
+        token.accountType = subscription.plan || 'free';
+        token.subscriptionStatus = subscription.status || 'active';
+        token.blocked = (existingUser as any).blocked || false;
       }
       
-      // Handle regular credentials login (exclude OAuth users who were already handled above)
+      // Handle regular credentials login
       if (user && (!account || account.type !== "oauth")) {
         token.id = user.id;
-        token.role = user.role || 'user'; // Include user role in token, default to 'user'
-        token.accountType = user.accountType || 'free'; // Include account type in token, default to 'free'
-        token.blocked = user.blocked || false; // Include blocked status in token, default to false
+        token.role = user.role || 'user';
+        token.accountType = user.accountType || 'free';
+        token.subscriptionStatus = (user as any).subscriptionStatus || 'active';
+        token.blocked = user.blocked || false;
       }
       
       return token;
@@ -129,9 +146,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
-        session.user.role = (token.role as string) || 'user'; // Include user role in session, default to 'user'
-        session.user.accountType = (token.accountType as string) || 'free'; // Include account type in session, default to 'free'
-        session.user.blocked = (token.blocked as boolean) || false; // Include blocked status in session, default to false
+        session.user.role = (token.role as string) || 'user';
+        session.user.accountType = (token.accountType as string) || 'free';
+        session.user.subscriptionStatus = (token.subscriptionStatus as string) || 'active';
+        session.user.blocked = (token.blocked as boolean) || false;
       }
       return session;
     }
@@ -155,9 +173,10 @@ export const authOptions: NextAuthOptions = {
 declare module "next-auth" {
   interface User {
     id: string;
-    role?: string; // Add role property
-    accountType?: string; // Add account type property
-    blocked?: boolean; // Add blocked property
+    role?: string; 
+    accountType?: string; 
+    subscriptionStatus?: string;
+    blocked?: boolean; 
   }
   
   interface Session {
@@ -166,9 +185,10 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role?: string; // Add role property
-      accountType?: string; // Add account type property
-      blocked?: boolean; // Add blocked property
+      role?: string; 
+      accountType?: string; 
+      subscriptionStatus?: string;
+      blocked?: boolean; 
     };
   }
 }
@@ -176,8 +196,9 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role?: string; // Add role property
-    accountType?: string; // Add account type property
-    blocked?: boolean; // Add blocked property
+    role?: string; 
+    accountType?: string; 
+    subscriptionStatus?: string;
+    blocked?: boolean; 
   }
 }

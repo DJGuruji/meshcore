@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import connectDB from '@/lib/db';
-import { ApiProject, User } from '@/lib/models';
+import { ApiProject, ApiEndpoint, User, Subscription } from '@/lib/models';
 import { authOptions } from '@/lib/auth';
 import { sendProjectCreationConfirmation } from '@/lib/email';
 import axios from 'axios';
@@ -108,13 +108,27 @@ export async function POST(request: NextRequest) {
     if (user.blocked) {
       return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
+
+    // Fetch subscription as the source of truth for the plan
+    let subscription = await Subscription.findOne({ user: session.user.id });
+    if (!subscription) {
+      // Create a default free subscription if missing
+      subscription = await Subscription.create({
+        user: session.user.id,
+        plan: 'free',
+        status: 'active',
+        expiresAt: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000)
+      });
+    }
+
+    const currentPlan = subscription.plan;
     
     // Check project limit based on account type
     const userProjects = await ApiProject.find({ user: session.user.id });
     const projectCount = userProjects.length;
     
     let maxProjects = 2; // Default to free tier
-    switch (user.accountType) {
+    switch (currentPlan) {
       case 'free':
         maxProjects = 2;
         break;
@@ -130,16 +144,16 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if user has reached their project limit (except for ultra-pro)
-    if (user.accountType !== 'ultra-pro' && projectCount >= maxProjects) {
+    if (currentPlan !== 'ultra-pro' && projectCount >= maxProjects) {
       return NextResponse.json({ 
         error: 'Project limit reached', 
-        message: `You have reached your maximum project limit of ${maxProjects} for your ${user.accountType} account. Please upgrade your account to create more projects.`
+        message: `You have reached your maximum project limit of ${maxProjects} for your ${currentPlan} account. Please upgrade your account to create more projects.`
       }, { status: 400 });
     }
     
     // Check storage limit - even if storage is full, allow project creation (read-only mode)
     let maxStorage = 10 * 1024 * 1024; // Default to 10 MB for free tier
-    switch (user.accountType) {
+    switch (currentPlan) {
       case 'free':
         maxStorage = 10 * 1024 * 1024; // 10 MB
         break;
@@ -166,17 +180,30 @@ export async function POST(request: NextRequest) {
     if (newTotalUsage > maxStorage) {
       return NextResponse.json({ 
         error: 'Storage limit exceeded', 
-        message: `Adding this project would exceed your storage limit of ${Math.round(maxStorage / (1024 * 1024))} MB for your ${user.accountType} account.`
+        message: `Adding this project would exceed your storage limit of ${Math.round(maxStorage / (1024 * 1024))} MB for your ${currentPlan} account.`
       }, { status: 400 });
     }
     
     // Add user ID to the project (no expiration date)
+    // Endpoints are handled separately for Enterprise Scale
+    const { endpoints, ...projectDefinition } = data;
+    
     const projectData = {
-      ...data,
+      ...projectDefinition,
       user: session.user.id
     };
     
+    // Create the project document
     const project = await ApiProject.create(projectData);
+    
+    // Create endpoint documents linked to this project
+    if (endpoints && Array.isArray(endpoints) && endpoints.length > 0) {
+      const endpointsToCreate = endpoints.map((ep: any) => ({
+        ...ep,
+        projectId: project._id
+      }));
+      await ApiEndpoint.insertMany(endpointsToCreate);
+    }
     
     // Update user's storage usage to include the project definition size
     try {
@@ -199,7 +226,7 @@ export async function POST(request: NextRequest) {
         await sendProjectCreationConfirmation(
           user.email,
           project.name,
-          user.accountType
+          currentPlan
         );
       } catch (emailError) {
       }

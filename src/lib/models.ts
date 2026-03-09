@@ -87,28 +87,35 @@ const UserSchema = new mongoose.Schema({
   },
   emailVerificationToken: {
     type: String,
-    select: false
+    select: false,
+    index: true
   },
   emailVerificationTokenExpiry: {
     type: Date,
     select: false
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
+}, { 
+  timestamps: true 
 });
 
-// Hash password before saving
+// Indexes for performance (email already unique)
+UserSchema.index({ role: 1 });
+UserSchema.index({ accountType: 1 });
+UserSchema.index({ blocked: 1 });
+
+// Hash password and tokens before saving
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
+  // Hash password if modified
+  if (this.isModified('password') && this.password) {
+    try {
+      const salt = await bcrypt.genSalt(12); // Increased to 12 for better security
+      this.password = await bcrypt.hash(this.password, salt);
+    } catch (error) {
+      return next(error as Error);
+    }
   }
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error as Error);
-  }
+
+  next();
 });
 
 // Method to check if password matches
@@ -169,6 +176,8 @@ UserSchema.methods.cleanupOldRequestData = function() {
   }
 };
 
+export const User = mongoose.models.User || mongoose.model('User', UserSchema);
+
 interface EndpointField {
   name: string;
   type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'image' | 'video' | 'audio' | 'file';
@@ -185,197 +194,144 @@ const ApiProjectSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Project name is required'],
-    default: 'My API Project'
+    default: 'My API Project',
+    maxlength: [100, 'Project name cannot exceed 100 characters']
   },
   baseUrl: {
     type: String,
     required: [true, 'Base URL is required'],
-    default: '/api/v1'
+    default: '/api/v1',
+    maxlength: [200, 'Base URL cannot exceed 200 characters']
   },
   // Authentication settings
   authentication: {
-    enabled: {
-      type: Boolean,
-      default: false
-    },
-    token: {
-      type: String,
-      default: null
-    },
-    headerName: {
-      type: String,
-      default: 'Authorization'
-    },
-    tokenPrefix: {
-      type: String,
-      default: 'Bearer'
-    }
+    enabled: { type: Boolean, default: false },
+    token: { type: String, default: null },
+    headerName: { type: String, default: 'Authorization' },
+    tokenPrefix: { type: String, default: 'Bearer' }
   },
   // Email configuration settings
   emailConfig: {
-    enabled: {
-      type: Boolean,
-      default: false
-    },
-    email: {
-      type: String,
-      default: ''
-    },
-    appPassword: {
-      type: String,
-      default: ''
-    }
+    enabled: { type: Boolean, default: false },
+    email: { type: String, default: '' },
+    appPassword: { type: String, default: '' }
   },
-  endpoints: [{
-    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-    path: {
-      type: String,
-      required: [true, 'Endpoint path is required']
-    },
-    method: {
-      type: String,
-      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'CRUD'],
-      required: [true, 'HTTP method is required'],
-      default: 'GET'
-    },
-    responseBody: {
-      type: String, // JSON string
-      default: '{"message": "Hello World"}'
-    },
-    statusCode: {
-      type: Number,
-      default: 200
-    },
-    description: String,
-    // Per-endpoint authentication override
-    requiresAuth: {
-      type: Boolean,
-      default: null // null means inherit from project settings
-    },
-    // Field definitions for POST endpoints
-    fields: [{
-      name: {
-        type: String,
-        required: true
-      },
-      type: {
-        type: String,
-        enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file'],
-        required: true
-      },
-      required: {
-        type: Boolean,
-        default: false
-      },
-      description: String,
-      // For nested object validation
-      nestedFields: {
-        type: [{
-          name: {
-            type: String,
-            required: true
-          },
-          type: {
-            type: String,
-            enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file'],
-            required: true
-          },
-          required: {
-            type: Boolean,
-            default: false
-          },
-          description: String,
-          // Recursive nested fields for deeper nesting
-          nestedFields: {
-            type: [mongoose.Schema.Types.Mixed],
-            default: []
-          },
-          // For array validation within nested objects
-          arrayItemType: {
-            type: String,
-            enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file']
-          }
-        }],
-        default: []
-      },
-      // For array validation
-      arrayItemType: {
-        type: String,
-        enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file']
-      }
-    }],
-    // Data source for GET endpoints
-    dataSource: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'ApiProject.endpoints',
-      default: null
-    },
-    dataSourceMode: {
-      type: String,
-      enum: ['full', 'field', 'aggregator'],
-      default: 'full'
-    },
-    dataSourceField: {
-      type: String,
-      default: ''
-    },
-    dataSourceFields: {
-      type: [String],
-      default: []
-    },
-    aggregator: {
-      type: String,
-      enum: ['count', 'sum', 'avg', 'min', 'max', 'total'],
-      default: null
-    },
-    // Conditions for filtering data
-    conditions: [{
-      field: {
-        type: String,
-        required: true
-      },
-      operator: {
-        type: String,
-        enum: ['=', '!=', '>', '<', '>=', '<=', 'contains', 'startsWith', 'endsWith'],
-        required: true
-      },
-      value: mongoose.Schema.Types.Mixed
-    }],
-    // Pagination settings for GET endpoints
-    pagination: {
-      enabled: {
-        type: Boolean,
-        default: false
-      },
-      defaultLimit: {
-        type: Number,
-        default: 10
-      },
-      maxLimit: {
-        type: Number,
-        default: 100
-      }
-    },
-    isCrud: {
-      type: Boolean,
-      default: false
-    },
-    resourceName: String,
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-  }],
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true
+  },
+  expiresAt: { type: Date, default: null, index: true }, 
+  lastWeekReminderSent: { type: Boolean, default: false }, 
+  lastDayReminderSent: { type: Boolean, default: false } 
+}, { 
+  timestamps: true 
+});
+
+ApiProjectSchema.index({ user: 1, createdAt: -1 });
+
+// Endpoint Field Definition (extracted for clarity)
+const EndpointFieldSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  type: {
+    type: String,
+    enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file'],
+    required: true
+  },
+  required: { type: Boolean, default: false },
+  description: String,
+  nestedFields: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  arrayItemType: {
+    type: String,
+    enum: ['string', 'number', 'boolean', 'object', 'array', 'image', 'video', 'audio', 'file']
+  }
+});
+
+// Standalone Endpoint Model (Enterprise Scalability)
+const ApiEndpointSchema = new mongoose.Schema({
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ApiProject',
     required: true,
     index: true
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, default: null, index: true }, // Expiration date for auto-deletion
-  lastWeekReminderSent: { type: Boolean, default: false }, // Track if 1-week reminder was sent
-  lastDayReminderSent: { type: Boolean, default: false } // Track if 1-day reminder was sent
+  path: {
+    type: String,
+    required: [true, 'Endpoint path is required'],
+    trim: true
+  },
+  method: {
+    type: String,
+    enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'CRUD'],
+    required: [true, 'HTTP method is required'],
+    default: 'GET'
+  },
+  responseBody: {
+    type: String, // JSON string
+    default: '{"message": "Hello World"}'
+  },
+  statusCode: {
+    type: Number,
+    default: 200
+  },
+  description: String,
+  requiresAuth: {
+    type: Boolean,
+    default: null 
+  },
+  fields: [EndpointFieldSchema],
+  // Data source for GET endpoints
+  dataSource: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ApiEndpoint',
+    default: null
+  },
+  dataSourceMode: {
+    type: String,
+    enum: ['full', 'field', 'aggregator'],
+    default: 'full'
+  },
+  dataSourceField: {
+    type: String,
+    default: ''
+  },
+  dataSourceFields: {
+    type: [String],
+    default: []
+  },
+  aggregator: {
+    type: String,
+    enum: ['count', 'sum', 'avg', 'min', 'max', 'total'],
+    default: null
+  },
+  conditions: [{
+    field: String,
+    operator: {
+      type: String,
+      enum: ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'in'],
+      default: 'eq'
+    },
+    value: mongoose.Schema.Types.Mixed,
+    type: { type: String, enum: ['static', 'param', 'header'], default: 'static' }
+  }],
+  // Scale features
+  pagination: {
+    enabled: { type: Boolean, default: false },
+    defaultLimit: { type: Number, default: 10 },
+    maxLimit: { type: Number, default: 100 }
+  },
+  isCrud: { type: Boolean, default: false },
+  resourceName: String
+}, { 
+  timestamps: true 
 });
+
+// Fast lookups for mock server routing
+ApiEndpointSchema.index({ projectId: 1, path: 1, method: 1 });
+ApiEndpointSchema.index({ projectId: 1, method: 1 });
+
+export const ApiProject = mongoose.models.ApiProject || mongoose.model('ApiProject', ApiProjectSchema);
+export const ApiEndpoint = mongoose.models.ApiEndpoint || mongoose.model('ApiEndpoint', ApiEndpointSchema);
 
 // Hash app password before saving
 ApiProjectSchema.pre('save', async function(next) {
@@ -396,6 +352,42 @@ ApiProjectSchema.pre('save', async function(next) {
   }
 });
 
+// Subscription Schema (New: Single Source of Truth for Plan State)
+const SubscriptionSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true
+  },
+  plan: {
+    type: String,
+    enum: ['free', 'plus', 'pro', 'ultra-pro', 'custom'],
+    default: 'free',
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['active', 'past_due', 'canceled', 'expired'],
+    default: 'active',
+    required: true
+  },
+  expiresAt: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  razorpaySubscriptionId: String,
+  lastPaymentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payment'
+  }
+}, { 
+  timestamps: true 
+});
+
+export const Subscription = mongoose.models.Subscription || mongoose.model('Subscription', SubscriptionSchema);
+
 // Method to verify app password
 ApiProjectSchema.methods.verifyAppPassword = async function(enteredPassword: string) {
   if (!this.emailConfig || !this.emailConfig.appPassword) {
@@ -404,8 +396,6 @@ ApiProjectSchema.methods.verifyAppPassword = async function(enteredPassword: str
   return await bcrypt.compare(enteredPassword, this.emailConfig.appPassword);
 };
 
-export const User = mongoose.models.User || mongoose.model('User', UserSchema);
-export const ApiProject = mongoose.models.ApiProject || mongoose.model('ApiProject', ApiProjectSchema);
 
 // API Tester Collection Schema
 const ApiTesterCollectionSchema = new mongoose.Schema({
@@ -474,12 +464,13 @@ const ApiTesterCollectionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+}, { 
+  timestamps: true 
 });
+
+ApiTesterCollectionSchema.index({ user: 1, updatedAt: -1 });
 
 // API Tester Environment Schema
 const ApiTesterEnvironmentSchema = new mongoose.Schema({
@@ -500,12 +491,13 @@ const ApiTesterEnvironmentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+}, { 
+  timestamps: true 
 });
+
+// index on user already created via field-level index: true
 
 // API Tester Request History Schema
 const ApiTesterHistorySchema = new mongoose.Schema({
@@ -515,12 +507,10 @@ const ApiTesterHistorySchema = new mongoose.Schema({
   statusCode: Number,
   responseTime: Number,
   responseSize: Number,
-  timestamp: { type: Date, default: Date.now },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   requestData: {
     headers: [{
@@ -536,7 +526,11 @@ const ApiTesterHistorySchema = new mongoose.Schema({
     body: mongoose.Schema.Types.Mixed,
     auth: mongoose.Schema.Types.Mixed
   }
+}, { 
+  timestamps: true 
 });
+
+ApiTesterHistorySchema.index({ user: 1, createdAt: -1 });
 
 export const ApiTesterCollection = mongoose.models.ApiTesterCollection || mongoose.model('ApiTesterCollection', ApiTesterCollectionSchema);
 export const ApiTesterEnvironment = mongoose.models.ApiTesterEnvironment || mongoose.model('ApiTesterEnvironment', ApiTesterEnvironmentSchema);
@@ -578,8 +572,8 @@ const MockServerDataSchema = new mongoose.Schema({
     }],
     default: []
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+}, { 
+  timestamps: true 
 });
 
 export const MockServerData = mongoose.models.MockServerData || mongoose.model('MockServerData', MockServerDataSchema);
@@ -619,12 +613,13 @@ const GraphQLTesterCollectionSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+}, { 
+  timestamps: true 
 });
+
+GraphQLTesterCollectionSchema.index({ user: 1, updatedAt: -1 });
 
 // GraphQL Tester Environment Schema
 const GraphQLTesterEnvironmentSchema = new mongoose.Schema({
@@ -645,12 +640,13 @@ const GraphQLTesterEnvironmentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+}, { 
+  timestamps: true 
 });
+
+// index on user already created via field-level index: true
 
 // GraphQL Tester Request History Schema
 const GraphQLTesterHistorySchema = new mongoose.Schema({
@@ -670,15 +666,16 @@ const GraphQLTesterHistorySchema = new mongoose.Schema({
       password: String
     }
   },
-  response: mongoose.Schema.Types.Mixed,
-  timestamp: { type: Date, default: Date.now },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   }
+}, { 
+  timestamps: true 
 });
+
+GraphQLTesterHistorySchema.index({ user: 1, createdAt: -1 });
 
 export const GraphQLTesterCollection = mongoose.models.GraphQLTesterCollection || mongoose.model('GraphQLTesterCollection', GraphQLTesterCollectionSchema);
 export const GraphQLTesterEnvironment = mongoose.models.GraphQLTesterEnvironment || mongoose.model('GraphQLTesterEnvironment', GraphQLTesterEnvironmentSchema);
@@ -716,8 +713,7 @@ const PaymentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   plan: {
     type: String,
@@ -756,8 +752,18 @@ const PaymentSchema = new mongoose.Schema({
     type: String,
     required: false
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  gatewayPayload: {
+    type: mongoose.Schema.Types.Mixed,
+    select: false // Only fetch when explicitly needed
+  }
+}, { 
+  timestamps: true 
 });
+
+// Critical Payment Indexes
+PaymentSchema.index({ user: 1, createdAt: -1 });
+PaymentSchema.index({ razorpayPaymentId: 1 });
+PaymentSchema.index({ status: 1 });
+PaymentSchema.index({ expiresAt: 1 });
 
 export const Payment = mongoose.models.Payment || mongoose.model('Payment', PaymentSchema);

@@ -3,6 +3,8 @@ import connectDB from '@/lib/db';
 import { User } from '@/lib/models';
 
 export async function GET(request: NextRequest) {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  
   try {
     await connectDB();
     
@@ -10,7 +12,7 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('token');
     
     if (!token) {
-      return NextResponse.redirect(new URL('/auth/signin?error=invalid-token', request.url));
+      return NextResponse.redirect(new URL('/auth/signin?error=invalid-token', baseUrl));
     }
     
     // Find user with the verification token
@@ -20,7 +22,7 @@ export async function GET(request: NextRequest) {
     });
     
     if (!user) {
-      return NextResponse.redirect(new URL('/auth/signin?error=invalid-or-expired-token', request.url));
+      return NextResponse.redirect(new URL('/auth/signin?error=invalid-or-expired-token', baseUrl));
     }
     
     // Update user as verified
@@ -30,8 +32,8 @@ export async function GET(request: NextRequest) {
     await user.save();
     
     // Redirect to sign in page with success message
-    return NextResponse.redirect(new URL('/auth/signin?verified=true', request.url));
+    return NextResponse.redirect(new URL('/auth/signin?verified=true', baseUrl));
   } catch (error) {
-    return NextResponse.redirect(new URL('/auth/signin?error=verification-failed', request.url));
+    return NextResponse.redirect(new URL('/auth/signin?error=verification-failed', baseUrl));
   }
 }

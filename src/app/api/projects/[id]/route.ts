@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import connectDB from '@/lib/db';
-import { ApiProject } from '@/lib/models';
-import { User } from '@/lib/models';
+import { ApiProject, ApiEndpoint, MockServerData, User, Subscription } from '@/lib/models';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
 import axios from 'axios';
@@ -65,6 +64,10 @@ export async function GET(
         tokenPrefix: 'Bearer'
       };
     }
+
+    // Fetch endpoints from the standalone collection (Enterprise Scale)
+    const endpoints = await ApiEndpoint.find({ projectId: id }).sort({ createdAt: 1 });
+    projectData.endpoints = endpoints;
     
     // Cache the response for 5 minutes
     try {
@@ -162,11 +165,24 @@ export async function PUT(
       return NextResponse.json({ error: 'Your account has been blocked. Please contact support.' }, { status: 403 });
     }
     
+    // Fetch subscription as source of truth
+    let subscription = await Subscription.findOne({ user: session.user.id });
+    if (!subscription) {
+      subscription = await Subscription.create({
+        user: session.user.id,
+        plan: 'free',
+        status: 'active',
+        expiresAt: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000)
+      });
+    }
+
+    const currentPlan = subscription.plan;
+
     // Check storage limit if the project is getting larger
     if (sizeDifference > 0) {
       const currentUsage = user.storageUsage || 0;
       let maxStorage = 10 * 1024 * 1024; // Default to 10 MB for free tier
-      switch (user.accountType) {
+      switch (currentPlan) {
         case 'free':
           maxStorage = 10 * 1024 * 1024; // 10 MB
           break;
@@ -185,57 +201,62 @@ export async function PUT(
       if (newTotalUsage > maxStorage) {
         return NextResponse.json({ 
           error: 'Storage limit exceeded', 
-          message: `Updating this project would exceed your storage limit of ${Math.round(maxStorage / (1024 * 1024))} MB for your ${user.accountType} account.`
+          message: `Updating this project would exceed your storage limit of ${Math.round(maxStorage / (1024 * 1024))} MB for your ${currentPlan} account.`
         }, { status: 400 });
       }
     }
     
-    // Build update object explicitly to ensure authentication is saved
+    // Build update object explicitly
+    const { endpoints, ...projectDefinition } = data;
     const updateData: any = {
+      ...projectDefinition,
       updatedAt: new Date()
     };
     
-    // Only update fields that are provided
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.baseUrl !== undefined) updateData.baseUrl = data.baseUrl;
-    if (data.endpoints !== undefined) updateData.endpoints = data.endpoints;
-    
-    // Handle authentication object explicitly
-    if (data.authentication !== undefined) {
-      updateData.authentication = data.authentication;
-    }
-    
-    // Handle emailConfig object explicitly
-    if (data.emailConfig !== undefined) {
-      updateData.emailConfig = data.emailConfig;
-    }
-    
-    
+    // Remove endpoints from update data because they live in a separate collection
+    delete (updateData as any).endpoints;
+
     const project = await ApiProject.findOneAndUpdate(
       { _id: id, user: session.user.id },
       { $set: updateData },
       { new: true, runValidators: true }
     );
     
-    
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    // Sync endpoints to the standalone collection (Enterprise Scale)
+    if (endpoints !== undefined && Array.isArray(endpoints)) {
+      // Delete existing endpoints
+      await ApiEndpoint.deleteMany({ projectId: id });
+      
+      // Insert new endpoints
+      if (endpoints.length > 0) {
+        const endpointsToCreate = endpoints.map((ep: any) => ({
+          ...ep,
+          projectId: id
+        }));
+        await ApiEndpoint.insertMany(endpointsToCreate);
+      }
     }
     
     // Convert to plain object to ensure all fields are included
     const projectData = project.toObject();
     
+    // Add endpoints back to the response object so the frontend gets the full project
+    projectData.endpoints = endpoints !== undefined ? endpoints : await ApiEndpoint.find({ projectId: id });
+    
     // Debug: Log emailConfig to verify it's being saved
     console.log('Updated project emailConfig:', projectData.emailConfig);
     
-    // Update user's storage usage if project size changed
+    // Update user's storage usage atomically if project size changed
     if (sizeDifference !== 0) {
       try {
-        const currentUsage = user.storageUsage || 0;
-        const newUsage = Math.max(0, currentUsage + sizeDifference);
-        await User.findByIdAndUpdate(session.user.id, { 
-          storageUsage: newUsage 
-        });
+        await User.updateOne(
+          { _id: session.user.id }, 
+          { $inc: { storageUsage: sizeDifference } }
+        );
       } catch (storageError) {
       }
     }
@@ -300,15 +321,22 @@ export async function DELETE(
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+
+    // Cascading delete: Remove all endpoints and mock data associated with this project
+    try {
+      await ApiEndpoint.deleteMany({ projectId: id });
+      await MockServerData.deleteMany({ projectId: id });
+    } catch (mockDeleteError) {
+      console.error('Failed to delete associated project data:', mockDeleteError);
+    }
     
-    // Update user's storage usage to subtract the project definition size
+    // Update user's storage usage atomically to subtract the project definition size
     try {
       const projectSize = Buffer.byteLength(JSON.stringify(project), 'utf8');
-      const currentUsage = userDoc.storageUsage || 0;
-      const newUsage = Math.max(0, currentUsage - projectSize);
-      await User.findByIdAndUpdate(session.user.id, { 
-        storageUsage: newUsage 
-      });
+      await User.updateOne(
+        { _id: session.user.id }, 
+        { $inc: { storageUsage: -projectSize } }
+      );
     } catch (storageError) {
     }
     

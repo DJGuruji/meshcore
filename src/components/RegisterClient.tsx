@@ -37,10 +37,10 @@ export default function RegisterClient({ registered }: RegisterClientProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
 
-  // Redirect authenticated users to home page
+  // Redirect authenticated users to workspace
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/');
+      router.push('/mockserver');
     }
   }, [status, router]);
 
@@ -116,15 +116,15 @@ export default function RegisterClient({ registered }: RegisterClientProps) {
     try {
       setLoading(true);
       const result = await signIn('google', {
-        callbackUrl: '/',
+        callbackUrl: '/mockserver',
         redirect: false
       });
       
       if (result?.error) {
         setError(result.error);
       } else {
-        // Redirect to home page on successful login
-        router.push('/');
+        // Redirect to workspace on successful login
+        router.push('/mockserver');
         router.refresh();
       }
     } catch (error) {

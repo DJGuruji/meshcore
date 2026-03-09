@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import { ApiProject, MockServerData, User } from '@/lib/models';
+import { ApiProject, ApiEndpoint, MockServerData, User, Subscription } from '@/lib/models';
 import { extractTokenFromHeader } from '@/lib/tokenUtils';
 import cache from '@/lib/cache';
 import { sendRequestLimitNotification, sendStorageLimitNotification } from '@/lib/email';
@@ -518,18 +518,22 @@ function calculateAggregatorResult(data: any, field: string, aggregator: string)
   };
 }
 
-// Helper function to check rate limits
+// Helper function to check rate limits using Redis/Cache
 async function checkRateLimit(project: any): Promise<{ allowed: boolean; message?: string }> {
   try {
-    // Get the user associated with the project
-    const user = await User.findById(project.user);
+    // Get the user associated with the project (cached or from DB)
+    const user = await User.findById(project.user).select('accountType lastRequestAt');
     if (!user) {
       return { allowed: false, message: 'User not found' };
     }
     
-    // Calculate rate limits based on account type
-    let maxRequestsPerSecond = 5; // Default to 5 r/s for free tier
-    switch (user.accountType) {
+    // Fetch subscription for the user (source of truth)
+    const subscription = await Subscription.findOne({ user: user._id }).select('plan');
+    const currentPlan = subscription?.plan || user.accountType || 'free';
+    
+    // Calculate rate limits based on current plan
+    let maxRequestsPerSecond = 5; 
+    switch (currentPlan) {
       case 'free':
         maxRequestsPerSecond = 5;
         break;
@@ -544,158 +548,161 @@ async function checkRateLimit(project: any): Promise<{ allowed: boolean; message
         break;
     }
     
-    // Check if enough time has passed since last request
+    // Redis-based Rate Limiting (Fixed Window: 1 second)
     const now = Date.now();
-    const lastRequestTime = user.lastRequestAt ? user.lastRequestAt.getTime() : 0;
-    const timeSinceLastRequest = now - lastRequestTime;
+    const currentSecond = Math.floor(now / 1000);
+    const rateLimitKey = `ratelimit:${user._id}:${currentSecond}`;
     
-    // Calculate minimum time between requests (in milliseconds)
-    const minTimeBetweenRequests = 1000 / maxRequestsPerSecond;
+    // Increment the counter for the current second
+    const requestCount = await cache.incr(rateLimitKey);
     
-    if (timeSinceLastRequest < minTimeBetweenRequests) {
-      const waitTime = Math.ceil(minTimeBetweenRequests - timeSinceLastRequest);
+    // Set expiry if it's a new key (1st request in this second)
+    if (requestCount === 1) {
+      await cache.pexpire(rateLimitKey, 2000); // 2 second TTL to be safe
+    }
+    
+    if (requestCount > maxRequestsPerSecond) {
       return { 
         allowed: false, 
-        message: `Rate limit exceeded. Please wait ${waitTime}ms before making another request.`
+        message: `Rate limit exceeded. Your plan allows ${maxRequestsPerSecond} requests per second.`
       };
     }
     
-    // Update last request time
-    user.lastRequestAt = new Date(now);
-    user.markModified('lastRequestAt');
-    await user.save();
+    // Background: Update lastRequestAt in DB occasionally (not every request to save DB writes)
+    // Only update DB if last update was more than 5 seconds ago
+    const lastUpdate = user.lastRequestAt ? user.lastRequestAt.getTime() : 0;
+    if (now - lastUpdate > 5000) {
+      User.updateOne(
+        { _id: user._id },
+        { $set: { lastRequestAt: new Date(now) } }
+      ).catch(() => {});
+    }
     
     return { allowed: true };
   } catch (error: any) {
-    // Allow the operation if there's an error checking limits
+    // Fail-safe: allow the operation if there's an error checking limits to ensure project functionality
     return { allowed: true };
   }
 }
 
-// Helper function to check daily request limits
+// Helper function to check daily request limits with Redis caching
 async function checkDailyRequestLimit(project: any): Promise<{ allowed: boolean; message?: string }> {
   try {
-    // Get the user associated with the project
-    let user = await User.findById(project.user);
+    const userId = project.user.toString();
+    
+    // 1. Fast Path: Check if we have a "limit exceeded" flag in Redis (1 minute cache)
+    const isExceeded = await cache.get(`quota_exceeded:${userId}`);
+    if (isExceeded) {
+      return { 
+        allowed: false, 
+        message: `Daily request limit exceeded. (Cached status)`
+      };
+    }
+
+    // 2. Get the user (from DB for source of truth)
+    const user = await User.findById(userId).select('lastRequestReset dailyRequests email lastRequestLimitEmailSent');
     if (!user) {
       return { allowed: false, message: 'User not found' };
     }
+
+    // Get subscription for the plan
+    const subscription = await Subscription.findOne({ user: userId }).select('plan');
+    const currentPlan = subscription?.plan || 'free';
     
-    // Initialize lastRequestReset if it doesn't exist
+    // 3. Handle Reset Logic
     if (!user.lastRequestReset) {
       user.lastRequestReset = new Date();
-      user.markModified('lastRequestReset');
-      await user.save();
-      // Refresh the user object after saving
-      user = await User.findById(project.user);
-      if (!user) {
-        return { allowed: false, message: 'User not found after save' };
-      }
+      await User.updateOne({ _id: userId }, { $set: { lastRequestReset: user.lastRequestReset } });
     }
     
-    // Check if 24 hours have passed since last reset
     const now = new Date();
     const lastReset = new Date(user.lastRequestReset);
     const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
     
-    
-    // If 24 hours have passed, reset the counter
+    // If 24 hours passed, reset in DB and Redis
     if (hoursSinceReset >= 24) {
-      user.dailyRequests = {}; // Clear all daily request counts
-      user.markModified('dailyRequests'); // Mark as modified for Mongoose
-      user.lastRequestReset = now;
-      user.markModified('lastRequestReset');
-      await user.save();
-      // Refresh the user object after saving
-      user = await User.findById(project.user);
-      if (!user) {
-        return { allowed: false, message: 'User not found after reset' };
-      }
+      const newReset = new Date();
+      await User.updateOne(
+        { _id: userId }, 
+        { $set: { dailyRequests: {}, lastRequestReset: newReset } }
+      );
+      await cache.del(`daily_count:${userId}:*`);
+      await cache.del(`quota_exceeded:${userId}`);
+      user.lastRequestReset = newReset;
     }
     
-    // Calculate request limits based on account type
-    let maxRequests = 300; // Default to 300 for free tier
-    switch (user.accountType) {
-      case 'free':
-        maxRequests = 300;
-        break;
-      case 'plus':
-        maxRequests = 3000;
-        break;
-      case 'pro':
-        maxRequests = 20000;
-        break;
-      case 'ultra-pro':
-        maxRequests = 200000;
-        break;
+    // 4. Calculate limits
+    let maxRequests = 300; 
+    switch (currentPlan) {
+      case 'free': maxRequests = 300; break;
+      case 'plus': maxRequests = 3000; break;
+      case 'pro': maxRequests = 20000; break;
+      case 'ultra-pro': maxRequests = 200000; break;
     }
     
-    // Get current request count for the current 24-hour window
-    const currentWindowKey = lastReset.toISOString();
-    const currentRequests = user.dailyRequests[currentWindowKey] || 0;
+    // 5. Redis Counter
+    const windowKey = user.lastRequestReset.toISOString().replace(/\./g, '_');
+    const redisCountKey = `daily_count:${userId}:${windowKey}`;
+    const currentRequests = await cache.incr(redisCountKey);
     
-    // Check if limit is exceeded
-    if (currentRequests >= maxRequests) {
-      // Calculate when the limit will renew
-      const renewalTime = new Date(lastReset.getTime() + (24 * 60 * 60 * 1000));
+    // If new key, set TTL for 25 hours
+    if (currentRequests === 1) {
+      await cache.pexpire(redisCountKey, 25 * 60 * 60 * 1000);
+    }
+    
+    // 6. Check Limit
+    if (currentRequests > maxRequests) {
+      // Set exceeded flag in Redis for 5 minutes to avoid DB pressure
+      await cache.set(`quota_exceeded:${userId}`, true, { ttl: 300 });
       
-      // Send email notification (only once per limit exceeded period)
-      const shouldSendEmail = !user.lastRequestLimitEmailSent || 
+      const renewalTime = new Date(user.lastRequestReset.getTime() + (24 * 60 * 60 * 1000));
+      
+      // Send email (background)
+      const shouldEmail = !user.lastRequestLimitEmailSent || 
         (now.getTime() - new Date(user.lastRequestLimitEmailSent).getTime()) > (24 * 60 * 60 * 1000);
       
-      if (shouldSendEmail) {
-        try {
-          await sendRequestLimitNotification(
-            user.email,
-            user.accountType,
-            currentRequests,
-            maxRequests,
-            renewalTime
-          );
-          
-          // Update the last email sent time
-          user.lastRequestLimitEmailSent = now;
-          user.markModified('lastRequestLimitEmailSent');
-          await user.save();
-        } catch (emailError: any) {
-        }
+      if (shouldEmail) {
+        sendRequestLimitNotification(user.email, currentPlan, currentRequests, maxRequests, renewalTime)
+          .then(() => User.updateOne({ _id: userId }, { $set: { lastRequestLimitEmailSent: now } }))
+          .catch(() => {});
       }
       
       return { 
         allowed: false, 
-        message: `Daily request limit exceeded. You have used all ${maxRequests} requests for your ${user.accountType} account. Limit will renew at ${renewalTime.toLocaleString()}.`
+        message: `Daily request limit exceeded (${maxRequests} requests). Renews at ${renewalTime.toLocaleString()}.`
       };
     }
     
-    // Update request count
-    const newCount = currentRequests + 1;
-    user.dailyRequests[currentWindowKey] = newCount;
-    
-    // CRITICAL: Mark the Map as modified so Mongoose knows to save it
-    // Without this, Map changes are not persisted to MongoDB!
-    user.markModified('dailyRequests');
-    
-    await user.save();
+    // 7. Sync back to DB occasionally (every 20 requests)
+    if (currentRequests % 20 === 0) {
+      User.updateOne(
+        { _id: userId },
+        { $set: { [`dailyRequests.${windowKey}`]: currentRequests } }
+      ).catch(() => {});
+    }
     
     return { allowed: true };
   } catch (error: any) {
-    // Allow the operation if there's an error checking limits
-    return { allowed: true };
+    return { allowed: true }; // Fail-safe
   }
 }
 
 // Helper function to check storage limits
 async function checkStorageLimit(project: any, dataSize: number, isWriteOperation: boolean = true): Promise<{ allowed: boolean; message?: string }> {
   try {
-    // Get the user associated with the project
-    const user = await User.findById(project.user);
+    // Get the user
+    const user = await User.findById(project.user).select('storageUsage email lastStorageLimitEmailSent');
     if (!user) {
       return { allowed: false, message: 'User not found' };
     }
+
+    // Get subscription for the plan
+    const subscription = await Subscription.findOne({ user: project.user }).select('plan');
+    const currentPlan = subscription?.plan || 'free';
     
-    // Calculate storage limits based on account type
-    let maxStorage = 10 * 1024 * 1024; // Default to 10 MB for free tier
-    switch (user.accountType) {
+    // Check storage limit based on current plan
+    let maxStorage = 10 * 1024 * 1024; // Default to free tier
+    switch (currentPlan) {
       case 'free':
         maxStorage = 10 * 1024 * 1024; // 10 MB
         break;
@@ -726,14 +733,16 @@ async function checkStorageLimit(project: any, dataSize: number, isWriteOperatio
           try {
             await sendStorageLimitNotification(
               user.email,
-              user.accountType,
+              currentPlan,
               currentUsage,
               maxStorage
             );
             
-            // Update the last email sent time
-            user.lastStorageLimitEmailSent = now;
-            await user.save();
+            // Update the last email sent time atomically
+            await User.updateOne(
+              { _id: user._id },
+              { $set: { lastStorageLimitEmailSent: now } }
+            );
           } catch (emailError: any) {
           }
         }
@@ -808,24 +817,39 @@ async function handleRequest(request: NextRequest, method: string) {
     const projectSlug = pathParts[0];
     const remainingPath = '/' + pathParts.slice(1).join('/');
     
-    // Find all projects and check their endpoints
-    const projects = await ApiProject.find({});
-    
-    for (const project of projects) {
-      // Generate the project slug and compare
+    // Find the project matching the slug
+    // Optimization: Only fetch projects to match slug, then fetch endpoints for that project
+    const allProjects = await ApiProject.find({}).select('name baseUrl authentication user');
+    let targetProject = null;
+
+    for (const project of allProjects) {
       const generatedSlug = project.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      
       if (generatedSlug === projectSlug) {
-        for (const endpoint of project.endpoints) {
-          const isCrud = (endpoint as any).isCrud || false;
-          if (matchEndpoint(remainingPath, project.name, project.baseUrl, endpoint.path, method, isCrud) && 
-              (isCrud || endpoint.method === method)) {
-            
-            // If it's a CRUD endpoint, it acts as its own data source for GET/PUT/DELETE
-            if (isCrud) {
-              (endpoint as any).dataSource = endpoint._id;
-              (endpoint as any).dataSourceMode = (endpoint as any).dataSourceMode || 'full';
-            }
+        targetProject = project;
+        break;
+      }
+    }
+
+    if (!targetProject) {
+      const response = NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return addCorsHeaders(response);
+    }
+
+    // Fetch endpoints for this specific project (Enterprise Scale)
+    const endpoints = await ApiEndpoint.find({ projectId: targetProject._id });
+    
+    for (const endpoint of endpoints) {
+      const isCrud = (endpoint as any).isCrud || false;
+      if (matchEndpoint(remainingPath, targetProject.name, targetProject.baseUrl, endpoint.path, method, isCrud) && 
+          (isCrud || endpoint.method === method)) {
+        
+        // If it's a CRUD endpoint, it acts as its own data source for GET/PUT/DELETE
+        if (isCrud) {
+          (endpoint as any).dataSource = endpoint._id;
+          (endpoint as any).dataSourceMode = (endpoint as any).dataSourceMode || 'full';
+        }
+
+        const project = targetProject; // Alias for compatibility with existing code below
             // Check daily request limit
             const requestLimitCheck = await checkDailyRequestLimit(project);
             if (!requestLimitCheck.allowed) {
@@ -994,14 +1018,9 @@ async function handleRequest(request: NextRequest, method: string) {
                   });
                   await mockData.save();                  
                   // Update user's storage usage
+                  // Update user's storage usage atomically
                   try {
-                    const user = await User.findById(project.user);
-                    if (user) {
-                      const currentUsage = user.storageUsage || 0;
-                      await User.findByIdAndUpdate(project.user, { 
-                        storageUsage: currentUsage + dataSize 
-                      });
-                    }
+                    await User.updateOne({ _id: project.user }, { $inc: { storageUsage: dataSize } });
                   } catch (storageError) {
                   }
                   
@@ -1048,8 +1067,8 @@ async function handleRequest(request: NextRequest, method: string) {
                 const isValidId = normalizedRemainingPath.length > normalizedFullBase.length;
                 const id = isValidId ? normalizedRemainingPath.substring(normalizedFullBase.length + 1) : null;
                 
-                // Find the source endpoint
-                const sourceEndpoint = project.endpoints.find((ep: typeof endpoint) => 
+                // Find the source endpoint (Enterprise Scale: look in local endpoints collection)
+                const sourceEndpoint = endpoints.find((ep: any) => 
                   ep._id && endpoint.dataSource && 
                   ep._id.toString() === endpoint.dataSource.toString());
                 
@@ -1101,13 +1120,13 @@ async function handleRequest(request: NextRequest, method: string) {
                         await MockServerData.deleteOne({ _id: id });
                         
                         // Update user's storage usage
+                        // Update user's storage usage atomically
                         try {
-                          const user = await User.findById(project.user);
-                          if (user && dataSize > 0) {
-                            const currentUsage = user.storageUsage || 0;
-                            await User.findByIdAndUpdate(project.user, { 
-                              storageUsage: Math.max(0, currentUsage - dataSize) 
-                            });
+                          if (dataSize > 0) {
+                            await User.updateOne(
+                              { _id: project.user }, 
+                              { $inc: { storageUsage: -dataSize } }
+                            );
                           }
                         } catch (storageError) {
                         }
@@ -1261,15 +1280,12 @@ async function handleRequest(request: NextRequest, method: string) {
                           }
                         );                        
                         // Update user's storage usage
+                        // Update user's storage usage atomically
                         try {
-                          const user = await User.findById(project.user);
-                          if (user) {
-                            const currentUsage = user.storageUsage || 0;
-                            const newUsage = Math.max(0, currentUsage + storageDiff);
-                            await User.findByIdAndUpdate(project.user, { 
-                              storageUsage: newUsage 
-                            });
-                          }
+                          await User.updateOne(
+                            { _id: project.user }, 
+                            { $inc: { storageUsage: storageDiff } }
+                          );
                         } catch (storageError) {
                         }
                       }
@@ -1339,8 +1355,8 @@ async function handleRequest(request: NextRequest, method: string) {
               }
               
               
-              // Find the source endpoint
-              const sourceEndpoint = project.endpoints.find((ep: typeof endpoint) => 
+              // Find the source endpoint (Enterprise Scale: look in local endpoints collection)
+              const sourceEndpoint = endpoints.find((ep: any) => 
                 ep._id && endpoint.dataSource && 
                 ep._id.toString() === endpoint.dataSource.toString());
               if (sourceEndpoint) {
@@ -1541,23 +1557,18 @@ async function handleRequest(request: NextRequest, method: string) {
                 headers: { 'Content-Type': 'text/plain' }
               });
               // Add read-only mode indicator if needed
-              if (!storageCheck.allowed) {
-                response.headers.set('X-Read-Only-Mode', 'true');
-              }
               return addCorsHeaders(response);
             }
           }
         }
-      }
-    }
-    
+
     const notFoundResponse = NextResponse.json({ 
       error: 'Endpoint not found',
       path: fullPath,
       method: method
     }, { status: 404 });
     return addCorsHeaders(notFoundResponse);
-    
+
   } catch (error: any) {
     const errorResponse = NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     return addCorsHeaders(errorResponse);

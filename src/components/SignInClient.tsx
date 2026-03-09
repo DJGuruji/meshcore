@@ -33,10 +33,10 @@ export default function SignInClient({ verified, error: errorParam }: SignInClie
   const [showPassword, setShowPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
 
-  // Redirect authenticated users to home page
+  // Redirect authenticated users to workspace
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/');
+      router.push('/mockserver');
     }
   }, [status, router]);
 
@@ -95,8 +95,8 @@ export default function SignInClient({ verified, error: errorParam }: SignInClie
         return;
       }
       
-      // Redirect to home page on successful login
-      router.push('/');
+      // Redirect to workspace on successful login
+      router.push('/mockserver');
       router.refresh();
     } catch (error) {
       setError('An error occurred during sign in');
@@ -111,15 +111,15 @@ export default function SignInClient({ verified, error: errorParam }: SignInClie
     try {
       setLoading(true);
       const result = await signIn('google', {
-        callbackUrl: '/',
+        callbackUrl: '/mockserver',
         redirect: false
       });
       
       if (result?.error) {
         setError(result.error);
       } else {
-        // Redirect to home page on successful login
-        router.push('/');
+        // Redirect to workspace on successful login
+        router.push('/mockserver');
         router.refresh();
       }
     } catch (error) {
