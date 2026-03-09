@@ -22,6 +22,7 @@ services:
       - NODE_ENV=production
       - NEXT_PUBLIC_BASE_URL=${BASE_URL}
       - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - NEXTAUTH_URL=${BASE_URL}
     restart: always
     depends_on:
       - redis

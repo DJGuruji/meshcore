@@ -87,7 +87,8 @@ const UserSchema = new mongoose.Schema({
   },
   emailVerificationToken: {
     type: String,
-    select: false
+    select: false,
+    index: true
   },
   emailVerificationTokenExpiry: {
     type: Date,
@@ -109,26 +110,6 @@ UserSchema.pre('save', async function(next) {
     try {
       const salt = await bcrypt.genSalt(12); // Increased to 12 for better security
       this.password = await bcrypt.hash(this.password, salt);
-    } catch (error) {
-      return next(error as Error);
-    }
-  }
-
-  // Hash resetToken if modified
-  if (this.isModified('resetToken') && this.resetToken) {
-    try {
-      const salt = await bcrypt.genSalt(10); // Tokens can use lower cost
-      this.resetToken = await bcrypt.hash(this.resetToken, salt);
-    } catch (error) {
-      return next(error as Error);
-    }
-  }
-
-  // Hash emailVerificationToken if modified
-  if (this.isModified('emailVerificationToken') && this.emailVerificationToken) {
-    try {
-      const salt = await bcrypt.genSalt(10);
-      this.emailVerificationToken = await bcrypt.hash(this.emailVerificationToken, salt);
     } catch (error) {
       return next(error as Error);
     }

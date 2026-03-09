@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SEOContent from '@/components/SEOContent';
 import BoltIcon from '@heroicons/react/24/outline/BoltIcon';
@@ -7,6 +10,24 @@ import BeakerIcon from '@heroicons/react/24/outline/BeakerIcon';
 import CubeIcon from '@heroicons/react/24/outline/CubeIcon';
 
 export default function Home() {
+  const { status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/mockserver');
+    }
+  }, [status, router]);
+
+  // Prevent flash of landing page for logged-in users
+  if (status === 'authenticated') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#030712]">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#030712] px-4 py-16 sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0">
