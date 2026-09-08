@@ -12,6 +12,7 @@ export async function validateTurnstileToken(token: string): Promise<boolean> {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
+        timeout: 5000,
       }
     );
     

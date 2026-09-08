@@ -1165,25 +1165,20 @@ const registerFormDataFile = (fieldId?: string, file?: File, tabId?: string) => 
       timestamp: new Date().toISOString()
     };
 
-    // Save to history
-    try {
-      await axios.post('/api/tools/api-tester/history', {
-        method: currentRequest.method,
-        url: finalUrl,
-        statusCode: processedResponse.status,
-        responseTime: processedResponse.time,
-        responseSize: processedResponse.size,
-        timestamp: processedResponse.timestamp,
-        requestData: {
-          headers: currentRequest.headers,
-          params: currentRequest.params,
-          body: createCleanBody(currentRequest.body),  // Use clean body
-          auth: currentRequest.auth
-        }
-      });
-      fetchHistory(); // Refresh history
-    } catch (historyError) {
-    }
+    axios.post('/api/tools/api-tester/history', {
+      method: currentRequest.method,
+      url: finalUrl,
+      statusCode: processedResponse.status,
+      responseTime: processedResponse.time,
+      responseSize: processedResponse.size,
+      timestamp: processedResponse.timestamp,
+      requestData: {
+        headers: currentRequest.headers,
+        params: currentRequest.params,
+        body: createCleanBody(currentRequest.body),
+        auth: currentRequest.auth
+      }
+    }).then(() => fetchHistory()).catch(() => {});
 
 
     // Update tab with response

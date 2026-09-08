@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import connectDB from '@/lib/db';
-import { ApiTesterHistory } from '@/lib/models';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 // Enable Node.js runtime for file handling
 export const runtime = 'nodejs';
@@ -127,7 +126,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Send request
-      const response = await fetch(finalUrl.toString(), requestOptions);
+      const response = await fetchWithTimeout(finalUrl.toString(), requestOptions);
       const endTime = Date.now();
 
       // Get response body
@@ -154,29 +153,6 @@ export async function POST(request: NextRequest) {
 
       // Calculate response size
       const responseSize = new Blob([responseText]).size;
-
-      // Save to history
-      try {
-        await connectDB();
-        const historyEntry = new ApiTesterHistory({
-          method: method.toUpperCase(),
-          url: finalUrl.toString(),
-          statusCode: response.status,
-          responseTime: endTime - startTime,
-          responseSize,
-          user: token.sub,
-          requestData: {
-            headers: headers.filter((h: any) => h.enabled),
-            params: params.filter((p: any) => p.enabled),
-            // Note: We don't save file data in history for security reasons
-            body: { type: formData.get('bodyType') },
-            auth: auth
-          }
-        });
-        await historyEntry.save();
-      } catch (historyError) {
-        // Log error but don't fail the request
-      }
 
       return NextResponse.json({
         status: response.status,

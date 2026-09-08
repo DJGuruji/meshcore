@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 /**
  * Localhost Proxy API Route
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Execute fetch from server-side (bypasses CORS!)
     const startTime = Date.now();
-    const response = await fetch(url, fetchOptions);
+    const response = await fetchWithTimeout(url, fetchOptions);
     const endTime = Date.now();
 
     // Read response

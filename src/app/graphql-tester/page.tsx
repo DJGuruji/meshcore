@@ -165,7 +165,7 @@ export default function GraphQLTesterPage() {
     {
       id: 'tab-1',
       name: 'Untitled Request',
-      url: `${process.env.BASE_URL || 'http://localhost:3000'}/api/tools/graphql-test`,
+      url: '/api/tools/graphql-test',
       query: `query {
   users {
     id
@@ -437,11 +437,61 @@ export default function GraphQLTesterPage() {
       // Create new abort controller for this request
       abortControllerRef.current = new AbortController();
 
-      // Send request
-      const res = await axios.post(replaceVariables(url), requestBody, {
-        headers: requestHeaders,
-        signal: abortControllerRef.current.signal
-      });
+      const rawUrl = replaceVariables(url);
+      const finalUrl = rawUrl.startsWith('http://') || rawUrl.startsWith('https://')
+        ? rawUrl
+        : new URL(rawUrl, window.location.origin).toString();
+
+      let res;
+      const parsedUrl = new URL(finalUrl);
+      const isSameOrigin = parsedUrl.origin === window.location.origin;
+      const isLocalhostTarget = parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1';
+
+      if (isSameOrigin || isLocalhostTarget) {
+        res = await axios.post(finalUrl, requestBody, {
+          headers: requestHeaders,
+          signal: abortControllerRef.current.signal
+        });
+      } else {
+        const proxyRes = await axios.post('/api/tools/api-tester/send', {
+          method: 'POST',
+          url: finalUrl,
+          headers: Object.entries(requestHeaders).map(([key, value]) => ({
+            key,
+            value,
+            enabled: true
+          })),
+          params: [],
+          graphqlQuery: replaceVariables(query),
+          graphqlVariables: finalVariables,
+          auth: {
+            type: auth.type || 'none',
+            bearer: { token: auth.bearerToken || '' },
+            basic: {
+              username: auth.basicAuth?.username || '',
+              password: auth.basicAuth?.password || ''
+            }
+          }
+        }, {
+          signal: abortControllerRef.current.signal
+        });
+
+        if (proxyRes.data?.error) {
+          const proxyError: any = new Error(proxyRes.data.message || 'Request failed');
+          proxyError.response = {
+            data: proxyRes.data,
+            status: proxyRes.data.status || 500,
+            statusText: proxyRes.data.statusText || 'Error'
+          };
+          throw proxyError;
+        }
+
+        res = {
+          data: proxyRes.data.body,
+          status: proxyRes.data.status,
+          statusText: proxyRes.data.statusText
+        };
+      }
 
       // Calculate timing and size
       const endTime = Date.now();
@@ -479,12 +529,9 @@ export default function GraphQLTesterPage() {
         timestamp: new Date().toISOString()
       };
 
-      // Save to history
-      try {
-        await axios.post('/api/tools/graphql-tester/history', historyItem);
-        fetchHistory(); // Refresh history
-      } catch (error) {
-      }
+      axios.post('/api/tools/graphql-tester/history', historyItem)
+        .then(() => fetchHistory())
+        .catch(() => {});
 
       toast.success('Request sent successfully!');
     } catch (error: any) {
@@ -516,12 +563,9 @@ export default function GraphQLTesterPage() {
         timestamp: new Date().toISOString()
       };
 
-      // Save to history
-      try {
-        await axios.post('/api/tools/graphql-tester/history', historyItem);
-        fetchHistory(); // Refresh history
-      } catch (historyError) {
-      }
+      axios.post('/api/tools/graphql-tester/history', historyItem)
+        .then(() => fetchHistory())
+        .catch(() => {});
 
       updateCurrentTab({ 
         response: {
@@ -812,7 +856,7 @@ export default function GraphQLTesterPage() {
     const newTab = {
       id: newTabId,
       name: 'Untitled Request',
-      url: 'http://localhost:3000/api/tools/graphql-test',
+      url: '/api/tools/graphql-test',
       query: `query {
   users {
     id

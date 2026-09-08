@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const history = await GraphQLTesterHistory.find({ 
       user: session.user.id 
     })
-    .sort({ timestamp: -1 })
+    .sort({ createdAt: -1 })
     .limit(limit)
     .skip(offset);
     
@@ -49,11 +49,7 @@ export async function GET(request: NextRequest) {
       offset
     };
 
-    // Cache the response for 2 minutes (shorter since history changes frequently)
-    try {
-      await cacheService.set(cacheKey, result, { ttl: 120 }); // 2 minutes
-    } catch (cacheError) {
-    }
+    cacheService.set(cacheKey, result, { ttl: 120 }).catch(() => {});
     
     return NextResponse.json(result);
 
@@ -99,12 +95,7 @@ export async function POST(request: NextRequest) {
       user: userId
     });
 
-    // Invalidate cache for this user's GraphQL history
-    try {
-      // Delete all GraphQL history cache entries for this user
-      const deletedCount = await cacheService.delPattern(`graphql_history_${userId}_*`);
-    } catch (cacheError) {
-    }
+    cacheService.delPattern(`graphql_history_${userId}_*`).catch(() => {});
 
     return NextResponse.json(historyItem, { status: 201 });
 
@@ -147,12 +138,7 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    // Invalidate cache for this user's GraphQL history
-    try {
-      // Delete all GraphQL history cache entries for this user
-      const deletedCount = await cacheService.delPattern(`graphql_history_${session.user.id}_*`);
-    } catch (cacheError) {
-    }
+    cacheService.delPattern(`graphql_history_${session.user.id}_*`).catch(() => {});
 
     return NextResponse.json({ message: 'History cleared successfully' });
 

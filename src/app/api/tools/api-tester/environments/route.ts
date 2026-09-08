@@ -60,10 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache the response for 5 minutes
-    try {
-      await cacheService.set(cacheKey, result, { ttl: 300 }); // 5 minutes
-    } catch (cacheError) {
-    }
+    cacheService.set(cacheKey, result, { ttl: 300 }).catch(() => {});
 
     return NextResponse.json(result);
 
@@ -113,12 +110,7 @@ export async function POST(request: NextRequest) {
       user: userId
     });
 
-    // Invalidate cache for this user's environments
-    try {
-      const cacheKey = `user_api_tester_envs_${userId}`;
-      await cacheService.del(cacheKey);
-    } catch (cacheError) {
-    }
+    cacheService.del(`user_api_tester_envs_${userId}`).catch(() => {});
 
     return NextResponse.json(environment, { status: 201 });
 
@@ -165,16 +157,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Environment not found' }, { status: 404 });
     }
 
-    // Invalidate cache for this environment and user's environments
-    try {
-      const envCacheKey = `api_tester_env_${id}_${session.user.id}`;
-      const userEnvsCacheKey = `user_api_tester_envs_${session.user.id}`;
-      
-      await cacheService.del(envCacheKey);
-      await cacheService.del(userEnvsCacheKey);
-      
-    } catch (cacheError) {
-    }
+    cacheService.del(`api_tester_env_${id}_${session.user.id}`).catch(() => {});
+    cacheService.del(`user_api_tester_envs_${session.user.id}`).catch(() => {});
 
     return NextResponse.json(environment);
 
@@ -219,16 +203,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Environment not found' }, { status: 404 });
     }
 
-    // Invalidate cache for this environment and user's environments
-    try {
-      const envCacheKey = `api_tester_env_${id}_${session.user.id}`;
-      const userEnvsCacheKey = `user_api_tester_envs_${session.user.id}`;
-      
-      await cacheService.del(envCacheKey);
-      await cacheService.del(userEnvsCacheKey);
-      
-    } catch (cacheError) {
-    }
+    cacheService.del(`api_tester_env_${id}_${session.user.id}`).catch(() => {});
+    cacheService.del(`user_api_tester_envs_${session.user.id}`).catch(() => {});
 
     return NextResponse.json({ message: 'Environment deleted successfully' });
 

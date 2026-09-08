@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 // Enable Edge Runtime
 export const runtime = 'edge';
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }      // Send request
-      const response = await fetch(finalUrl.toString(), requestOptions);
+      const response = await fetchWithTimeout(finalUrl.toString(), requestOptions);
       const endTime = Date.now();
 
       // Get response body
@@ -193,37 +194,6 @@ export async function POST(request: NextRequest) {
 
       // Calculate response size
       const responseSize = new Blob([responseText]).size;
-
-      // Save to history asynchronously (fire-and-forget)
-      // This doesn't block the response
-      const historyData = {
-        method: method.toUpperCase(),
-        url: finalUrl.toString(),
-        statusCode: response.status,
-        responseTime: endTime - startTime,
-        responseSize,
-        requestData: {
-          headers: headers.filter((h: any) => h.enabled),
-          params: params.filter((p: any) => p.enabled),
-          body: requestBody,
-          auth: auth,
-          graphqlQuery: graphqlQuery,
-          graphqlVariables: graphqlVariables
-        }
-      };
-
-      // Async history save - don't await
-      fetch(new URL('/api/tools/api-tester/history', request.url).toString(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Forward the cookie for authentication
-          'Cookie': request.headers.get('cookie') || ''
-        },
-        body: JSON.stringify(historyData)
-      }).catch(err => {
-        // Log error but don't fail the request
-      });
 
       return NextResponse.json({
         status: response.status,
